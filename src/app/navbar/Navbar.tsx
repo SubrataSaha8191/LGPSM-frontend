@@ -57,7 +57,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="px-5 py-2.5 text-sm font-bold text-white bg-[#dd5c1b] hover:bg-[#A83800] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
+            className="px-5 py-2.5 text-sm font-bold text-white bg-[#f26214] hover:bg-[#ef8e5a] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
           >
             Sign Up Free
           </Link>

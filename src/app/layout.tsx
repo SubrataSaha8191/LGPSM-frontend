@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk, Caveat } from "next/font/google";
 import "@/styles/globals.scss";
 import { AuthProvider } from "@/context/AuthContext";
 import { AlertProvider } from "@/context/AlertContext";
+import { PageTitleProvider } from "@/context/PageTitleContext";
 import SmoothScrollProvider from "@/components/common/SmoothScrollProvider";
 
 const inter = Inter({
@@ -24,8 +25,8 @@ const caveat = Caveat({
 
 export const metadata: Metadata = {
   title: {
-    default: "LGPSM",
-    template: "%s | LGPSM",
+    default: "LGPSM · Digital Invitations & Event Management",
+    template: "%s · LGPSM",
   },
   description:
     "LGPSM - Design, customize, and share stunning QR-based invitations for events and celebrations all in one simple platform.",
@@ -53,7 +54,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-white text-gray-900 selection:bg-[#FF5B22] selection:text-white">
         <AuthProvider>
           <AlertProvider>
-            <SmoothScrollProvider>{children}</SmoothScrollProvider>
+            <PageTitleProvider>
+              <SmoothScrollProvider>{children}</SmoothScrollProvider>
+            </PageTitleProvider>
           </AlertProvider>
         </AuthProvider>
       </body>

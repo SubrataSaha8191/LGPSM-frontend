@@ -10,6 +10,7 @@ import { eventService } from "@/services/eventService";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { formatEventId } from "@/utils/formatId";
+import { usePageTitle } from "@/context/PageTitleContext";
 
 interface EventRow {
   id: string;
@@ -38,6 +39,8 @@ export default function OrganizerDetailsPage() {
   const organizerId = (params?.id as string) || "";
 
   const [organizer, setOrganizer] = useState<OrganizerDetail | null>(null);
+
+  usePageTitle(organizer?.name ? `${organizer.name} · Organizers` : "Organizer Details");
 
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
   const [deactivateReason, setDeactivateReason] = useState("Policy Violation");

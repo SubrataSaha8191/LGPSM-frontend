@@ -19,6 +19,7 @@ import EventSubNav from "@/components/EventSubNav";
 import EventCleanupModal from "@/components/events/EventCleanupModal";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import HorizontalScroll from "@/components/common/HorizontalScroll";
+import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
 
 interface EventDetail {
   _id: string;
@@ -124,10 +125,13 @@ export default function EventDetailsPage() {
   const params = useParams();
   const eventId = (params?.id as string) || "";
   const { user } = useAuth();
+  const { cacheEventTitle } = usePageTitleContext();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [event, setEvent] = useState<EventDetail | null>(null);
+
+  usePageTitle(event?.title ? event.title : "Event Details");
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [assignmentsCount, setAssignmentsCount] = useState(0);
   const [report, setReport] = useState<EventReportData | null>(null);
@@ -154,6 +158,9 @@ export default function EventDetailsPage() {
     }
     const ev = evRes.data as unknown as EventDetail;
     setEvent(ev);
+    if (ev?.title) {
+      cacheEventTitle(eventId, ev.title);
+    }
     const ss = sessRes.success && Array.isArray(sessRes.data) ? sessRes.data : [];
     setSessions(ss);
     setAnalysisSession((prev) => prev || ss[0]?._id || "");

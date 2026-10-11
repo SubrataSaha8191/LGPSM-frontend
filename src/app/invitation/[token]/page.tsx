@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { invitationService, PublicInvitationData } from "@/services/invitationService";
+import { usePageTitle } from "@/context/PageTitleContext";
 
 export default function PublicInvitationPage() {
   const params = useParams();
@@ -11,6 +12,9 @@ export default function PublicInvitationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitationData, setInvitationData] = useState<PublicInvitationData | null>(null);
+
+  const eventTitle = invitationData?.event?.title;
+  usePageTitle(eventTitle ? `Invitation: ${eventTitle}` : "Event Invitation");
 
   const [selectedRsvp, setSelectedRsvp] = useState<"ACCEPTED" | "DECLINED">("ACCEPTED");
   const [dietaryPref, setDietaryPref] = useState<string>("");

@@ -18,12 +18,14 @@ import {
   ServerEvent,
 } from "@/components/add-event/eventDraft";
 import { persistSessionsAndInvitees } from "@/components/add-event/persistEventExtras";
+import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
 
 export default function EditEventPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = (params?.id as string) || "";
   const { showAlert } = useAlert();
+  const { cacheEventTitle } = usePageTitleContext();
 
   const [isFetchingEvent, setIsFetchingEvent] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -37,6 +39,9 @@ export default function EditEventPage() {
     { version: EVENT_DRAFT_VERSION, baseVersion, enabled: !!baseVersion, normalize: normalizeEventDraft }
   );
   const { reset } = draftState;
+
+  const currentTitle = draftState.value?.title || serverDraftRef.current?.title;
+  usePageTitle(currentTitle ? `Edit: ${currentTitle}` : "Edit Event");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -60,6 +65,9 @@ export default function EditEventPage() {
       const sessions = sessionsRes.success && Array.isArray(sessionsRes.data) ? sessionsRes.data : [];
       const serverDraft = eventToDraft(eventRes.data as ServerEvent, sessions);
       serverDraftRef.current = serverDraft;
+      if (eventRes.data?.title) {
+        cacheEventTitle(eventId, eventRes.data.title);
+      }
       // Seed with server data first; enabling the draft afterwards restores newer local edits if still valid
       reset(serverDraft);
       setBaseVersion(String(eventRes.data.updatedAt || "server"));
