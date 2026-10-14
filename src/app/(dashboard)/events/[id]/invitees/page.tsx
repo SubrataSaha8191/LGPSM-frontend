@@ -5,6 +5,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import InviteesPreviewModal from "@/components/add-event/modals/InviteesPreviewModal";
 import EditInviteeModal from "@/components/add-event/modals/EditInviteeModal";
 import DeleteInviteeModal from "@/components/add-event/modals/DeleteInviteeModal";
+import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChooserModal";
+import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import PageHeader from "@/components/common/PageHeader";
 import CustomDropdown from "@/components/common/CustomDropdown";
@@ -76,6 +78,8 @@ export default function InviteesManagementPage() {
   const [cardFor, setCardFor] = useState<Invitee | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showChooser, setShowChooser] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -344,7 +348,7 @@ export default function InviteesManagementPage() {
 
             <div className="flex flex-wrap items-center gap-2.5">
               <input ref={fileInput} type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
-              <button type="button" onClick={() => fileInput.current?.click()} disabled={busy !== null} className={`${btn} bg-[#FF651D] hover:bg-[#E5520F] text-white`}>
+              <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className={`${btn} bg-[#FF651D] hover:bg-[#E5520F] text-white`}>
                 + Add Invitees
               </button>
               <button type="button" onClick={() => downloadInviteeTemplate()} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
@@ -387,8 +391,8 @@ export default function InviteesManagementPage() {
               <p className="py-16 text-center text-sm text-[#828282]">Loading invitees...</p>
             ) : invitees.length === 0 ? (
               <div className="py-16 text-center space-y-3">
-                <p className="text-sm text-[#828282]">No invitees yet. Upload an Excel sheet to add your guest list.</p>
-                <button type="button" onClick={() => fileInput.current?.click()} className={`${btn} bg-[#FFF3EC] text-[#E5520F] hover:bg-[#FFE3D7]`}>Add Invitees</button>
+                <p className="text-sm text-[#828282]">No invitees yet. Add manually or upload an Excel sheet.</p>
+                <button type="button" onClick={() => setShowChooser(true)} className={`${btn} bg-[#FFF3EC] text-[#E5520F] hover:bg-[#FFE3D7]`}>Add Invitees</button>
               </div>
             ) : (
               <div className="overflow-x-auto border border-[#E0E0E0] rounded-md">
@@ -494,6 +498,19 @@ export default function InviteesManagementPage() {
       {cardFor && <CardPreviewModal eventId={eventId} inviteeId={cardFor._id} inviteeName={cardFor.name} onClose={() => setCardFor(null)} />}
       <EditInviteeModal isOpen={!!editing} onClose={() => setEditing(null)} invitee={editing} onSave={saveEdit} />
       <DeleteInviteeModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={confirmDelete} />
+      <AddInviteeChooserModal
+        isOpen={showChooser}
+        onClose={() => setShowChooser(false)}
+        onChooseExcel={() => { setShowChooser(false); fileInput.current?.click(); }}
+        onChooseManual={() => { setShowChooser(false); setShowManualAdd(true); }}
+      />
+      <AddInviteeManualModal
+        isOpen={showManualAdd}
+        eventId={eventId}
+        showCompany={showCompany}
+        onClose={() => setShowManualAdd(false)}
+        onSaved={async () => { await load(); notifyDbUpdate(); }}
+      />
 
       {showHistory && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="history-title">
