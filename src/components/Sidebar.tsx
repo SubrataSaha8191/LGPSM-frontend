@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -14,8 +14,17 @@ import NavIcon from "./sidebar/NavIcon";
 function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeItem: string; onNavigate: () => void }) {
   const children = entry.children || [];
   const groupActive = children.some((c) => c.key === activeItem);
-  const [open, setOpen] = useState(groupActive || entry.key === "event");
-  const expanded = entry.alwaysExpanded || open || groupActive;
+  const [open, setOpen] = useState(groupActive);
+
+  const prevGroupActiveRef = useRef(groupActive);
+  useEffect(() => {
+    if (groupActive && !prevGroupActiveRef.current) {
+      setOpen(true);
+    }
+    prevGroupActiveRef.current = groupActive;
+  }, [groupActive]);
+
+  const expanded = Boolean(entry.alwaysExpanded || open);
 
   // "Configurations" (Admin Figma) renders as a static, permanently-open section label — no
   // chevron, no collapse control — since every reviewed Figma screen shows it pre-expanded.
@@ -53,7 +62,7 @@ function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeIt
     <div>
       <button
         type="button"
-        onClick={() => setOpen((v) => !(v || groupActive))}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={expanded}
         className={`w-full flex items-center gap-2 py-2 text-base font-medium cursor-pointer transition-colors ${
           groupActive ? "text-[#FF651D]" : "text-[#DEE2E5] hover:text-white"
