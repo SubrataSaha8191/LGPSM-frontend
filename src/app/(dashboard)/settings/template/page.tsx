@@ -18,6 +18,7 @@ function toItem(t: Template): TemplateItem {
     imageKey: t.previewImageKey || null,
     status: t.isPublished === false ? "Saved on Draft" : "Published",
     createdAt: t.createdAt || "",
+    cardDesign: t.cardDesign || "CLASSIC",
   };
 }
 
@@ -57,6 +58,7 @@ export default function TemplateSettingsPage() {
       categoryId: t.categoryId,
       subcategoryId: t.subcategoryId,
       previewImageKey: t.imageKey || undefined,
+      cardDesign: t.cardDesign,
       isPublished: t.status === "Published",
     });
     if (!res.success) {

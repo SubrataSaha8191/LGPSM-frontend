@@ -5,6 +5,7 @@ import { TemplateItem } from "@/types/settings";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
+import { CARD_DESIGNS, CARD_DESIGN_LABELS, CardDesign } from "@/services/templateService";
 
 interface EditTemplateModalProps {
   template: TemplateItem;
@@ -20,6 +21,7 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
   const [name, setName] = useState(template.name);
   const [cat, setCat] = useState({ categoryId: template.categoryId, subcategoryId: template.subcategoryId });
   const [imageKey, setImageKey] = useState<string | null>(template.imageKey);
+  const [cardDesign, setCardDesign] = useState<CardDesign>(template.cardDesign || "CLASSIC");
   const [isPublished, setIsPublished] = useState(template.status === "Published");
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -31,7 +33,7 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
     e.preventDefault();
     if (invalid || uploading) return;
     setBusy(true);
-    const ok = await onSave({ ...template, name: name.trim(), ...cat, imageKey, status: isPublished ? "Published" : "Saved on Draft" });
+    const ok = await onSave({ ...template, name: name.trim(), ...cat, imageKey, cardDesign, status: isPublished ? "Published" : "Saved on Draft" });
     setBusy(false);
     if (ok) onClose();
   };
@@ -72,6 +74,22 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
               />
             </div>
             <CategoryFields api={categories} categoryId={cat.categoryId} subcategoryId={cat.subcategoryId} onChange={setCat} canManage required />
+            <div>
+              <label htmlFor="edit-template-card-design" className="block text-sm font-medium text-gray-900 mb-1.5">
+                Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
+              </label>
+              <select
+                id="edit-template-card-design"
+                value={cardDesign}
+                onChange={(e) => setCardDesign(e.target.value as CardDesign)}
+                className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
+              >
+                {CARD_DESIGNS.map((d) => (
+                  <option key={d} value={d}>{CARD_DESIGN_LABELS[d]}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
+            </div>
             <div className="flex items-center gap-3">
               <span id="edit-template-publish" className="text-sm font-medium text-gray-900">Publish</span>
               <button

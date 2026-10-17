@@ -9,6 +9,8 @@ export interface TemplateSubcategory {
   name: string;
 }
 
+import { CardDesign } from "@/services/templateService";
+
 export interface TemplateItem {
   id: string;
   name: string;
@@ -18,6 +20,8 @@ export interface TemplateItem {
   imageKey: string | null;
   status: "Published" | "Saved on Draft";
   createdAt: string;
+  // Which server-rendered invitation card layout this template produces
+  cardDesign: CardDesign;
 }
 
 export interface EventSettingsOptions {

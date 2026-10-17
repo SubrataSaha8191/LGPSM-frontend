@@ -4,12 +4,14 @@ import React, { useState } from "react";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
+import { CARD_DESIGNS, CARD_DESIGN_LABELS, CardDesign } from "@/services/templateService";
 
 export interface NewTemplateInput {
   name: string;
   categoryId: string;
   subcategoryId: string;
   previewImageKey: string;
+  cardDesign: CardDesign;
   isPublished: boolean;
 }
 
@@ -23,6 +25,7 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
   const [name, setName] = useState("");
   const [cat, setCat] = useState({ categoryId: "", subcategoryId: "" });
   const [imageKey, setImageKey] = useState<string | null>(null);
+  const [cardDesign, setCardDesign] = useState<CardDesign>("CLASSIC");
   const [isPublished, setIsPublished] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,12 +46,13 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
       return;
     }
     setSubmitting(true);
-    const ok = await onAddTemplate({ name: name.trim(), ...cat, previewImageKey: imageKey!, isPublished });
+    const ok = await onAddTemplate({ name: name.trim(), ...cat, previewImageKey: imageKey!, cardDesign, isPublished });
     setSubmitting(false);
     if (ok) {
       setName("");
       setCat({ categoryId: "", subcategoryId: "" });
       setImageKey(null);
+      setCardDesign("CLASSIC");
       setIsPublished(false);
       setShowErrors(false);
     }
@@ -85,6 +89,22 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
             categoryError={shown.category}
             subcategoryError={shown.subcategory}
           />
+          <div>
+            <label htmlFor="new-template-card-design" className="block text-sm font-medium text-gray-900 mb-1.5">
+              Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
+            </label>
+            <select
+              id="new-template-card-design"
+              value={cardDesign}
+              onChange={(e) => setCardDesign(e.target.value as CardDesign)}
+              className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
+            >
+              {CARD_DESIGNS.map((d) => (
+                <option key={d} value={d}>{CARD_DESIGN_LABELS[d]}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
+          </div>
           <div className="flex items-center gap-3">
             <span id="new-template-publish" className="text-sm font-medium text-gray-900">Publish</span>
             <button
