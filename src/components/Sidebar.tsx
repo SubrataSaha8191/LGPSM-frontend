@@ -130,7 +130,7 @@ function AddEventButton({ active, onNavigate }: { active: boolean; onNavigate: (
 
 function Logo() {
   return (
-    <div className="flex justify-center">
+    <div className="flex items-center justify-center">
       <Link href="/dashboard" className="inline-block">
         <Image src="/images/navbar/Nav_logo.webp" alt="LGPSM" width={202} height={67} priority className="h-[38px] w-auto object-contain" />
       </Link>
