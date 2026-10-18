@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // QA/Lighthouse reports and their helper scripts are tooling output, not application code.
+    "qa-reports/**",
   ]),
 ]);
 

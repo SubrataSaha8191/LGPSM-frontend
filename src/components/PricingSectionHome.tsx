@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -57,16 +58,18 @@ export default function PricingSectionHome() {
     <section ref={sectionRef} id="pricing" className="py-16 lg:py-24 bg-white">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Rounded Card Container with last_page.png as CSS Background */}
+        {/* Rounded card; the background is a lazy, responsive next/image instead of a CSS background so it is not fetched at full size on every page load */}
         <div
           ref={containerRef}
-          className="relative rounded-[32px] overflow-hidden shadow-2xl p-8 sm:p-12 lg:p-16 text-center text-white"
-          style={{
-            backgroundImage: "url('/images/home/last_hero.webp')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+          className="relative rounded-[32px] overflow-hidden shadow-2xl p-8 sm:p-12 lg:p-16 text-center text-white bg-[#C16016]"
         >
+          <Image
+            src="/images/home/last_hero.webp"
+            alt=""
+            fill
+            sizes="(max-width: 1240px) 100vw, 1240px"
+            className="object-cover object-center pointer-events-none"
+          />
           {/* Subtle overlay */}
           <div className="absolute inset-0 bg-black/10 pointer-events-none z-0" />
 

@@ -50,8 +50,6 @@ export function AuthSplitLayout({ children }: { children: React.ReactNode }) {
             alt=""
             fill
             sizes="46vw"
-            priority
-            fetchPriority="high"
             className={`object-cover object-center transition-opacity duration-700 ease-out ${
               cardLoaded ? "opacity-100" : "opacity-0"
             }`}
@@ -103,6 +101,16 @@ export function AuthLogo() {
   );
 }
 
+// Server-rendered placeholder for auth pages whose body reads the URL query on the client. Without it
+// the HTML is blank until JavaScript loads, so the brand logo (the LCP element) now paints immediately.
+export function AuthLoadingShell() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <AuthLogo />
+    </div>
+  );
+}
+
 export function BackLink({ href, label = "Back to Home", onClick }: { href?: string; label?: string; onClick?: () => void }) {
   const inner = (
     <span className="inline-flex items-center gap-2 text-sm leading-6 font-semibold text-[#15191C] hover:text-[#FF651D] transition-colors cursor-pointer">
@@ -150,7 +158,7 @@ export const authLabelClass = "block text-sm leading-5 font-medium text-[#15191C
 export const authFieldStackClass = "space-y-3";
 
 export const authPrimaryButtonClass =
-  "w-full h-[41px] bg-[#dd5c1b] hover:bg-[#A83800] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2";
+  "w-full h-[41px] bg-[#c65318] hover:bg-[#A83800] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2";
 
 export function PasswordInput({
   value,

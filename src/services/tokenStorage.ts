@@ -14,6 +14,11 @@ export interface UserData {
 const ACCESS_TOKEN_KEY = "lgpsm_access_token";
 const REFRESH_TOKEN_KEY = "lgpsm_refresh_token";
 const USER_KEY = "lgpsm_user";
+// Route-gate marker read by middleware.ts. It is only a "signed in" hint for redirecting visitors; it
+// deliberately does not contain the JWT, so a cookie leak (logs, proxies, injected script reading
+// document.cookie) can't be replayed against the API. Real authorization is enforced by the backend.
+const SESSION_MARKER_COOKIE = "lgpsm_session";
+const secureFlag = () => (window.location.protocol === "https:" ? "; Secure" : "");
 
 export const tokenStorage = {
   getAccessToken(): string | null {
@@ -24,7 +29,9 @@ export const tokenStorage = {
   setAccessToken(token: string): void {
     if (typeof window === "undefined") return;
     localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    document.cookie = `lgpsm_access_token=${token}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `${SESSION_MARKER_COOKIE}=1; path=/; max-age=604800; SameSite=Lax${secureFlag()}`;
+    // Remove the legacy cookie that used to carry the token itself
+    document.cookie = "lgpsm_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   },
 
   getRefreshToken(): string | null {
@@ -60,6 +67,7 @@ export const tokenStorage = {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    document.cookie = `${SESSION_MARKER_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     document.cookie = "lgpsm_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   },
 };

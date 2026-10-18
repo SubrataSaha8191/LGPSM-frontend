@@ -127,7 +127,7 @@ export default function SubHeroIntro() {
         <h2 ref={titleRef} className="text-4xl sm:text-5xl lg:text-[52px] font-medium tracking-tight leading-[1.15] font-[family-name:var(--font-space-grotesk)]">
           <span className="text-[#0D0D0D]">Everything you need in</span>
           <br />
-          <span className="text-gray-400 font-normal">a simple, intuitive design.</span>
+          <span className="text-gray-500 font-normal">a simple, intuitive design.</span>
         </h2>
 
         {/* Description */}

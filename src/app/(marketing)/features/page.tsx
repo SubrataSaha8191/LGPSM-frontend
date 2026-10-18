@@ -215,6 +215,7 @@ export default function FeaturesPage() {
                       alt={feat.imageAlt}
                       width={560}
                       height={420}
+                      sizes="(max-width: 1024px) 90vw, 560px"
                       className="w-full h-auto object-contain"
                       priority={idx === 0}
                     />

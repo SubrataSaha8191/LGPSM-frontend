@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+
 export default function PricingSection() {
   const [billingCycle, setBillingCycle] = useState<"yearly" | "monthly">("yearly");
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -181,12 +182,12 @@ export default function PricingSection() {
         
         {/* Main Title & Subtitle */}
         <div className="text-center max-w-3xl mx-auto mb-8 space-y-3">
-          <h2
+          <h1
             ref={titleRef}
             className="text-3xl sm:text-4xl lg:text-[50px] font-semibold text-[#1C2228] tracking-tight leading-[1.15]"
           >
             Transparent Pricing for Flawless Events
-          </h2>
+          </h1>
           <p
             ref={subtitleRef}
             className="text-sm sm:text-base text-gray-500 font-normal leading-relaxed max-w-2xl mx-auto"
@@ -303,7 +304,7 @@ export default function PricingSection() {
           {/* 1. Standard Plan Card */}
           <div className="bg-white border border-gray-200 rounded-none p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-bold text-[#1C2228] mb-2">Standard Plan</h3>
+              <h2 className="text-xl font-bold text-[#1C2228] mb-2">Standard Plan</h2>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-4xl lg:text-[44px] font-extrabold text-[#1C2228] tracking-tight">
                   ₹1,999
@@ -312,7 +313,7 @@ export default function PricingSection() {
               <p className="text-xs text-gray-500 font-medium mb-8">Up to 250 Attendees per month</p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 border border-[#dd5c1b] text-[#dd5c1b] hover:bg-[#dd5c1b] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
+              <button className="w-full py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
                 Start My 15-day Trial
               </button>
 
@@ -352,10 +353,10 @@ export default function PricingSection() {
           {/* 2. Professional Plan Card (Dark Slate Background, Most Popular Badge, Sharp 0px corners) */}
           <div className="bg-[#262B35] text-white rounded-none p-8 flex flex-col justify-between shadow-2xl relative border border-gray-800">
             <div>
-              <h3 className="text-xl font-bold text-white mb-2">Professional Plan</h3>
+              <h2 className="text-xl font-bold text-white mb-2">Professional Plan</h2>
               
               {/* Most Popular Badge */}
-              <div className="inline-block bg-[#dd5c1b] text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none mb-3 tracking-wider">
+              <div className="inline-block bg-[#c65318] text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none mb-3 tracking-wider">
                 Most Popular
               </div>
 
@@ -367,7 +368,7 @@ export default function PricingSection() {
               <p className="text-xs text-gray-300 font-medium mb-8">Up to 1,500 Attendees per month</p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 bg-[#dd5c1b] hover:bg-[#A83800] text-white font-bold text-xs rounded-none transition-all cursor-pointer shadow-md mb-8">
+              <button className="w-full py-3 px-4 bg-[#c65318] hover:bg-[#A83800] text-white font-bold text-xs rounded-none transition-all cursor-pointer shadow-md mb-8">
                 Start My 15-day Trial
               </button>
 
@@ -399,7 +400,7 @@ export default function PricingSection() {
           {/* 3. Enterprise Plan Card */}
           <div className="bg-white border border-gray-200 rounded-none p-8 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
             <div>
-              <h3 className="text-xl font-bold text-[#1C2228] mb-2">Enterprise Plan</h3>
+              <h2 className="text-xl font-bold text-[#1C2228] mb-2">Enterprise Plan</h2>
               <div className="flex items-baseline gap-1 mb-1">
                 <span className="text-4xl lg:text-[44px] font-extrabold text-[#1C2228] tracking-tight">
                   ₹5,999
@@ -410,7 +411,7 @@ export default function PricingSection() {
               </p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 border border-[#dd5c1b] text-[#dd5c1b] hover:bg-[#dd5c1b] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
+              <button className="w-full py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
                 Start My 15-day Trial
               </button>
 

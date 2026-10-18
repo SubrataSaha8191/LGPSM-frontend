@@ -1,36 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
-import gsap from "gsap";
 
 export default function HeroSection() {
   const [email, setEmail] = useState("");
-  const heroRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      if (heroRef.current) {
-        gsap.fromTo(
-          heroRef.current,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }
-        );
-      }
-
-      if (contentRef.current) {
-        gsap.fromTo(
-          contentRef.current.children,
-          { opacity: 0, y: 20 },
-          { opacity: 1, y: 0, duration: 0.45, stagger: 0.08, ease: "power2.out", delay: 0.1 }
-        );
-      }
-    }, heroRef);
-
-    return () => ctx.revert();
-  }, []);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     alert(`Signing up with: ${email}`);
@@ -43,8 +17,7 @@ export default function HeroSection() {
         
         {/* Responsive Grid Hero Container */}
         <div 
-          ref={heroRef}
-          className="relative w-full rounded-[15px] overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-12 min-h-[420px] sm:min-h-[520px] lg:min-h-[620px] items-center"
+          className="hero-card-enter relative w-full rounded-[15px] overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-12 min-h-[420px] sm:min-h-[520px] lg:min-h-[620px] items-center"
         >
           <Image
             src="/images/home/top_hero.webp"
@@ -57,7 +30,7 @@ export default function HeroSection() {
           />
           
           {/* Left Side: Clean HTML Text, Subtitle & Interactive Form Overlay */}
-          <div ref={contentRef} className="lg:col-span-6 z-10 p-8 sm:p-12 lg:p-16 space-y-6 sm:space-y-8 bg-transparent">
+          <div className="hero-content-enter lg:col-span-6 z-10 p-8 sm:p-12 lg:p-16 space-y-6 sm:space-y-8 bg-transparent">
             
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-4xl lg:text-[50px] font-medium text-[#0D0D0D] tracking-tight leading-[1.12] font-[family-name:var(--font-space-grotesk)]">
@@ -85,7 +58,7 @@ export default function HeroSection() {
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#fd7b39] hover:bg-[#A83800]/20 text-white font-bold text-sm rounded-md shadow-md transition-all hover:scale-100 active:scale-95 whitespace-nowrap font-[family-name:var(--font-space-grotesk)] cursor-pointer"
+                  className="px-6 py-3 bg-[#d14802] hover:bg-[#A83800] text-white font-bold text-sm rounded-md shadow-md transition-all hover:scale-100 active:scale-95 whitespace-nowrap font-[family-name:var(--font-space-grotesk)] cursor-pointer"
                 >
                   Sign Up Free
                 </button>

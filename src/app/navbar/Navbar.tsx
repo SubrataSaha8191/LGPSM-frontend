@@ -17,15 +17,15 @@ export default function Navbar() {
             <Image
               src="/images/navbar/Nav_logo.webp"
               alt="LGPSM Logo"
-              width={240}
-              height={80}
+              width={168}
+              height={56}
               priority
               className="h-10 sm:h-14 w-auto object-contain"
             />
           </Link>
 
           {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-7">
+          <nav aria-label="Main" className="hidden md:flex items-center gap-7">
             <Link
               href="/features"
               className="text-sm font-semibold text-gray-700 hover:text-[#FF5B22] transition-colors font-[family-name:var(--font-space-grotesk)]"
@@ -57,7 +57,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="px-5 py-2.5 text-sm font-bold text-white bg-[#f26214] hover:bg-[#ef8e5a] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
+            className="px-5 py-2.5 text-sm font-bold text-white bg-[#cb4f0b] hover:bg-[#b34609] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
           >
             Sign Up Free
           </Link>
@@ -67,9 +67,10 @@ export default function Navbar() {
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle navigation menu"
+          aria-expanded={mobileMenuOpen}
           className="md:hidden p-2 text-gray-600 focus:outline-none"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
           </svg>
         </button>

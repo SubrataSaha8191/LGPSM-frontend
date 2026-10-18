@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("lgpsm_access_token")?.value;
+  // `lgpsm_access_token` is the legacy cookie name; accepted so sessions started before the change keep working
+  const token = request.cookies.get("lgpsm_session")?.value || request.cookies.get("lgpsm_access_token")?.value;
   const { pathname } = request.nextUrl;
 
   // Protect every authenticated dashboard section (role checks happen in the dashboard layout and the API)
@@ -17,6 +18,7 @@ export function middleware(request: NextRequest) {
     "/templates",
     "/notification",
     "/notifications",
+    "/billing",
   ];
 
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -47,5 +49,6 @@ export const config = {
     "/templates/:path*",
     "/notification/:path*",
     "/notifications/:path*",
+    "/billing/:path*",
   ],
 };

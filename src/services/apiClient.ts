@@ -11,6 +11,13 @@ export interface ApiResponse<T = unknown> {
   error?: string;
   /** Machine-readable reason some endpoints add to error responses (e.g. QR check-in rejections) */
   code?: string;
+  /** Validation issues (zod) some endpoints return with a 400, e.g. `{ path: ["body", "email"], message }` */
+  details?: unknown;
+  /**
+   * HTTP status of a failed request (0 when the request never reached the server). Only set on
+   * failures, so callers can tell e.g. rate limiting (429) from a validation error (400).
+   */
+  status?: number;
 }
 
 interface RawResponseBody {
@@ -160,6 +167,7 @@ export async function apiClient<T = unknown>(
         success: false,
         message: errorMessage || `Request failed with status ${response.status}`,
         ...(data as ApiResponse<T>),
+        status: response.status,
       };
     }
 
@@ -169,6 +177,7 @@ export async function apiClient<T = unknown>(
     return {
       success: false,
       message: errorMessage,
+      status: 0,
     };
   }
 }

@@ -14,6 +14,12 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     let rafCallback: ((time: number) => void) | null = null;
 
     const initLenis = () => {
+      // Respect the OS "reduce motion" setting: keep native scrolling instead of Lenis smoothing
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        ScrollTrigger.refresh();
+        return;
+      }
+
       lenis = new Lenis({
         duration: 0.9,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),

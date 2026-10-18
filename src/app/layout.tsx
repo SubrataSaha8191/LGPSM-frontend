@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { AlertProvider } from "@/context/AlertContext";
 import { PageTitleProvider } from "@/context/PageTitleContext";
 import SmoothScrollProvider from "@/components/common/SmoothScrollProvider";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/constants/site";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,13 +24,36 @@ const caveat = Caveat({
   weight: ["400", "500", "600", "700"],
 });
 
+const DEFAULT_TITLE = "LGPSM · Digital Invitations & Event Management";
+const SOCIAL_IMAGE = {
+  url: "/images/home/top_hero.webp",
+  width: 1713,
+  height: 918,
+  alt: "LGPSM digital invitations and event management",
+};
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "LGPSM · Digital Invitations & Event Management",
+    default: DEFAULT_TITLE,
     template: "%s · LGPSM",
   },
-  description:
-    "LGPSM - Design, customize, and share stunning QR-based invitations for events and celebrations all in one simple platform.",
+  description: `LGPSM - ${SITE_DESCRIPTION}`,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+    title: DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SOCIAL_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SOCIAL_IMAGE.url],
+  },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

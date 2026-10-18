@@ -6,6 +6,7 @@ import { authService } from "@/services/authService";
 import {
   AuthAlert,
   AuthHeading,
+  AuthLoadingShell,
   AuthLogo,
   AuthSplitLayout,
   BackLink,
@@ -288,7 +289,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthLoadingShell />}>
       <VerifyEmailContent />
     </Suspense>
   );

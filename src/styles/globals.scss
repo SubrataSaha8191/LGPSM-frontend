@@ -276,3 +276,35 @@ html {
 .animate-fadeIn {
   animation: overlayFadeIn 0.3s ease forwards;
 }
+
+// ── Hero entrance (CSS-driven) ────────────────────────────────────────────
+// Runs from first paint with no JS/hydration dependency, so server-rendered hero content never
+// flashes hidden→visible and the LCP image is never held at opacity 0. The card only moves; the
+// text content fades in on top of it.
+@keyframes heroCardRise {
+  from { transform: translateY(12px); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes heroContentRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-card-enter {
+  animation: heroCardRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-content-enter > * {
+  animation: heroContentRise 0.45s ease-out both;
+}
+.hero-content-enter > *:nth-child(1) { animation-delay: 0.1s; }
+.hero-content-enter > *:nth-child(2) { animation-delay: 0.18s; }
+.hero-content-enter > *:nth-child(3) { animation-delay: 0.26s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card-enter,
+  .hero-content-enter > * {
+    animation: none;
+  }
+}

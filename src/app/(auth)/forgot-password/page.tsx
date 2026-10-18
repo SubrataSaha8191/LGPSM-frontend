@@ -7,6 +7,7 @@ import { authService } from "@/services/authService";
 import {
   AuthAlert,
   AuthHeading,
+  AuthLoadingShell,
   AuthLogo,
   AuthSplitLayout,
   BackLink,
@@ -201,7 +202,7 @@ function ForgotPasswordContent() {
 
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthLoadingShell />}>
       <ForgotPasswordContent />
     </Suspense>
   );

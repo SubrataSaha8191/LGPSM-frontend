@@ -8,6 +8,7 @@ import {
   AdminAuthLayout,
   AuthAlert,
   AuthHeading,
+  AuthLoadingShell,
   AuthLogo,
   AuthSplitLayout,
   BackLink,
@@ -237,7 +238,7 @@ function SigninContent() {
 
 export default function SigninPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AuthLoadingShell />}>
       <SigninContent />
     </Suspense>
   );

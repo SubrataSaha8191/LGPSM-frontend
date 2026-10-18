@@ -39,13 +39,15 @@ export default function Footer() {
   return (
     <footer
       ref={footerRef}
-      className="relative text-gray-300 py-16 lg:py-24 overflow-hidden"
-      style={{
-        backgroundImage: "url('/images/footer/Footer.webp')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      className="relative text-gray-300 py-16 lg:py-24 overflow-hidden bg-[#242A2D]"
     >
+      <Image
+        src="/images/footer/Footer.webp"
+        alt=""
+        fill
+        sizes="100vw"
+        className="object-cover object-center pointer-events-none"
+      />
       <div className="relative z-10 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Top CTA Banner */}

@@ -1,0 +1,31 @@
+name: Security and tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: '41 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install from the lockfile
+        run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+      - name: Secret scan (reports file:line and rule only)
+        run: bash scripts/secret-scan.sh
+      - name: Production dependency audit (high and critical fail the build)
+        run: npm audit --omit=dev --audit-level=high
