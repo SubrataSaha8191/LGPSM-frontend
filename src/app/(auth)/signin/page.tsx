@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +30,12 @@ import {
 } from "@/components/auth/authPortal";
 import { INPUT_PLACEHOLDERS } from "@/constants/placeholders";
 import { ERROR_MESSAGES } from "@/constants/errorMessages";
+import { applyRememberChoice, readRememberedEmail } from "@/utils/rememberedLogin";
+
+const subscribeToStorage = (onChange: () => void) => {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+};
 
 function RoleTabs({ currentMode, onSelect }: { currentMode: PortalMode; onSelect: (m: PortalMode) => void }) {
   const tabs: { mode: PortalMode; label: string }[] = [
@@ -68,9 +74,14 @@ function SigninContent() {
 
   const initial = parsePortalMode(searchParams.get("mode"));
   const mode: PortalMode = initial.mode;
-  const [email, setEmail] = useState("");
+  // The remembered email is read from localStorage without an effect: the server render sees "" and the
+  // browser sees the saved value, which useSyncExternalStore reconciles without a hydration mismatch.
+  const remembered = useSyncExternalStore(subscribeToStorage, () => readRememberedEmail(localStorage, mode), () => "");
+  const [typedEmail, setTypedEmail] = useState<string | null>(null);
+  const email = typedEmail ?? remembered;
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberChoice, setRememberChoice] = useState<boolean | null>(null);
+  const rememberMe = rememberChoice ?? remembered !== "";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -101,6 +112,8 @@ function SigninContent() {
     try {
       const res = await login({ email, password, role: portalRole(mode) });
       if (res.success) {
+        // Only a confirmed sign-in is remembered, so a mistyped address is never saved
+        applyRememberChoice(localStorage, mode, email, rememberMe);
         onSuccess();
       } else if (res.message === "EMAIL_NOT_VERIFIED" || res.message?.includes("EMAIL_NOT_VERIFIED")) {
         sessionStorage.setItem("lgpsm_pending_verification_email", email.trim());
@@ -140,7 +153,7 @@ function SigninContent() {
           autoComplete="email"
           placeholder={INPUT_PLACEHOLDERS.auth.email}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setTypedEmail(e.target.value)}
           disabled={isSubmitting}
           className={authInputClass}
         />
@@ -163,7 +176,7 @@ function SigninContent() {
           <input
             type="checkbox"
             checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
+            onChange={(e) => setRememberChoice(e.target.checked)}
             className="w-4 h-4 rounded border-[#CFD9E0] accent-[#FF651D] cursor-pointer"
           />
           Remember me

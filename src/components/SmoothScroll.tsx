@@ -12,8 +12,14 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     // Refs to items created inside the deferred callback so cleanup can reach them
     let lenis: Lenis | null = null;
     let rafCallback: ((time: number) => void) | null = null;
+    // Set on cleanup so a start that was still pending (page unmounted, or React Strict Mode's
+    // throwaway first mount in dev) can never create a Lenis instance nobody will destroy. A leaked
+    // instance keeps hijacking the wheel on every later page, which locks scrolling in the dashboard.
+    let cancelled = false;
+    let startFrame = 0;
 
     const initLenis = () => {
+      if (cancelled) return;
       // Respect the OS "reduce motion" setting: keep native scrolling instead of Lenis smoothing
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         ScrollTrigger.refresh();
@@ -41,7 +47,9 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     // During load the browser is busy (JS parse, image decode, 9+ useEffect calls)
     // and every RAF frame exceeds 16ms. Starting Lenis here causes those dropped
     // frames to show as scroll lag. After load the page is idle → instant 60fps.
-    const start = () => requestAnimationFrame(initLenis);
+    const start = () => {
+      startFrame = requestAnimationFrame(initLenis);
+    };
 
     if (document.readyState === "complete") {
       start();
@@ -53,6 +61,8 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     window.addEventListener("resize", onResize, { passive: true });
 
     return () => {
+      cancelled = true;
+      cancelAnimationFrame(startFrame);
       window.removeEventListener("load", start);
       window.removeEventListener("resize", onResize);
       if (rafCallback) gsap.ticker.remove(rafCallback);

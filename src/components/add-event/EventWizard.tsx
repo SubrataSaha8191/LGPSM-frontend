@@ -44,6 +44,12 @@ interface EventWizardProps {
 }
 
 // Shared create/edit event wizard. The page owns the draft (and its persistence); the steps are controlled.
+const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// The dashboard page scrolls inside <main data-page-reveal>, not the window
+const scrollPageTo = (top: number) =>
+  document.querySelector<HTMLElement>("[data-page-reveal]")?.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+
 export default function EventWizard({
   heading,
   draft,
@@ -64,6 +70,9 @@ export default function EventWizard({
   const stepContentRef = useRef<HTMLDivElement>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [showErrors, setShowErrors] = useState(false);
+  // Bumped each time a forward move is blocked by validation, so the page can bring the problem into view
+  const [blockedCount, setBlockedCount] = useState(0);
+  const isFirstStepRender = useRef(true);
   const [features, setFeatures] = useState<EventFeatureSettings>(ALL_EVENT_FEATURES);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -82,6 +91,29 @@ export default function EventWizard({
       gsap.fromTo(stepContentRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" });
     }
   }, [currentStep]);
+
+  // The page scrolls inside the dashboard's <main>, so a step change would otherwise leave the user at the
+  // old scroll position (the bottom of the previous step) instead of the top of the new one.
+  useEffect(() => {
+    if (isFirstStepRender.current) {
+      isFirstStepRender.current = false;
+      return;
+    }
+    scrollPageTo(0);
+  }, [currentStep]);
+
+  // When "Next" is refused, the warning banner and the invalid fields can be far above the button the user just
+  // pressed. Scroll to the first invalid field (or the top of the page when none is on screen yet).
+  useEffect(() => {
+    if (blockedCount === 0) return;
+    const invalid = stepContentRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+    if (invalid) {
+      invalid.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+      invalid.focus({ preventScroll: true });
+    } else {
+      scrollPageTo(0);
+    }
+  }, [blockedCount]);
 
   const subcategoryRequired = !!draft.categoryId && categories.subcategoryOptionsFor(draft.categoryId).length > 0;
   const isAdmin = user?.role === "ADMIN";
@@ -108,6 +140,7 @@ export default function EventWizard({
 
     if (blockingKeys.length > 0) {
       setShowErrors(true);
+      setBlockedCount((n) => n + 1);
       const earliestStepWithErrors = Math.min(...blockingKeys.map(stepOfError));
       setCurrentStep(earliestStepWithErrors);
       return;

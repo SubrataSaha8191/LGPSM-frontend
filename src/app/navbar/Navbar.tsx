@@ -17,7 +17,7 @@ export default function Navbar() {
             <Image
               src="/images/navbar/Nav_logo.webp"
               alt="LGPSM Logo"
-              width={168}
+              width={169}
               height={56}
               priority
               className="h-10 sm:h-14 w-auto object-contain"
