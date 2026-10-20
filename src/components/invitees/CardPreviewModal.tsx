@@ -53,7 +53,7 @@ export default function CardPreviewModal({ eventId, inviteeId, inviteeName, onCl
           {error ? (
             <p role="alert" className="text-sm text-rose-600 text-center">{error}</p>
           ) : url ? (
-            <div className="relative w-full aspect-[2/3]">
+            <div className="relative w-full max-w-[320px] mx-auto aspect-[393/682]">
               <Image src={url} alt="Invitation card" fill unoptimized className="object-contain" />
             </div>
           ) : (

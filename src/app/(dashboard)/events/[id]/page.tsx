@@ -10,7 +10,7 @@ import { assignmentService } from "@/services/assignmentService";
 import { reportService, EventReportData } from "@/services/reportService";
 import { auditLogService, AuditLogItem } from "@/services/auditLogService";
 import { formatCompactDateTime, formatDateTime, formatTime } from "@/utils/dateTime";
-import TemplateThumb from "@/components/settings/TemplateThumb";
+import EventCardPreview from "@/components/events/EventCardPreview";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import { formatEventId } from "@/utils/formatId";
 import PageHeader from "@/components/common/PageHeader";
@@ -341,22 +341,21 @@ export default function EventDetailsPage() {
           <section className={`${card} p-4`} aria-labelledby="card-preview-heading">
             <div className="flex items-center justify-between mb-3">
               <h3 id="card-preview-heading" className="text-base font-medium text-gray-900">Card Preview</h3>
-              {typeof event.templateId === "object" && event.templateId?.name && (
-                <button type="button" onClick={() => setCardExpanded(true)} aria-label="Expand card preview" className="p-1 -m-1 text-gray-900 hover:text-[#FF651D] cursor-pointer">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                  </svg>
-                </button>
-              )}
+              <button type="button" onClick={() => setCardExpanded(true)} aria-label="Expand card preview" className="p-1 -m-1 text-gray-900 hover:text-[#FF651D] cursor-pointer">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              </button>
             </div>
             <div className="rounded-md overflow-hidden border border-[#EEEEEE]">
-              <TemplateThumb
-                imageKey={typeof event.templateId === "object" ? event.templateId?.previewImageKey : undefined}
-                name={typeof event.templateId === "object" && event.templateId?.name ? event.templateId.name : event.title}
+              <EventCardPreview
+                eventId={eventId}
+                refreshKey={`${(event as { updatedAt?: string }).updatedAt || ""}|${typeof event.templateId === "object" ? event.templateId?.name || "" : String(event.templateId || "")}`}
+                label={event.title}
               />
             </div>
             <p className="mt-2 text-xs text-[#828282] truncate">
-              {typeof event.templateId === "object" && event.templateId?.name ? `Template: ${event.templateId.name}` : "No template selected"}
+              {typeof event.templateId === "object" && event.templateId?.name ? `Template: ${event.templateId.name}` : "Design chosen from the event type"}
             </p>
             <Link href={`/events/${eventId}/invitees`} className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>

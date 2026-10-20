@@ -65,11 +65,12 @@ export interface TemplatePreviewPayload {
 export const templateService = {
   /**
    * The card this template makes for the event being entered, rendered by the server (nothing is saved).
-   * POST /api/v1/templates/:id/preview
+   * POST /api/v1/templates/:id/preview (or /api/v1/templates/preview when no template is chosen)
    */
-  async previewCard(templateId: string, payload: TemplatePreviewPayload, signal?: AbortSignal): Promise<Blob> {
+  async previewCard(templateId: string | null, payload: TemplatePreviewPayload, signal?: AbortSignal): Promise<Blob> {
     const token = tokenStorage.getAccessToken();
-    const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}/preview`, {
+    // With no template chosen the card still gets the design that suits the event type, as it will when sent
+    const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId ? `${templateId}/` : ""}preview`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(payload),
