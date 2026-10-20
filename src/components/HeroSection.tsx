@@ -58,7 +58,7 @@ export default function HeroSection() {
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-[#d14802] hover:bg-[#A83800] text-white font-bold text-sm rounded-md shadow-md transition-all hover:scale-100 active:scale-95 whitespace-nowrap font-[family-name:var(--font-space-grotesk)] cursor-pointer"
+                  className="px-6 py-3 bg-[#eb7a15] hover:bg-[#A83800]/10 text-white font-bold text-sm rounded-md shadow-md transition-all hover:scale-100 active:scale-95 whitespace-nowrap font-[family-name:var(--font-space-grotesk)] cursor-pointer"
                 >
                   Sign Up Free
                 </button>

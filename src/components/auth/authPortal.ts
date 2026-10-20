@@ -1,31 +1,25 @@
-export type PortalMode = "admin" | "organizer" | "system_user";
+// System users (on-ground staff) work only in the mobile app, so the web has just two portals
+export type PortalMode = "admin" | "organizer";
 
 export interface ParsedPortal {
   mode: PortalMode;
-  mobileOnly: boolean;
 }
 
 export function parsePortalMode(raw: string | null | undefined, fallback: PortalMode = "organizer"): ParsedPortal {
   switch (raw) {
     case "admin":
-      return { mode: "admin", mobileOnly: false };
+      return { mode: "admin" };
     case "organizer":
     case "user": // legacy alias
-      return { mode: "organizer", mobileOnly: false };
-    case "system_user":
-    case "assigned_user":
-      return { mode: "system_user", mobileOnly: false };
-    case "app":
-      return { mode: "system_user", mobileOnly: true };
+      return { mode: "organizer" };
     default:
-      return { mode: fallback, mobileOnly: false };
+      // Includes the retired system_user / assigned_user / app links: old bookmarks land on the organizer sign-in
+      return { mode: fallback };
   }
 }
 
-export function portalRole(mode: PortalMode): "ADMIN" | "ORGANIZER" | "SYSTEM_USER" {
-  if (mode === "admin") return "ADMIN";
-  if (mode === "system_user") return "SYSTEM_USER";
-  return "ORGANIZER";
+export function portalRole(mode: PortalMode): "ADMIN" | "ORGANIZER" {
+  return mode === "admin" ? "ADMIN" : "ORGANIZER";
 }
 
 export const signinHref = (mode: PortalMode) => `/signin?mode=${mode}`;
@@ -35,9 +29,7 @@ export const signinHref = (mode: PortalMode) => `/signin?mode=${mode}`;
 export const PORTAL_COOKIE = "lgpsm_portal";
 
 export function portalForRole(role: string | undefined | null): PortalMode {
-  if (role === "ADMIN") return "admin";
-  if (role === "SYSTEM_USER") return "system_user";
-  return "organizer";
+  return role === "ADMIN" ? "admin" : "organizer";
 }
 
 export function rememberPortal(role: string | undefined | null) {
@@ -47,7 +39,7 @@ export function rememberPortal(role: string | undefined | null) {
 
 export function rememberedPortal(): PortalMode | null {
   if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp(`(?:^|; )${PORTAL_COOKIE}=(admin|organizer|system_user)`));
+  const match = document.cookie.match(new RegExp(`(?:^|; )${PORTAL_COOKIE}=(admin|organizer)`));
   return (match?.[1] as PortalMode) || null;
 }
 
@@ -58,10 +50,51 @@ export function loginRedirectPath(from?: string): string {
   return `/signin?${params.toString()}`;
 }
 
+// A deliberate logout must not leave a "return to this page" trail. Otherwise the route guard, which also
+// reacts to the session disappearing, sends the person to sign-in with from=<page they were on>, and whoever
+// signs in next (possibly another role) lands on that page instead of their dashboard.
+export const EXPLICIT_LOGOUT_KEY = "lgpsm_explicit_logout";
+
+interface FlagStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+const browserSessionStorage = (): FlagStorage | null => {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+};
+
+export function flagExplicitLogout(storage: FlagStorage | null = browserSessionStorage()): void {
+  try {
+    storage?.setItem(EXPLICIT_LOGOUT_KEY, "1");
+  } catch {
+    /* storage blocked: the sign-in page also validates the return path, so this only loses a refinement */
+  }
+}
+
+export function isExplicitLogout(storage: FlagStorage | null = browserSessionStorage()): boolean {
+  try {
+    return storage?.getItem(EXPLICIT_LOGOUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearExplicitLogout(storage: FlagStorage | null = browserSessionStorage()): void {
+  try {
+    storage?.removeItem(EXPLICIT_LOGOUT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function isSafeReturnPath(path: string | null | undefined): path is string {
   return !!path && path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/signin");
 }
 export const forgotPasswordHref = (mode: PortalMode) => `/forgot-password?mode=${mode}`;
 
-export const MOBILE_ONLY_NOTICE =
-  "Assigned users sign in through the LGPSM mobile app. Ask your event organizer for access details.";

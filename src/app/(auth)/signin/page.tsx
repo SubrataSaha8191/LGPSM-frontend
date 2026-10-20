@@ -21,15 +21,16 @@ import {
   authPrimaryButtonClass,
 } from "@/components/auth/AuthLayouts";
 import {
-  MOBILE_ONLY_NOTICE,
   PortalMode,
   forgotPasswordHref,
   isSafeReturnPath,
+  clearExplicitLogout,
   parsePortalMode,
   portalRole,
 } from "@/components/auth/authPortal";
 import { INPUT_PLACEHOLDERS } from "@/constants/placeholders";
 import { ERROR_MESSAGES } from "@/constants/errorMessages";
+import { canAccessRoute } from "@/components/sidebar/navConfig";
 import { applyRememberChoice, readRememberedEmail } from "@/utils/rememberedLogin";
 
 const subscribeToStorage = (onChange: () => void) => {
@@ -41,7 +42,6 @@ function RoleTabs({ currentMode, onSelect }: { currentMode: PortalMode; onSelect
   const tabs: { mode: PortalMode; label: string }[] = [
     { mode: "organizer", label: "Organizer" },
     { mode: "admin", label: "Super Admin" },
-    { mode: "system_user", label: "System User" },
   ];
 
   return (
@@ -93,9 +93,12 @@ function SigninContent() {
     router.push(`/signin?${params.toString()}`);
   };
 
-  const onSuccess = () => {
+  const onSuccess = (role?: string) => {
+    clearExplicitLogout();
     const from = searchParams.get("from");
-    if (isSafeReturnPath(from)) {
+    // Return to the earlier page only when this account may open it; otherwise (for example a different role
+    // signing in after someone else's session ended) start from the dashboard
+    if (isSafeReturnPath(from) && canAccessRoute(role, from.split("?")[0])) {
       router.push(from);
     } else {
       sessionStorage.setItem("show_dashboard_popup", "true");
@@ -114,7 +117,7 @@ function SigninContent() {
       if (res.success) {
         // Only a confirmed sign-in is remembered, so a mistyped address is never saved
         applyRememberChoice(localStorage, mode, email, rememberMe);
-        onSuccess();
+        onSuccess(res.data?.user?.role);
       } else if (res.message === "EMAIL_NOT_VERIFIED" || res.message?.includes("EMAIL_NOT_VERIFIED")) {
         sessionStorage.setItem("lgpsm_pending_verification_email", email.trim());
         router.push("/verify-email");
@@ -133,7 +136,7 @@ function SigninContent() {
     setIsSubmitting(true);
     try {
       const res = await loginWithGoogle(idToken);
-      if (res.success) onSuccess();
+      if (res.success) onSuccess(res.data?.user?.role);
       else setErrorMessage(res.message || ERROR_MESSAGES.network.genericFailure);
     } finally {
       setIsSubmitting(false);
@@ -219,19 +222,12 @@ function SigninContent() {
 
       <RoleTabs currentMode={mode} onSelect={handleModeChange} />
 
-      {mode === "system_user" && (
-        <>
-          <AuthHeading title="System User Access" subtitle="On-ground staff & mobile app check-in access" />
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900 leading-relaxed space-y-2">
-            <p className="font-semibold text-amber-950">Mobile App Check-in Access</p>
-            <p>{MOBILE_ONLY_NOTICE}</p>
-          </div>
-        </>
-      )}
-
       {mode === "organizer" && (
         <>
           <AuthHeading title="Organizer Sign In" subtitle="Welcome back! Login to Organizer Portal" />
+          {searchParams.get("notice") === "mobile-only" && (
+            <AuthAlert tone="info">On-ground staff sign in through the LGPSM mobile app. Organizers can sign in here.</AuthAlert>
+          )}
           {isVerifiedParam && <AuthAlert tone="success">Email verified successfully! Please sign in to access your dashboard.</AuthAlert>}
           {errorMessage && <AuthAlert tone="error">{errorMessage}</AuthAlert>}
           <GoogleButton onToken={handleGoogle} disabled={isSubmitting} />

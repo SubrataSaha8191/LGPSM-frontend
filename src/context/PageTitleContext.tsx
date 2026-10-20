@@ -113,7 +113,6 @@ function resolveRouteTitle(
   if (pathname === "/signin") {
     const mode = searchParams.get("mode");
     if (mode === "admin") return "Admin Sign In";
-    if (mode === "system") return "System User Sign In";
     if (mode === "organizer") return "Organizer Sign In";
     return "Sign In";
   }

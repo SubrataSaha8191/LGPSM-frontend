@@ -50,6 +50,10 @@ export function AuthSplitLayout({ children }: { children: React.ReactNode }) {
             alt=""
             fill
             sizes="46vw"
+            // The main visual of the sign-in / sign-up screen, so it is the LCP image on desktop: fetch it now
+            // instead of waiting for lazy loading to decide
+            loading="eager"
+            fetchPriority="high"
             className={`object-cover object-center transition-opacity duration-700 ease-out ${
               cardLoaded ? "opacity-100" : "opacity-0"
             }`}

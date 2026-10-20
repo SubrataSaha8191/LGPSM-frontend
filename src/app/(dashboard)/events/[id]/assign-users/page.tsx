@@ -11,8 +11,10 @@ import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import PageHeader from "@/components/common/PageHeader";
 import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
+import { useAlert } from "@/context/AlertContext";
 
 export default function EventAssignUsersPage() {
+  const { confirm } = useAlert();
   const params = useParams();
   const eventId = (params?.id as string);
   const { user } = useAuth();
@@ -145,7 +147,7 @@ export default function EventAssignUsersPage() {
 
   // Handle unassigning via DELETE /api/v1/assignments/:assignmentId
   const handleUnassignAssignment = async (assignmentId: string) => {
-    if (!confirm("Are you sure you want to remove this assignment?")) return;
+    if (!(await confirm({ title: "Remove assignment?", message: "This system user will no longer be assigned to this event.", confirmText: "Remove", tone: "danger" }))) return;
 
     try {
       setErrorFeedback(null);

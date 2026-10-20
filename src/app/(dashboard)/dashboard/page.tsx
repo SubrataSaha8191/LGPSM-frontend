@@ -6,10 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { eventService } from "@/services/eventService";
 import { reportService } from "@/services/reportService";
 import { userService } from "@/services/userService";
-import { assignmentService, AssignmentData } from "@/services/assignmentService";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import UserNavDropdown from "@/components/common/UserNavDropdown";
-import CheckInModal from "@/components/common/CheckInModal";
 import DashboardPopupModal from "@/components/dashboard/DashboardPopupModal";
 
 interface OrganizerSummary {
@@ -34,46 +32,24 @@ export default function DashboardPage() {
   const [loadingMetrics, setLoadingMetrics] = useState<boolean>(true);
   const [metricsError, setMetricsError] = useState<string | null>(null);
 
-  // System User personalized assignments state
-  const [myAssignments, setMyAssignments] = useState<AssignmentData[]>([]);
-  const [loadingAssignments, setLoadingAssignments] = useState<boolean>(true);
-  const [assignmentsError, setAssignmentsError] = useState<string | null>(null);
-
-  // CheckIn Modal state
-  const [checkInModalEvent, setCheckInModalEvent] = useState<{ id: string; title: string } | null>(null);
 
   // Welcome Popup modal (06-Popup.pdf)
   const [showWelcomePopup, setShowWelcomePopup] = useState<boolean>(false);
 
-  const isSystemUser = user?.role === "SYSTEM_USER";
   const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("show_dashboard_popup") === "true") {
-      setShowWelcomePopup(true);
-    }
+    if (typeof window === "undefined" || sessionStorage.getItem("show_dashboard_popup") !== "true") return;
+    // Wait for the dashboard's own page fade-in (~0.45s) to finish. Opened any earlier, the popup's entrance
+    // plays underneath a still-transparent page and the user just sees it appear.
+    const timer = window.setTimeout(() => setShowWelcomePopup(true), 650);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
-    if (isSystemUser) {
-      // Fetch personal assignments from GET /api/v1/users/me/assignments
-      (async () => {
-        setLoadingAssignments(true);
-        setAssignmentsError(null);
-        const res = await assignmentService.getMyAssignments();
-        if (cancelled) return;
-        if (res?.success && Array.isArray(res.data)) {
-          setMyAssignments(res.data);
-        } else {
-          setMyAssignments([]);
-          setAssignmentsError(res?.message || "Failed to load your assignments.");
-        }
-        setLoadingAssignments(false);
-      })();
-    } else {
       // Organizer / Admin metrics, all derived from backend data
       (async () => {
         setLoadingMetrics(true);
@@ -118,185 +94,12 @@ export default function DashboardPage() {
         }
         setLoadingMetrics(false);
       })();
-    }
 
     return () => {
       cancelled = true;
     };
-  }, [user, isSystemUser, isAdmin]);
+  }, [user, isAdmin]);
 
-  // If System User, render personalized assignments dashboard
-  if (isSystemUser) {
-    const totalAssignedSessions = myAssignments.reduce(
-      (sum, item) => sum + (item.sessionIds?.length || 0),
-      0
-    );
-
-    return (
-      <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
-        {/* Top Header Bar */}
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">My Assignments</h1>
-              <p className="text-xs text-gray-500">System User Operations Portal</p>
-            </div>
-          </div>
-          <UserNavDropdown />
-        </header>
-
-        {/* System User Main Content */}
-        <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 pb-24">
-          {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-[#FF5B22] to-[#ff7b4d] text-white p-6 rounded-xl shadow-md flex items-center justify-between">
-            <div>
-              <span className="inline-block px-2.5 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-[11px] font-bold uppercase tracking-wider mb-1">
-                System User Portal
-              </span>
-              <h2 className="text-xl font-bold">Welcome back, {user?.fullName || "Staff Member"}!</h2>
-              <p className="text-xs text-white/90 mt-1">
-                Here are the event sessions assigned to you for check-in management and operational support.
-              </p>
-            </div>
-          </div>
-
-          {/* Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-2xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-orange-100 text-[#FF5B22] flex items-center justify-center shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">{myAssignments.length}</h3>
-                <p className="text-xs font-semibold text-gray-500">Assigned Events</p>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-2xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">{totalAssignedSessions}</h3>
-                <p className="text-xs font-semibold text-gray-500">Assigned Sessions</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Assignments Table Container */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-2xs space-y-4">
-            <h3 className="text-base font-bold text-gray-900">Assigned Event Sessions</h3>
-
-            {loadingAssignments ? (
-              <div className="py-12 flex justify-center items-center">
-                <div className="w-6 h-6 border-2 border-[#FF5B22] border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : assignmentsError ? (
-              <div className="py-12 text-center text-rose-600 text-xs font-medium break-words">{assignmentsError}</div>
-            ) : myAssignments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs whitespace-nowrap">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-gray-500 font-semibold text-[11px]">
-                      <th className="py-3 px-4">Event</th>
-                      <th className="py-3 px-4">Assigned Sessions</th>
-                      <th className="py-3 px-4">Location / Format</th>
-                      <th className="py-3 px-4">Assigned By</th>
-                      <th className="py-3 px-4">Assignment Date</th>
-                      <th className="py-3 px-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 text-gray-800">
-                    {myAssignments.map((item) => {
-                      const eventObj = typeof item.eventId === "object" ? item.eventId : null;
-                      const realEvtId = eventObj?._id || (typeof item.eventId === "string" ? item.eventId : "");
-                      const eventTitle = eventObj?.title || "Event";
-                      const rawLocation: any = eventObj?.location;
-                      const eventLocation = (typeof rawLocation === "string" ? rawLocation : rawLocation?.address) || eventObj?.format || "—";
-
-                      const assignedByObj = typeof item.assignedBy === "object" ? item.assignedBy : null;
-                      const assignedByName = assignedByObj?.fullName || assignedByObj?.email || "Organizer";
-
-                      return (
-                        <tr key={item._id} className="hover:bg-gray-50/80 transition-colors">
-                          <td className="py-4 px-4 font-bold text-gray-900 max-w-[240px] truncate" title={eventTitle}>
-                            {eventTitle}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex flex-wrap gap-1.5 max-w-md">
-                              {(item.sessionIds || []).length === 0 && (
-                                <span className="px-2.5 py-1 bg-gray-100 text-gray-700 text-[10px] font-bold rounded-md uppercase tracking-tight">
-                                  All sessions
-                                </span>
-                              )}
-                              {(item.sessionIds || []).map((s: any, idx: number) => {
-                                const sessName = typeof s === "object" ? s.name : `Session ${idx + 1}`;
-                                return (
-                                  <span
-                                    key={idx}
-                                    className="px-2.5 py-1 bg-[#FF5B22] text-white text-[10px] font-bold rounded-md uppercase tracking-tight"
-                                  >
-                                    • {sessName}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </td>
-                          <td className="py-4 px-4 text-gray-600 font-medium max-w-[220px] truncate" title={eventLocation}>
-                            {eventLocation}
-                          </td>
-                          <td className="py-4 px-4 text-gray-700 font-medium">
-                            {assignedByName}
-                          </td>
-                          <td className="py-4 px-4 text-gray-500 text-[11px]">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleString() : "—"}
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            {realEvtId && (
-                              <button
-                                type="button"
-                                onClick={() => setCheckInModalEvent({ id: realEvtId, title: eventTitle })}
-                                className="px-3 py-1.5 bg-[#FF5B22] hover:bg-[#E04B16] text-white font-bold text-xs rounded-md shadow-xs transition-colors cursor-pointer"
-                              >
-                                Scan / Check In
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="py-12 text-center text-gray-500 text-xs">
-                No active assignments found for your account. You will be notified when an organizer assigns event sessions to you.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Check-In Modal for System Users */}
-        {checkInModalEvent && (
-          <CheckInModal
-            isOpen={!!checkInModalEvent}
-            onClose={() => setCheckInModalEvent(null)}
-            eventId={checkInModalEvent.id}
-            eventName={checkInModalEvent.title}
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Standard Admin / Organizer Dashboard
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
       {/* Top Header Bar */}

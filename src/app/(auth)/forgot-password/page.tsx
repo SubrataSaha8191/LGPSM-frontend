@@ -17,7 +17,7 @@ import {
   authLabelClass,
   authPrimaryButtonClass,
 } from "@/components/auth/AuthLayouts";
-import { MOBILE_ONLY_NOTICE, parsePortalMode, signinHref } from "@/components/auth/authPortal";
+import { parsePortalMode, signinHref } from "@/components/auth/authPortal";
 import { INPUT_PLACEHOLDERS } from "@/constants/placeholders";
 import { ERROR_MESSAGES } from "@/constants/errorMessages";
 
@@ -28,7 +28,7 @@ function ForgotPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get("token") || "";
-  const { mode, mobileOnly } = parsePortalMode(searchParams.get("mode"), "organizer");
+  const { mode } = parsePortalMode(searchParams.get("mode"), "organizer");
   const loginHref = signinHref(mode);
 
   const [stage, setStage] = useState<ForgotStage>(tokenFromUrl ? "reset" : "request");
@@ -187,13 +187,9 @@ function ForgotPasswordContent() {
             </svg>
           </div>
           <AuthHeading title="Your password has been successfully reset!" subtitle="You can now log in with your new password. If you encounter any issues, please contact support" />
-          {mobileOnly ? (
-            <p className="text-sm text-[#5C5C5C]">{MOBILE_ONLY_NOTICE.replace(" Ask your event organizer for access details.", "")}</p>
-          ) : (
-            <Link href={loginHref} className={authPrimaryButtonClass}>
-              Back to login
-            </Link>
-          )}
+          <Link href={loginHref} className={authPrimaryButtonClass}>
+            Back to login
+          </Link>
         </>
       )}
     </AuthSplitLayout>

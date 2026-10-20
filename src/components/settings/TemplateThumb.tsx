@@ -6,7 +6,7 @@ import { resolveImageUrl } from "@/utils/mediaUrl";
 export default function TemplateThumb({ imageKey, name, className = "" }: { imageKey: string | null | undefined; name: string; className?: string }) {
   const src = resolveImageUrl(imageKey);
   return (
-    <div className={`relative w-full aspect-[3/4] bg-[#F4F5F8] overflow-hidden ${className}`}>
+    <div className={`relative w-full aspect-[393/682] bg-[#F4F5F8] overflow-hidden ${className}`}>
       {src ? (
         <Image src={src} alt={name} fill unoptimized sizes="(max-width: 640px) 50vw, 240px" className="object-cover" />
       ) : (

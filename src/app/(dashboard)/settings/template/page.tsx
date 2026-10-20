@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import AddNewTemplateCard, { NewTemplateInput } from "@/components/settings/AddNewTemplateCard";
+import DefaultTemplatesPanel from "@/components/settings/DefaultTemplatesPanel";
 import TemplateFilterGrid from "@/components/settings/TemplateFilterGrid";
 import EditTemplateModal from "@/components/settings/modals/EditTemplateModal";
 import { useCategories } from "@/hooks/useCategories";
@@ -98,6 +99,11 @@ export default function TemplateSettingsPage() {
             </button>
           </div>
         )}
+        <DefaultTemplatesPanel
+          onInstalled={async () => {
+            await Promise.all([loadTemplates(), categories.reload()]);
+          }}
+        />
         <AddNewTemplateCard categories={categories} onAddTemplate={handleAdd} />
         <TemplateFilterGrid templates={templates} categories={categories} loading={loading} onEditTemplate={setEditing} />
       </div>

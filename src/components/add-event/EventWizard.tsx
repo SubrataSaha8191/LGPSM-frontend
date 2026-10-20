@@ -14,9 +14,12 @@ import PageHeader from "@/components/common/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCategories } from "@/hooks/useCategories";
 import { ALL_EVENT_FEATURES, EventFeatureSettings, platformSettingsService } from "@/services/platformSettingsService";
+import { templateService } from "@/services/templateService";
+import { suggestTemplate, SuggestableTemplate } from "@/utils/templateSuggestion";
 import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { DraftErrors, EventDraft, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
 import { DraftStatus } from "@/hooks/useFormDraft";
+import { useAlert } from "@/context/AlertContext";
 
 type PickerTarget =
   | { kind: "event"; field: EventDateField }
@@ -65,6 +68,7 @@ export default function EventWizard({
   onSubmit,
   onCancel,
 }: EventWizardProps) {
+  const { confirm } = useAlert();
   const { user } = useAuth();
   const categories = useCategories();
   const stepContentRef = useRef<HTMLDivElement>(null);
@@ -124,7 +128,32 @@ export default function EventWizard({
   const step2Valid = useMemo(() => step1Valid && !Object.keys(allErrors).some((k) => stepOfError(k) === 2), [allErrors, step1Valid]);
   const maxUnlockedStep = step2Valid ? 3 : step1Valid ? 2 : 1;
 
-  const patch = (p: Partial<EventDraft>) => setDraft((prev) => ({ ...prev, ...p }));
+  // Choosing an event type pre-selects the template made for it. Only a template this form chose itself is ever
+  // replaced: once the organizer picks one by hand, their choice stays.
+  const availableTemplates = useRef<SuggestableTemplate[]>([]);
+  const autoTemplateId = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    templateService.getTemplates().then((res) => {
+      if (!cancelled && res.success && Array.isArray(res.data)) availableTemplates.current = res.data;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const patch = (p: Partial<EventDraft>) => {
+    let templatePatch: Partial<EventDraft> = {};
+    if (("categoryId" in p || "subcategoryId" in p) && (!draft.template || draft.template.id === autoTemplateId.current)) {
+      const category = "categoryId" in p ? p.categoryId || "" : draft.categoryId;
+      const subcategory = "subcategoryId" in p ? p.subcategoryId || "" : draft.subcategoryId;
+      const suggestion = suggestTemplate(availableTemplates.current, category, subcategory);
+      autoTemplateId.current = suggestion ? suggestion._id : null;
+      templatePatch = { template: suggestion ? { id: suggestion._id, name: suggestion.name, previewKey: suggestion.previewImageKey || null } : null };
+    }
+    setDraft((prev) => ({ ...prev, ...p, ...templatePatch }));
+  };
 
   const handleStepChange = (targetStep: number) => {
     if (targetStep === currentStep) return;
@@ -159,13 +188,19 @@ export default function EventWizard({
     onSubmit({ draft, sessionFiles });
   };
 
-  const discard = () => {
-    if (confirm("Discard this draft? The information you entered will be lost.")) {
-      setSessionFiles({});
-      setShowErrors(false);
-      setCurrentStep(1);
-      onDiscardDraft();
-    }
+  const discard = async () => {
+    const confirmed = await confirm({
+      title: "Discard this draft?",
+      message: "The information you entered will be lost.",
+      confirmText: "Discard",
+      cancelText: "Keep editing",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    setSessionFiles({});
+    setShowErrors(false);
+    setCurrentStep(1);
+    onDiscardDraft();
   };
 
   const pickerValue = (() => {
@@ -305,6 +340,7 @@ export default function EventWizard({
               template={draft.template}
               eventTitle={draft.title}
               eventStart={draft.start}
+              eventEnd={draft.end}
               venue={draft.venue}
               logoKey={draft.logoKey}
               categoryName={categories.categoryName(draft.categoryId)}

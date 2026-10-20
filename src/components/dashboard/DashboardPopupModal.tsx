@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 export default function DashboardPopupModal({
@@ -10,6 +10,21 @@ export default function DashboardPopupModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  // Closing plays a short exit animation before the parent actually unmounts the modal
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  const handleClose = () => {
+    if (closing) return;
+    setClosing(true);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    closeTimer.current = setTimeout(() => {
+      onClose();
+      setClosing(false);
+    }, reduced ? 0 : 260);
+  };
+
   if (!isOpen) return null;
 
   const steps = [
@@ -84,12 +99,12 @@ export default function DashboardPopupModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-modal-overlay">
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col md:flex-row min-h-[420px] animate-modal-pop">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 welcome-popup-overlay ${closing ? "is-closing" : ""}`}>
+      <div className={`relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden flex flex-col md:flex-row min-h-[420px] welcome-popup-panel ${closing ? "is-closing" : ""}`}>
         {/* Close Button */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Close modal"
           className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-black/40 text-white hover:bg-[#FF651D] hover:rotate-90 hover:scale-110 flex items-center justify-center transition-all duration-200 cursor-pointer shadow-md"
         >
@@ -98,15 +113,15 @@ export default function DashboardPopupModal({
 
         {/* Left Section */}
         <div className="flex-1 p-8 md:p-10 flex flex-col justify-center space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight animate-item-slide" style={{ animationDelay: "100ms" }}>
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight welcome-popup-item" style={{ animationDelay: "380ms" }}>
             Create an event
           </h2>
           <ul className="space-y-3.5">
             {steps.map((item, idx) => (
               <li
                 key={idx}
-                className="flex items-center gap-3.5 text-sm font-medium text-gray-800 hover:translate-x-1.5 transition-transform duration-200 group cursor-default animate-item-slide"
-                style={{ animationDelay: `${160 + idx * 55}ms` }}
+                className="flex items-center gap-3.5 text-sm font-medium text-gray-800 hover:translate-x-1.5 transition-transform duration-200 group cursor-default welcome-popup-item"
+                style={{ animationDelay: `${460 + idx * 70}ms` }}
               >
                 <div className="w-8 h-8 rounded-lg bg-[#FFF0EB] flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-xs">
                   {item.icon}
@@ -119,7 +134,7 @@ export default function DashboardPopupModal({
 
         {/* Right Section Image */}
         <div className="hidden md:block w-1/2 relative bg-gray-900 min-h-[420px] overflow-hidden">
-          <div className="absolute inset-0 animate-image-zoom">
+          <div className="absolute inset-0 welcome-popup-image">
             <Image
               src="/images/dashboard/Dashboard_Popup.webp"
               alt="Scanning QR Code"

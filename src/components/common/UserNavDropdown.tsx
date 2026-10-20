@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { loginRedirectPath } from "@/components/auth/authPortal";
+import { flagExplicitLogout, loginRedirectPath } from "@/components/auth/authPortal";
 import { useAuth } from "@/context/AuthContext";
 import CheckInModal from "@/components/common/CheckInModal";
 
@@ -35,8 +35,9 @@ export default function UserNavDropdown() {
 
   const handleLogoutClick = async () => {
     setIsOpen(false);
+    flagExplicitLogout();
     await logout();
-    router.push(loginRedirectPath());
+    router.replace(loginRedirectPath());
   };
 
   return (

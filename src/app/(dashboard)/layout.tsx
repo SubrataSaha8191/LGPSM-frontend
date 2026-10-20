@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/Sidebar";
-import { loginRedirectPath } from "@/components/auth/authPortal";
+import { isExplicitLogout, loginRedirectPath } from "@/components/auth/authPortal";
 import { canAccessRoute } from "@/components/sidebar/navConfig";
 import { tokenStorage } from "@/services/tokenStorage";
 
@@ -34,12 +34,13 @@ export default function DashboardLayout({
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
-      router.replace(loginRedirectPath(pathname || undefined));
+      // After a deliberate logout there is nothing to return to; an expired session keeps the page for the next sign-in
+      router.replace(loginRedirectPath(isExplicitLogout() ? undefined : pathname || undefined));
       return;
     }
     // Assigned users work only in the mobile app; end any web session they still hold
     if (isSystemUser) {
-      logout().then(() => router.replace("/signin?mode=app"));
+      logout().then(() => router.replace("/signin?mode=organizer&notice=mobile-only"));
       return;
     }
     if (user && !canAccessRoute(user.role, pathname)) {

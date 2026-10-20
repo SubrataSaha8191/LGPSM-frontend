@@ -39,6 +39,8 @@ export interface InvitationData {
   failureReason?: string;
   sentAt?: string;
   createdAt?: string;
+  // Set once the delivery history was cleared; the record is kept so Resend still works
+  clearedAt?: string;
 }
 
 export interface GetInvitationsResponse {
@@ -109,6 +111,14 @@ export const invitationService = {
       },
       true
     );
+  },
+
+  /**
+   * Hide the delivery history of an event (records are kept; Resend keeps working)
+   * DELETE /api/v1/events/:eventId/invitations/history
+   */
+  async clearHistory(eventId: string): Promise<ApiResponse<{ cleared: number }>> {
+    return apiClient<{ cleared: number }>(`/api/v1/events/${eventId}/invitations/history`, { method: "DELETE" }, true);
   },
 
   /**

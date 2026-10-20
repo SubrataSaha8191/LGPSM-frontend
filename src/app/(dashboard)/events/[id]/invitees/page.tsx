@@ -9,6 +9,7 @@ import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChoo
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import PageHeader from "@/components/common/PageHeader";
+import ButtonIcon from "@/components/common/ButtonIcons";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import { eventService } from "@/services/eventService";
@@ -55,7 +56,7 @@ export default function InviteesManagementPage() {
   // The sidebar "Add Invitees" flow lives under /events/select/invitees and keeps its own context
   const sidebarFlow = routeId === "select";
   const eventId = sidebarFlow ? searchParams.get("event") || "" : routeId;
-  const { showAlert } = useAlert();
+  const { showAlert, confirm } = useAlert();
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
   const [event, setEvent] = useState<{ title?: string; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
@@ -69,7 +70,7 @@ export default function InviteesManagementPage() {
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
   const [channel, setChannel] = useState<Channel>("EMAIL");
-  const [busy, setBusy] = useState<null | "send" | "resend" | "import" | "access">(null);
+  const [busy, setBusy] = useState<null | "send" | "resend" | "import" | "access" | "clear">(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
   const [upload, setUpload] = useState<{ file: File; rows: InviteeSheetRow[] } | null>(null);
@@ -123,8 +124,16 @@ export default function InviteesManagementPage() {
   const isCorporate = /corporate/i.test(categoryName);
   // The invitation lifecycle has started once any guest was sent (or attempted) an invitation
   const lifecycleStarted = invitees.some((i) => i.invitationStatus !== "PENDING") || history.length > 0;
+  // Cleared entries stay in `history` (Resend needs their ids) but are not shown in the delivery history
+  const visibleHistory = history.filter((h) => !h.clearedAt);
   const notInvited = invitees.filter((i) => i.invitationStatus === "PENDING");
-  const historyByInvitee = new Map(history.map((h) => [String(typeof h.inviteeId === "object" ? h.inviteeId?._id : h.inviteeId), h]));
+  // The list is newest-first, so keep the first record seen per guest: the latest delivery is the one to resend
+  // and the one whose failure reason is shown
+  const historyByInvitee = new Map<string, InvitationData>();
+  for (const h of history) {
+    const key = String(typeof h.inviteeId === "object" ? h.inviteeId?._id : h.inviteeId);
+    if (!historyByInvitee.has(key)) historyByInvitee.set(key, h);
+  }
   const selected = invitees.filter((i) => selectedIds.includes(i._id));
   const resendTargets = selected.map((i) => historyByInvitee.get(i._id)).filter((h): h is InvitationData => !!h?._id);
   const ownListSessions = sessions.filter((s) => s.inviteeSource !== "COPY_SESSION");
@@ -175,6 +184,28 @@ export default function InviteesManagementPage() {
     setSelectedIds([]);
     setBusy(null);
     await load();
+  };
+
+  const handleClearHistory = async () => {
+    const confirmed = await confirm({
+      title: "Clear delivery history?",
+      message: "This only clears the history list. Invitations already sent stay valid and you can still resend them. New deliveries will appear here again.",
+      confirmText: "Clear history",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    setBusy("clear");
+    const res = await invitationService.clearHistory(eventId);
+    setBusy(null);
+    if (!res.success) {
+      showAlert(res.message || "The history could not be cleared. Please try again.", "error");
+      return;
+    }
+    // Mark the local copy as cleared instead of refetching: the records stay (Resend needs their ids)
+    const now = new Date().toISOString();
+    setHistory((prev) => prev.map((h) => (h.clearedAt ? h : { ...h, clearedAt: now })));
+    setShowHistory(false);
+    showAlert("Delivery history cleared.", "success");
   };
 
   const handleFile = async (file: File | undefined) => {
@@ -349,16 +380,20 @@ export default function InviteesManagementPage() {
             <div className="flex flex-wrap items-center gap-2.5">
               <input ref={fileInput} type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
               <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className={`${btn} bg-[#FF651D] hover:bg-[#E5520F] text-white`}>
-                + Add Invitees
+                <ButtonIcon name="plus" />
+                Add Invitees
               </button>
               <button type="button" onClick={() => downloadInviteeTemplate()} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+                <ButtonIcon name="download" />
                 Download Excel Sample
               </button>
               <button type="button" onClick={() => setShowListPreview(true)} disabled={invitees.length === 0} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+                <ButtonIcon name="eye" />
                 Preview List
               </button>
               <span className="flex-1" />
               <button type="button" onClick={handleSend} disabled={busy !== null || notInvited.length === 0} className={`${btn} border border-[#FF651D] text-[#E5520F] hover:bg-orange-50`}>
+                <ButtonIcon name={busy === "send" ? "spinner" : "send"} />
                 {busy === "send" ? "Sending..." : selected.some((i) => i.invitationStatus === "PENDING") ? `Send Invitation (${selected.filter((i) => i.invitationStatus === "PENDING").length})` : `Send Invitation${notInvited.length ? ` (${notInvited.length})` : ""}`}
               </button>
               <button
@@ -368,9 +403,11 @@ export default function InviteesManagementPage() {
                 title={lifecycleStarted ? (resendTargets.length ? undefined : "Select guests who were already invited") : "Available after invitations have been sent"}
                 className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}
               >
+                <ButtonIcon name={busy === "resend" ? "spinner" : "resend"} />
                 {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
               </button>
-              <button type="button" onClick={() => setShowHistory(true)} disabled={history.length === 0} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+              <button type="button" onClick={() => setShowHistory(true)} disabled={visibleHistory.length === 0} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+                <ButtonIcon name="history" />
                 History
               </button>
             </div>
@@ -517,7 +554,18 @@ export default function InviteesManagementPage() {
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div className="px-6 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
               <h2 id="history-title" className="text-base font-medium text-gray-900">Invitation Delivery History</h2>
-              <button type="button" onClick={() => setShowHistory(false)} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleClearHistory}
+                  disabled={busy !== null || visibleHistory.length === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ButtonIcon name={busy === "clear" ? "spinner" : "trash"} className="w-3.5 h-3.5" />
+                  {busy === "clear" ? "Clearing..." : "Clear history"}
+                </button>
+                <button type="button" onClick={() => setShowHistory(false)} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
+              </div>
             </div>
             <div className="p-6 overflow-auto flex-1">
               <table className="w-full text-left text-sm min-w-[560px]">
@@ -525,7 +573,7 @@ export default function InviteesManagementPage() {
                   <tr><th className="py-2 pr-3 font-medium">Invitee</th><th className="py-2 pr-3 font-medium">Channel</th><th className="py-2 pr-3 font-medium">Status</th><th className="py-2 pr-3 font-medium">Reason</th><th className="py-2 font-medium">When</th></tr>
                 </thead>
                 <tbody className="divide-y divide-[#EEEEEE] text-[#4B4F52]">
-                  {history.map((h) => (
+                  {visibleHistory.map((h) => (
                     <tr key={h._id}>
                       <td className="py-2.5 pr-3 text-gray-900">{typeof h.inviteeId === "object" && h.inviteeId ? h.inviteeId.name : "—"}</td>
                       <td className="py-2.5 pr-3">{h.channel}</td>

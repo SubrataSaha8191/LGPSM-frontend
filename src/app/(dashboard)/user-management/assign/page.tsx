@@ -60,7 +60,7 @@ export const getAssignedCountText = (assignments: SystemUserRow["assignments"] =
 
 export default function AssignedSystemUsersPage() {
   const { user } = useAuth();
-  const { showAlert } = useAlert();
+  const { showAlert, confirm } = useAlert();
   const [users, setUsers] = useState<SystemUserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
@@ -306,7 +306,7 @@ export default function AssignedSystemUsersPage() {
 
   // Handle unassigning assignment via backend DELETE /api/v1/assignments/:assignmentId
   const handleUnassignAssignment = async (assignmentId: string) => {
-    if (!confirm("Are you sure you want to remove this system user assignment?")) return;
+    if (!(await confirm({ title: "Remove assignment?", message: "This system user will be removed from the assignment.", confirmText: "Remove", tone: "danger" }))) return;
 
     try {
       setErrorFeedback(null);
@@ -324,7 +324,7 @@ export default function AssignedSystemUsersPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected user(s)?`)) return;
+    if (!(await confirm({ title: "Delete users?", message: `${selectedIds.length} selected user(s) will be deleted. This cannot be undone.`, confirmText: "Delete", tone: "danger" }))) return;
 
     try {
       setErrorFeedback(null);

@@ -8,6 +8,7 @@ import {
   notifyNotificationsChanged,
   NotificationItem as RealNotification,
 } from "@/services/notificationService";
+import { useAlert } from "@/context/AlertContext";
 
 const PAGE_SIZE = 20;
 
@@ -44,6 +45,7 @@ function toCard(n: RealNotification): NotificationCardData {
 }
 
 export default function NotificationsPage() {
+  const { confirm } = useAlert();
   const [notifications, setNotifications] = useState<NotificationCardData[]>([]);
   // Unread total comes from the backend (covers notifications beyond the loaded pages)
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -137,7 +139,7 @@ export default function NotificationsPage() {
 
   const handleClearAllNotifications = async () => {
     if (notifications.length === 0) return;
-    if (!confirm("Are you sure you want to clear all notifications?")) return;
+    if (!(await confirm({ title: "Clear all notifications?", message: "Every notification will be removed.", confirmText: "Clear all", tone: "danger" }))) return;
     const res = await notificationService.clearAllNotifications();
     if (!res.success) {
       setErrorFeedback(res.message || "Failed to clear all notifications.");

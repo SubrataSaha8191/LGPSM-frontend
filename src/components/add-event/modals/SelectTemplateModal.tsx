@@ -46,8 +46,12 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
 
   if (!isOpen) return null;
 
+  // A template with no category suits every event type, so it is always offered; a category filter narrows the rest.
+  // Within a category, templates made for a specific subcategory only show for that subcategory, general ones always do.
   const visible = templates.filter(
-    (t) => (!filterCategory || templateCategoryId(t) === filterCategory) && (!filterSub || t.subcategoryId === filterSub)
+    (t) =>
+      !templateCategoryId(t) ||
+      ((!filterCategory || templateCategoryId(t) === filterCategory) && (!filterSub || !t.subcategoryId || t.subcategoryId === filterSub))
   );
 
   const handleSave = () => {

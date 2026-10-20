@@ -57,7 +57,7 @@ export default function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="px-5 py-2.5 text-sm font-bold text-white bg-[#cb4f0b] hover:bg-[#b34609] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
+            className="px-5 py-2.5 text-sm font-bold text-white bg-[#eb6e15] hover:bg-[#b34609] rounded-md shadow-sm transition-all active:scale-95 font-[family-name:var(--font-space-grotesk)]"
           >
             Sign Up Free
           </Link>
@@ -86,7 +86,6 @@ export default function Navbar() {
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1 pt-1">Sign In Roles</div>
             <Link href="/signin?mode=organizer" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-[#FF5B22] transition-colors">Organizer Sign In</Link>
             <Link href="/signin?mode=admin" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-[#FF5B22] transition-colors">Super Admin Sign In</Link>
-            <Link href="/signin?mode=system_user" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:border-[#FF5B22] transition-colors">System User Access</Link>
             <div className="pt-1">
               <Link href="/signup" onClick={() => setMobileMenuOpen(false)} className="w-full block text-center py-2.5 text-sm font-bold text-white bg-[#C44200] hover:bg-[#A83800] rounded-lg shadow-sm transition-colors">Sign Up Free (Organizer)</Link>
             </div>

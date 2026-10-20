@@ -11,8 +11,10 @@ import SessionScopePicker from "@/components/common/SessionScopePicker";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { assignmentService, AssignmentData } from "@/services/assignmentService";
 import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
+import { useAlert } from "@/context/AlertContext";
 
 export default function AllUsersPage() {
+  const { confirm } = useAlert();
   const { user } = useAuth();
   const [users, setUsers] = useState<SystemUserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,7 +150,7 @@ export default function AllUsersPage() {
   };
 
   const handleUnassignAssignment = async (assignmentId: string) => {
-    if (!confirm("Are you sure you want to unassign this system user?")) return;
+    if (!(await confirm({ title: "Unassign user?", message: "This system user will be removed from the assignment.", confirmText: "Unassign", tone: "danger" }))) return;
 
     try {
       setErrorFeedback(null);
@@ -165,7 +167,7 @@ export default function AllUsersPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected user(s)?`)) return;
+    if (!(await confirm({ title: "Delete users?", message: `${selectedIds.length} selected user(s) will be deleted. This cannot be undone.`, confirmText: "Delete", tone: "danger" }))) return;
 
     try {
       setErrorFeedback(null);
