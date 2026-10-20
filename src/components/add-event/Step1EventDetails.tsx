@@ -45,6 +45,8 @@ function OrganizerSelectField({
 }) {
   const [organizers, setOrganizers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  // Only a successful load can say which saved organizers no longer exist; a failed one says nothing
+  const [loadedOk, setLoadedOk] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -53,10 +55,19 @@ function OrganizerSelectField({
     userService.getUsers("ORGANIZER").then((res) => {
       if (res.success && Array.isArray(res.data)) {
         setOrganizers(res.data);
+        setLoadedOk(true);
       }
       setLoading(false);
     });
   }, []);
+
+  // A restored draft can hold organizers that are gone or not visible to this account. Once the real list is known,
+  // keep only the ones that exist, so an internal id is never left on screen or sent when the event is created.
+  useEffect(() => {
+    if (!loadedOk) return;
+    const known = selectedIds.filter((id) => organizers.some((o) => o._id === id));
+    if (known.length !== selectedIds.length) onChange(known);
+  }, [loadedOk, organizers, selectedIds, onChange]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -119,7 +130,17 @@ function OrganizerSelectField({
             <div className="flex flex-wrap gap-1.5 py-0.5">
               {selectedIds.map((id) => {
                 const org = organizers.find((o) => o._id === id);
-                const name = org ? org.fullName || org.email : id;
+                // While names load (or if loading failed) show a neutral placeholder, never the internal id
+                if (!org) {
+                  return loading ? (
+                    <span key={id} aria-label="Loading organizer" className="inline-block h-6 w-28 rounded-full bg-gray-200 animate-pulse" />
+                  ) : (
+                    <span key={id} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+                      Selected organizer
+                    </span>
+                  );
+                }
+                const name = org.fullName || org.email;
                 return (
                   <span
                     key={id}
