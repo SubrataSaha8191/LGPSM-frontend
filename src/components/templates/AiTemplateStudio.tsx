@@ -197,7 +197,7 @@ export default function AiTemplateStudio() {
 
   if (optionsError) {
     const missing = /route not found|not found/i.test(optionsError);
-    return <Panel tone={missing ? "info" : "error"} title="AI design is not available" message={missing ? "This server does not have AI design yet. It will appear here once the backend is updated." : optionsError} />;
+    return <Panel tone={missing ? "info" : "error"} title="AI design is not available" message={missing ? "There was a problem with the AI design service." : optionsError} />;
   }
   if (!options) return <p className="py-16 text-center text-sm text-[#828282]">Loading…</p>;
   if (!options.available) {
