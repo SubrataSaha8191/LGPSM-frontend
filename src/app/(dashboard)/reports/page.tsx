@@ -8,7 +8,6 @@ import ReportsStatsCards from "@/components/reports/ReportsStatsCards";
 import ReportsCharts from "@/components/reports/ReportsCharts";
 import UserNavDropdown from "@/components/common/UserNavDropdown";
 import ReportsLogsTable from "@/components/reports/ReportsLogsTable";
-import CheckInModal from "@/components/common/CheckInModal";
 import { eventService } from "@/services/eventService";
 import { userService } from "@/services/userService";
 import { inviteeService } from "@/services/inviteeService";
@@ -56,7 +55,6 @@ export default function ReportsPage() {
   const [checkInTotal, setCheckInTotal] = useState<number>(0);
   const [checkInTotalPages, setCheckInTotalPages] = useState<number>(1);
   const [methodFilter, setMethodFilter] = useState<string>("");
-  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState<boolean>(false);
 
   // Event report state (all values come from the backend)
   const [eventReport, setEventReport] = useState<EventReportData | null>(null);
@@ -428,7 +426,6 @@ export default function ReportsPage() {
           onPageChange={(newPage) => setCheckInPage(newPage)}
           methodFilter={methodFilter}
           onMethodFilterChange={(m) => setMethodFilter(m)}
-          onOpenCheckInModal={() => setIsCheckInModalOpen(true)}
           inviteeLogs={filteredInviteeLogs}
           accessLogs={filteredAccessLogs}
           sessionsReport={filteredSessions}
@@ -437,17 +434,6 @@ export default function ReportsPage() {
         />
       </div>
 
-      {/* Check-In Modal Component */}
-      <CheckInModal
-        isOpen={isCheckInModalOpen}
-        onClose={() => setIsCheckInModalOpen(false)}
-        eventId={selectedEventId}
-        eventName={selectedEventTitle}
-        onCheckInSuccess={() => {
-          loadCheckInLogs();
-          setReloadKey((k) => k + 1);
-        }}
-      />
     </div>
   );
 }

@@ -74,6 +74,9 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
               />
             </div>
             <CategoryFields api={categories} categoryId={cat.categoryId} subcategoryId={cat.subcategoryId} onChange={setCat} canManage required />
+            {template.cardDesign === "CUSTOM" ? (
+              <p className="text-xs text-[#4B4F52] bg-[#F4F5F8] rounded-md p-3">This is an AI-generated design. Its layout comes from the generator and is changed by generating a new version, not from this list.</p>
+            ) : (
             <div>
               <label htmlFor="edit-template-card-design" className="block text-sm font-medium text-gray-900 mb-1.5">
                 Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
@@ -90,6 +93,7 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
               </select>
               <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
             </div>
+            )}
             <div className="flex items-center gap-3">
               <span id="edit-template-publish" className="text-sm font-medium text-gray-900">Publish</span>
               <button

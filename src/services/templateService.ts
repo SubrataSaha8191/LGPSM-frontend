@@ -11,9 +11,13 @@ export const CARD_DESIGNS = [
   "RICE_CEREMONY",
   "BIRTHDAY",
 ] as const;
-export type CardDesign = (typeof CARD_DESIGNS)[number];
+// CUSTOM is drawn from a stored design specification (AI-generated templates). It is not one an admin picks from
+// the list above: the backend only creates it through the AI generation workflow.
+export type CardDesign = (typeof CARD_DESIGNS)[number] | "CUSTOM";
+export type TemplateKind = "INVITATION" | "POSTER";
 
 export const CARD_DESIGN_LABELS: Record<CardDesign, string> = {
+  CUSTOM: "AI-generated design",
   CLASSIC: "Classic",
   CORPORATE_V1: "Corporate — Award",
   CORPORATE_V2: "Corporate — Summit",
@@ -31,6 +35,9 @@ export interface Template {
   previewImageKey?: string;
   templateData?: Record<string, any>;
   cardDesign?: CardDesign;
+  kind?: TemplateKind;
+  /** Set on AI-generated templates: the organizer (or admin) who made it */
+  ownerId?: string;
   isSystemTemplate: boolean;
   isActive: boolean;
   isPublished?: boolean;
@@ -90,9 +97,40 @@ export const templateService = {
     return apiClient<DefaultTemplateInstallResult>("/api/v1/templates/defaults", { method: "POST" }, true);
   },
 
-  async getTemplates(categoryId?: string): Promise<ApiResponse<Template[]>> {
-    const url = categoryId ? `/api/v1/templates?categoryId=${categoryId}` : "/api/v1/templates";
-    return apiClient<Template[]>(url, { method: "GET" }, true);
+  async getTemplates(categoryId?: string, options: { scope?: "mine"; kind?: TemplateKind } = {}): Promise<ApiResponse<Template[]>> {
+    const params = new URLSearchParams();
+    if (categoryId) params.set("categoryId", categoryId);
+    if (options.scope) params.set("scope", options.scope);
+    if (options.kind) params.set("kind", options.kind);
+    const query = params.toString();
+    return apiClient<Template[]>(`/api/v1/templates${query ? `?${query}` : ""}`, { method: "GET" }, true);
+  },
+
+  /**
+   * An AI template drawn with a real event's details at full size (PNG or JPEG), for download.
+   * Posters get a registration QR code when `registrationUrl` is given; invitations carry a marked sample code here
+   * because each guest's own code only exists in the invitation workflow.
+   * POST /api/v1/templates/:id/render
+   */
+  async renderForEvent(
+    templateId: string,
+    payload: { eventId: string; registrationUrl?: string; format?: "png" | "jpeg" }
+  ): Promise<{ ok: true; blob: Blob; qr: string; warnings: string } | { ok: false; message: string }> {
+    const token = tokenStorage.getAccessToken();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}/render`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { ok: false, message: body?.message || `The image could not be created (${res.status}).` };
+      }
+      return { ok: true, blob: await res.blob(), qr: res.headers.get("X-Invitation-Qr") || "", warnings: res.headers.get("X-Render-Warnings") || "" };
+    } catch {
+      return { ok: false, message: "Network error. Please check your connection and try again." };
+    }
   },
 
   async getTemplateById(id: string): Promise<ApiResponse<Template>> {

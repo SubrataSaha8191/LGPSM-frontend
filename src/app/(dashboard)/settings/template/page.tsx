@@ -59,7 +59,8 @@ export default function TemplateSettingsPage() {
       categoryId: t.categoryId,
       subcategoryId: t.subcategoryId,
       previewImageKey: t.imageKey || undefined,
-      cardDesign: t.cardDesign,
+      // AI designs are drawn from their stored specification; the design list below never applies to them
+      cardDesign: t.cardDesign === "CUSTOM" ? undefined : t.cardDesign,
       isPublished: t.status === "Published",
     });
     if (!res.success) {

@@ -86,6 +86,7 @@ function resolveRouteTitle(
   if (pathname === "/earnings") return "Earnings & Payouts";
   if (pathname === "/reports") return "Reports & Analytics";
   if (pathname === "/templates") return "Templates";
+  if (pathname === "/templates/ai") return "Design with AI";
   if (pathname === "/notifications" || pathname === "/notification") return "Notifications";
   if (pathname === "/event-organizer") return "Event Organizers";
   if (pathname === "/event-organizer/add") return "Add Organizer";

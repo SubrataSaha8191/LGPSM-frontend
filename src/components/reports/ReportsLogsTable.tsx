@@ -21,7 +21,6 @@ interface ReportsLogsTableProps {
   onPageChange?: (newPage: number) => void;
   methodFilter?: string;
   onMethodFilterChange?: (method: string) => void;
-  onOpenCheckInModal?: () => void;
   // Legacy reports props
   inviteeLogs?: InviteeLog[];
   accessLogs?: AccessLog[];
@@ -45,7 +44,6 @@ export default function ReportsLogsTable({
   onPageChange,
   methodFilter = "",
   onMethodFilterChange,
-  onOpenCheckInModal,
   inviteeLogs = [],
   accessLogs = [],
   sessionsReport = [],
@@ -115,19 +113,6 @@ export default function ReportsLogsTable({
           </button>
         </div>
 
-        {/* Check-In Action Button */}
-        {onOpenCheckInModal && (
-          <button
-            type="button"
-            onClick={onOpenCheckInModal}
-            className="mb-2 px-3 py-1.5 bg-[#FF5B22] hover:bg-[#E04B16] text-white font-bold text-xs rounded-md shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Perform Check-In</span>
-          </button>
-        )}
         </div>
       </div>
 
