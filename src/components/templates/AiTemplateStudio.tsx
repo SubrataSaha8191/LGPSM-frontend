@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { resolveImageUrl } from "@/utils/mediaUrl";
+import CustomDropdown from "@/components/common/CustomDropdown";
 import {
   GenerationJob,
   GenerationOptions,
@@ -22,6 +23,8 @@ import {
   presetLabel,
   variantBadge,
   variantImageKey,
+  usageExhausted,
+  usageLabel,
   ErrorView,
 } from "@/utils/aiTemplate";
 
@@ -36,6 +39,8 @@ type Busy = null | "starting" | "saving" | "discarding";
 
 export default function AiTemplateStudio() {
   const [options, setOptions] = useState<GenerationOptions | null>(null);
+  // today's allowance, refreshed from the server after every request
+  const [usage, setUsage] = useState<GenerationOptions["usage"]>(undefined);
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const [kind, setKind] = useState<TemplateKind>("INVITATION");
   const [preset, setPreset] = useState("INVITATION_PORTRAIT");
@@ -64,7 +69,10 @@ export default function AiTemplateStudio() {
     let cancelled = false;
     Promise.all([templateGenerationService.getOptions(), templateGenerationService.list(6)]).then(([opt, list]) => {
       if (cancelled) return;
-      if (opt.success && opt.data) setOptions(opt.data);
+      if (opt.success && opt.data) {
+        setOptions(opt.data);
+        setUsage(opt.data.usage);
+      }
       else setOptionsError(opt.message || "Could not load the design options.");
       if (list.success && Array.isArray(list.data)) {
         setRecent(list.data);
@@ -121,6 +129,8 @@ export default function AiTemplateStudio() {
   }, [jobId, jobStatus]);
 
   const begin = (res: Awaited<ReturnType<typeof templateGenerationService.create>>) => {
+    if (res.usage) setUsage(res.usage);
+    if (res.code === "QUOTA_EXCEEDED") setUsage((u) => (u ? { ...u, remaining: 0 } : u));
     if (res.success && res.data) {
       setJob(res.data);
       setError(null);
@@ -225,12 +235,8 @@ export default function AiTemplateStudio() {
         </fieldset>
 
         <div>
-          <label htmlFor="ai-size" className="block text-sm font-medium text-gray-900 mb-1.5">Size</label>
-          <select id="ai-size" value={effectivePreset} onChange={(e) => setPreset(e.target.value)} className={inputClass}>
-            {presets.map((p) => (
-              <option key={p.id} value={p.id}>{presetLabel(p)}</option>
-            ))}
-          </select>
+          <span className="block text-sm font-medium text-gray-900 mb-1.5">Size</span>
+          <CustomDropdown ariaLabel="Size" value={effectivePreset} onChange={setPreset} options={presets.map((p) => ({ value: p.id, label: presetLabel(p) }))} />
         </div>
 
         <div>
@@ -251,13 +257,8 @@ export default function AiTemplateStudio() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label htmlFor="ai-mood" className="block text-sm font-medium text-gray-900 mb-1.5">Mood</label>
-            <select id="ai-mood" value={mood} onChange={(e) => setMood(e.target.value)} className={inputClass}>
-              <option value="">Any</option>
-              {options.moods.map((m) => (
-                <option key={m} value={m}>{m[0].toUpperCase() + m.slice(1)}</option>
-              ))}
-            </select>
+            <span className="block text-sm font-medium text-gray-900 mb-1.5">Mood</span>
+            <CustomDropdown ariaLabel="Mood" value={mood} onChange={setMood} options={[{ value: "", label: "Any" }, ...options.moods.map((m) => ({ value: m, label: m[0].toUpperCase() + m.slice(1) }))]} />
           </div>
           <div>
             <label htmlFor="ai-colors" className="block text-sm font-medium text-gray-900 mb-1.5">Colours</label>
@@ -266,20 +267,16 @@ export default function AiTemplateStudio() {
         </div>
 
         <div>
-          <label htmlFor="ai-count" className="block text-sm font-medium text-gray-900 mb-1.5">Options to generate</label>
-          <select id="ai-count" value={variantCount} onChange={(e) => setVariantCount(Number(e.target.value))} className={inputClass}>
-            {Array.from({ length: options.limits.maxVariants }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
+          <span className="block text-sm font-medium text-gray-900 mb-1.5">Options to generate</span>
+          <CustomDropdown ariaLabel="Options to generate" value={String(variantCount)} onChange={(v) => setVariantCount(Number(v))} options={Array.from({ length: options.limits.maxVariants }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} />
         </div>
 
         {error && !job && <ErrorBanner error={error} />}
 
-        <button type="submit" disabled={busy !== null || running || promptTooShort} className="w-full rounded-md bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-3 cursor-pointer">
+        <button type="submit" disabled={busy !== null || running || promptTooShort || usageExhausted(usage)} className="w-full rounded-md bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-3 cursor-pointer">
           {busy === "starting" ? "Starting…" : running ? "Designing…" : "Generate designs"}
         </button>
-        <p className="text-xs text-[#828282] text-center">Up to {options.limits.dailyQuota} generations per day.</p>
+        <p className={`text-xs text-center ${usageExhausted(usage) ? "text-amber-700 font-medium" : "text-[#828282]"}`} aria-live="polite">{usageLabel(usage) || `Up to ${options.limits.dailyQuota} generations per day.`}</p>
       </form>
 
       <section aria-live="polite" aria-label="Designs" className="min-w-0 space-y-5">
@@ -335,6 +332,12 @@ export default function AiTemplateStudio() {
                 <p className="font-medium">We could draw the idea, but not turn it into a usable template.</p>
                 <p className="mt-1">The picture below is only a concept: it can&apos;t be used for invitations or posters. Ask for changes or generate again.</p>
               </div>
+            )}
+
+            {job.mode === "CREATE" && job.variants.length < job.variantCount && (
+              <p role="status" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                You asked for {job.variantCount} options, but only {job.variants.length} could be created this time. Use &ldquo;More like this&rdquo; to try for more.
+              </p>
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

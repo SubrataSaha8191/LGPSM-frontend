@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isFinished, pollDelayMs, describeGenerationError, variantBadge, variantImageKey, canSave, jobSummary, newIdempotencyKey, presetLabel } from "./aiTemplate.ts";
+import { isFinished, pollDelayMs, describeGenerationError, variantBadge, variantImageKey, canSave, jobSummary, newIdempotencyKey, presetLabel, usageLabel, usageExhausted } from "./aiTemplate.ts";
 
 test("only SUCCEEDED, CONCEPT_ONLY and FAILED stop polling", () => {
   for (const s of ["SUCCEEDED", "CONCEPT_ONLY", "FAILED"]) assert.equal(isFinished(s), true);
@@ -56,4 +56,16 @@ test("idempotency keys are unique and accepted by the backend's pattern", () => 
 
 test("size labels include the pixel size", () => {
   assert.equal(presetLabel({ label: "A4 poster", width: 1654, height: 2339 }), "A4 poster · 1654 × 2339");
+});
+
+test("the daily counter says how many generations are really left", () => {
+  assert.equal(usageLabel({ used: 2, limit: 15, remaining: 13 }), "13 of 15 generations left today");
+  assert.equal(usageLabel({ used: 14, limit: 15, remaining: 1 }), "1 of 15 generations left today");
+  assert.match(usageLabel({ used: 15, limit: 15, remaining: 0 }), /Daily limit reached/);
+  assert.equal(usageLabel({ used: 40, limit: null, remaining: null }), "No daily limit");
+  assert.equal(usageLabel(null), "");
+  assert.equal(usageExhausted({ used: 15, limit: 15, remaining: 0 }), true);
+  assert.equal(usageExhausted({ used: 3, limit: 15, remaining: 12 }), false);
+  assert.equal(usageExhausted({ used: 99, limit: null, remaining: null }), false);
+  assert.equal(usageExhausted(undefined), false);
 });

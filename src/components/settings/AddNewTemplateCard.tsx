@@ -1,5 +1,6 @@
 "use client";
 
+import CustomDropdown from "@/components/common/CustomDropdown";
 import React, { useState } from "react";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
@@ -90,19 +91,10 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
             subcategoryError={shown.subcategory}
           />
           <div>
-            <label htmlFor="new-template-card-design" className="block text-sm font-medium text-gray-900 mb-1.5">
+            <span className="block text-sm font-medium text-gray-900 mb-1.5">
               Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
-            </label>
-            <select
-              id="new-template-card-design"
-              value={cardDesign}
-              onChange={(e) => setCardDesign(e.target.value as CardDesign)}
-              className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
-            >
-              {CARD_DESIGNS.map((d) => (
-                <option key={d} value={d}>{CARD_DESIGN_LABELS[d]}</option>
-              ))}
-            </select>
+            </span>
+            <CustomDropdown ariaLabel="Invitation Card Design" value={cardDesign} onChange={(v) => setCardDesign(v as CardDesign)} options={CARD_DESIGNS.map((d) => ({ value: d, label: CARD_DESIGN_LABELS[d] }))} />
             <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
           </div>
           <div className="flex items-center gap-3">

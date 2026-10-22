@@ -37,6 +37,7 @@ export interface GenerationOptions {
   available: boolean;
   presets: { id: string; kind: TemplateKind; width: number; height: number; label: string }[];
   moods: string[];
+  usage?: { used: number; limit: number | null; remaining: number | null; resetsAt?: string | null };
   limits: { promptMin: number; promptMax: number; changeMax: number; maxVariants: number; dailyQuota: number };
 }
 
@@ -49,7 +50,7 @@ export interface CreateGenerationPayload {
   idempotencyKey?: string;
 }
 
-export type GenerationResult<T> = ApiResponse<T> & { deduplicated?: boolean };
+export type GenerationResult<T> = ApiResponse<T> & { deduplicated?: boolean; usage?: NonNullable<GenerationOptions["usage"]> };
 
 const base = "/api/v1/template-generations";
 

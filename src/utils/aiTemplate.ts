@@ -95,3 +95,22 @@ export function newIdempotencyKey(): string {
 export function presetLabel(p: { label: string; width: number; height: number }): string {
   return `${p.label} · ${p.width} × ${p.height}`;
 }
+
+export interface UsageInfo {
+  used: number;
+  /** null = no daily limit */
+  limit: number | null;
+  remaining: number | null;
+  resetsAt?: string | null;
+}
+
+/** "13 of 15 generations left today", or the limit-reached / no-limit wording. */
+export function usageLabel(usage: UsageInfo | null | undefined): string {
+  if (!usage) return "";
+  if (usage.limit === null) return "No daily limit";
+  const left = Math.max(0, usage.remaining ?? usage.limit - usage.used);
+  if (left === 0) return `Daily limit reached (${usage.limit} of ${usage.limit} used)`;
+  return `${left} of ${usage.limit} generation${usage.limit === 1 ? "" : "s"} left today`;
+}
+
+export const usageExhausted = (usage: UsageInfo | null | undefined): boolean => !!usage && usage.limit !== null && (usage.remaining ?? 1) <= 0;

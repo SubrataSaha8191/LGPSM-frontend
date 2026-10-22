@@ -1,5 +1,6 @@
 "use client";
 
+import CustomDropdown from "@/components/common/CustomDropdown";
 import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { inviteeService, CreateInviteePayload } from "@/services/inviteeService";
@@ -233,22 +234,10 @@ export default function AddInviteeManualModal({
 
             {/* Dietary Preference */}
             <div>
-              <label htmlFor="ai-dietary" className={labelClass}>
+              <span className={labelClass}>
                 Dietary Preference <span className="text-[#828282] font-normal text-xs">(optional)</span>
-              </label>
-              <select
-                id="ai-dietary"
-                value={dietaryPreference}
-                onChange={(e) => setDietaryPreference(e.target.value)}
-                className={`${inputClass} cursor-pointer`}
-              >
-                <option value="">Select preference</option>
-                {DIETARY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt === "None" ? "" : opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+              </span>
+              <CustomDropdown ariaLabel="Dietary Preference" value={dietaryPreference} onChange={setDietaryPreference} placeholder="Select preference" options={DIETARY_OPTIONS.map((opt) => ({ value: opt === "None" ? "" : opt, label: opt }))} />
             </div>
 
             {/* Error */}

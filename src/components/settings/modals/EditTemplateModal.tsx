@@ -1,5 +1,6 @@
 "use client";
 
+import CustomDropdown from "@/components/common/CustomDropdown";
 import React, { useState } from "react";
 import { TemplateItem } from "@/types/settings";
 import CategoryFields from "@/components/categories/CategoryFields";
@@ -78,19 +79,10 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
               <p className="text-xs text-[#4B4F52] bg-[#F4F5F8] rounded-md p-3">This is an AI-generated design. Its layout comes from the generator and is changed by generating a new version, not from this list.</p>
             ) : (
             <div>
-              <label htmlFor="edit-template-card-design" className="block text-sm font-medium text-gray-900 mb-1.5">
+              <span className="block text-sm font-medium text-gray-900 mb-1.5">
                 Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
-              </label>
-              <select
-                id="edit-template-card-design"
-                value={cardDesign}
-                onChange={(e) => setCardDesign(e.target.value as CardDesign)}
-                className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
-              >
-                {CARD_DESIGNS.map((d) => (
-                  <option key={d} value={d}>{CARD_DESIGN_LABELS[d]}</option>
-                ))}
-              </select>
+              </span>
+              <CustomDropdown ariaLabel="Invitation Card Design" value={cardDesign} onChange={(v) => setCardDesign(v as CardDesign)} options={CARD_DESIGNS.map((d) => ({ value: d, label: CARD_DESIGN_LABELS[d] }))} />
               <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
             </div>
             )}

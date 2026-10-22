@@ -12,6 +12,12 @@ import { templateService, Template } from "@/services/templateService";
 import { eventService, EventData } from "@/services/eventService";
 import { useAlert } from "@/context/AlertContext";
 
+export interface LivePreview {
+  url: string | null;
+  eventTitle: string;
+  loading: boolean;
+}
+
 interface TemplateCard {
   id: string;
   name: string;
@@ -47,6 +53,8 @@ function TemplatesPageContent() {
   // "My templates" is a link target (the AI studio sends people there after saving)
   const [view, setView] = useState<"all" | "mine">(searchParams.get("view") === "mine" ? "mine" : "all");
   const [reload, setReload] = useState(0);
+  // the template drawn with the event chosen in the preview panel (null = show the stored sample preview)
+  const [livePreview, setLivePreview] = useState<LivePreview | null>(null);
   const requestKey = `${view}:${reload}:${user?._id || ""}`;
   const loading = result?.key !== requestKey;
   const templates = result?.templates ?? [];
@@ -173,7 +181,7 @@ function TemplatesPageContent() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setPreview(t)}
+                onClick={() => { setLivePreview(null); setPreview(t); }}
                 className="text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] transition-colors cursor-pointer"
               >
                 <div className="relative">
@@ -196,22 +204,39 @@ function TemplatesPageContent() {
           <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full my-auto">
             <div className="px-6 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
               <h3 id="template-preview-title" className="text-base font-medium text-gray-900">Template Preview</h3>
-              <button type="button" onClick={() => setPreview(null)} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">
+              <button type="button" onClick={() => { setLivePreview(null); setPreview(null); }} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              <TemplateThumb imageKey={preview.imageKey} name={preview.name} className="rounded-md border border-[#E0E0E0]" />
+              <div className="relative">
+                {livePreview?.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={livePreview.url} alt={`${preview.name} with ${livePreview.eventTitle}`} className="w-full aspect-[393/682] object-contain rounded-md border border-[#E0E0E0] bg-[#F4F5F8]" />
+                ) : (
+                  <TemplateThumb imageKey={preview.imageKey} name={preview.name} className="rounded-md border border-[#E0E0E0]" />
+                )}
+                {livePreview?.loading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-md bg-white/70" role="status" aria-label="Updating preview">
+                    <span className="inline-block h-6 w-6 rounded-full border-2 border-[#FF651D] border-t-transparent animate-spin" />
+                  </div>
+                )}
+                {livePreview?.url && !livePreview.loading && (
+                  <p className="mt-2 text-xs text-[#4B4F52] text-center">Showing &ldquo;{livePreview.eventTitle}&rdquo;</p>
+                )}
+              </div>
               <div className="space-y-4 min-w-0">
                 <div>
                   <h4 className="text-xl font-medium text-gray-900 break-words">{preview.name}</h4>
                   <p className="text-sm text-[#4B4F52] mt-1">{labelFor(preview)}</p>
                 </div>
-                <p className="text-sm text-gray-800 bg-[#FEF9C3] border border-[#FEF08A] rounded-md p-3">
-                  Create an event with this template to preview it with your event details.
-                </p>
+                {!preview.isCustom && (
+                  <p className="text-sm text-gray-800 bg-[#FEF9C3] border border-[#FEF08A] rounded-md p-3">
+                    Create an event with this template to preview it with your event details.
+                  </p>
+                )}
                 {preview.isDraft ? (
                   <p className="text-sm text-[#828282]">
                     {preview.isMine ? "This template is a draft. Publish it to use it for your events." : "This template is a draft. Publish it from Template Settings before organizers can use it."}
@@ -239,7 +264,7 @@ function TemplatesPageContent() {
                     </Link>
                   )}
                 </div>
-                {preview.isCustom && <EventRenderPanel template={preview} />}
+                {preview.isCustom && <EventRenderPanel key={preview.id} template={preview} onLivePreview={setLivePreview} />}
               </div>
             </div>
           </div>
@@ -251,18 +276,63 @@ function TemplatesPageContent() {
 
 
 // Draws an AI template with a real event's details for download (posters get a registration QR when a link is given)
-function EventRenderPanel({ template }: { template: TemplateCard }) {
+function EventRenderPanel({ template, onLivePreview }: { template: TemplateCard; onLivePreview: (p: LivePreview | null) => void }) {
   const [events, setEvents] = useState<EventData[]>([]);
+  const [eventsState, setEventsState] = useState<"loading" | "ready" | "error">("loading");
   const [eventId, setEventId] = useState("");
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState<"png" | "jpeg" | null>(null);
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     eventService.getEvents({ limit: 100 }).then((res) => {
-      if (res.success && res.data?.events) setEvents(res.data.events);
+      if (cancelled) return;
+      // the events API answers with the list itself (older shapes wrapped it in { events })
+      const raw: unknown = res.data;
+      const list = Array.isArray(raw) ? (raw as EventData[]) : Array.isArray((raw as { events?: EventData[] } | undefined)?.events) ? (raw as { events: EventData[] }).events : [];
+      setEvents(list);
+      setEventsState(res.success === false ? "error" : "ready");
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Redraw the preview with the chosen event (and registration link, for posters). Debounced so typing a link does not
+  // fire a request per keystroke; a newer choice cancels an older one still in flight.
+  const eventTitle = events.find((e) => (e._id || e.id) === eventId)?.title || "";
+  useEffect(() => {
+    if (!eventId) {
+      onLivePreview(null);
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    const timer = setTimeout(async () => {
+      onLivePreview({ url: null, eventTitle, loading: true });
+      const res = await templateService.renderForEvent(template.id, { eventId, format: "jpeg", ...(template.kind === "POSTER" && link.trim() ? { registrationUrl: link.trim() } : {}) });
+      if (cancelled) return;
+      if (!res.ok) {
+        onLivePreview(null);
+        setMessage({ tone: "error", text: res.message });
+        return;
+      }
+      setMessage(null);
+      objectUrl = URL.createObjectURL(res.blob);
+      onLivePreview({ url: objectUrl, eventTitle, loading: false });
+    }, link ? 600 : 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl as string), 1000);
+    };
+    // eventTitle follows eventId; onLivePreview is a state setter
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, link, template.id, template.kind]);
+
+  // leaving the panel (closing the modal, choosing another template) returns the stored sample preview
+  useEffect(() => () => onLivePreview(null), [onLivePreview]);
 
   const download = async (format: "png" | "jpeg") => {
     if (!eventId) return;
@@ -286,13 +356,19 @@ function EventRenderPanel({ template }: { template: TemplateCard }) {
   return (
     <div className="border-t border-[#E5E5E5] pt-4 space-y-3">
       <h5 className="text-sm font-medium text-gray-900">{template.kind === "POSTER" ? "Download a poster for an event" : "Preview with a real event"}</h5>
-      <label className="block text-xs text-[#4B4F52]" htmlFor="render-event">Event</label>
-      <select id="render-event" value={eventId} onChange={(e) => setEventId(e.target.value)} className="w-full rounded-md border border-[#D9D9D9] bg-white px-3 py-2 text-sm">
-        <option value="">Choose an event…</option>
-        {events.map((ev) => (
-          <option key={ev._id || ev.id} value={ev._id || ev.id}>{ev.title}</option>
-        ))}
-      </select>
+      <span className="block text-xs text-[#4B4F52]">Event</span>
+      <CustomDropdown
+        ariaLabel="Event"
+        value={eventId}
+        onChange={(v) => {
+          setEventId(v);
+          setMessage(null);
+        }}
+        placeholder={eventsState === "loading" ? "Loading events…" : "Choose an event"}
+        disabled={eventsState === "loading"}
+        emptyMessage={eventsState === "error" ? "Your events could not be loaded" : "You have no events yet"}
+        options={events.map((ev) => ({ value: ev._id || ev.id, label: ev.title }))}
+      />
       {template.kind === "POSTER" && (
         <>
           <label className="block text-xs text-[#4B4F52]" htmlFor="render-link">Registration link for the QR code (https)</label>
