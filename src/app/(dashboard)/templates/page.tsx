@@ -249,6 +249,11 @@ function TemplatesPageContent() {
                     </Link>
                   )}
                   {preview.isMine && preview.isCustom && (
+                    <Link href={`/templates/ai?edit=${preview.id}`} className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-800 text-sm font-medium rounded-md">
+                      Edit design
+                    </Link>
+                  )}
+                  {preview.isMine && preview.isCustom && (
                     <button type="button" onClick={() => togglePublish(preview)} className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-800 text-sm font-medium rounded-md cursor-pointer">
                       {preview.isDraft ? "Publish" : "Unpublish"}
                     </button>

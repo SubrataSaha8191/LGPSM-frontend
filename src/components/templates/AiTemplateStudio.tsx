@@ -11,7 +11,7 @@ import {
   GenerationVariant,
   templateGenerationService,
 } from "@/services/templateGenerationService";
-import type { TemplateKind } from "@/services/templateService";
+import { templateService, type TemplateKind } from "@/services/templateService";
 import {
   SLOW_AFTER_MS,
   canSave,
@@ -37,7 +37,10 @@ const inputClass = "w-full rounded-md border border-[#D9D9D9] bg-white px-3 py-2
 
 type Busy = null | "starting" | "saving" | "discarding";
 
-export default function AiTemplateStudio() {
+/** With `editTemplateId` the studio changes a design that is already saved, instead of creating a new one. */
+export default function AiTemplateStudio({ editTemplateId }: { editTemplateId?: string }) {
+  const [editTarget, setEditTarget] = useState<{ id: string; name: string; imageKey: string | null; kind: TemplateKind } | null>(null);
+  const [editLoadError, setEditLoadError] = useState<string | null>(null);
   const [options, setOptions] = useState<GenerationOptions | null>(null);
   // today's allowance, refreshed from the server after every request
   const [usage, setUsage] = useState<GenerationOptions["usage"]>(undefined);
@@ -62,6 +65,22 @@ export default function AiTemplateStudio() {
 
   // One key per click of "Generate": a double click or a retry after a dropped connection reuses the same job
   const attemptKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!editTemplateId) return;
+    let cancelled = false;
+    templateService.getTemplateById(editTemplateId).then((res) => {
+      if (cancelled) return;
+      const t = res.data;
+      if (res.success && t && t.cardDesign === "CUSTOM") {
+        setEditTarget({ id: t._id || t.id || editTemplateId, name: t.name, imageKey: t.previewImageKey || null, kind: t.kind === "POSTER" ? "POSTER" : "INVITATION" });
+        setSaveName(t.name);
+      } else setEditLoadError(res.message || "This template cannot be edited with AI.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editTemplateId]);
 
   const presets = useMemo(() => (options?.presets || []).filter((p) => p.kind === kind), [options, kind]);
 
@@ -149,6 +168,12 @@ export default function AiTemplateStudio() {
     if (busy || !options) return;
     setBusy("starting");
     attemptKey.current = attemptKey.current || newIdempotencyKey();
+    if (editTarget) {
+      const edited = await templateGenerationService.editSaved(editTarget.id, prompt.trim(), attemptKey.current);
+      setBusy(null);
+      begin(edited);
+      return;
+    }
     const res = await templateGenerationService.create({
       kind,
       preset: effectivePreset,
@@ -173,11 +198,11 @@ export default function AiTemplateStudio() {
     begin(res);
   };
 
-  const save = async (publish: boolean) => {
+  const save = async (publish: boolean, replace = false) => {
     if (!job || busy) return;
     const name = saveName.trim() || `AI ${kind === "POSTER" ? "poster" : "invitation"} ${new Date().toLocaleDateString()}`;
     setBusy("saving");
-    const res = await templateGenerationService.save(job.id, selected, { name, publish });
+    const res = await templateGenerationService.save(job.id, selected, { name, publish, ...(replace && editTarget ? { replaceTemplateId: editTarget.id } : {}) });
     setBusy(null);
     if (res.success && res.data) {
       const t = res.data as { _id?: string; id?: string; name: string; isPublished?: boolean };
@@ -218,10 +243,36 @@ export default function AiTemplateStudio() {
     <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 items-start">
       <form onSubmit={generate} className="bg-white border border-[#E0E0E0] rounded-lg p-5 space-y-5 xl:sticky xl:top-24" aria-label="Describe your design">
         <div>
-          <h2 className="text-base font-medium text-gray-900">Describe your design</h2>
+          <h2 className="text-base font-medium text-gray-900">{editTarget ? "Edit your design" : "Describe your design"}</h2>
           <p className="text-sm text-[#828282] mt-0.5">We design the look. Your event details are filled in automatically every time you use it.</p>
         </div>
 
+        {editTarget ? (
+          <>
+            <div className="flex items-start gap-3 rounded-md border border-[#E0E0E0] bg-[#FAFAFA] p-3">
+              {resolveImageUrl(editTarget.imageKey) && (
+                <div className="relative h-24 w-14 shrink-0 overflow-hidden rounded border border-[#E0E0E0] bg-[#F4F5F8]">
+                  <Image src={resolveImageUrl(editTarget.imageKey) as string} alt={`${editTarget.name} current design`} fill unoptimized sizes="56px" className="object-contain" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-[#828282]">Editing</p>
+                <p className="text-sm font-medium text-gray-900 break-words">{editTarget.name}</p>
+                <p className="text-xs text-[#828282] mt-1">Your original stays as it is until you choose to replace it.</p>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="ai-prompt" className="block text-sm font-medium text-gray-900 mb-1.5">What should change?</label>
+              <textarea id="ai-prompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} maxLength={options?.limits.changeMax || 500} placeholder="e.g. Use a deep blue background and make the title larger" className={inputClass} />
+              <div className="mt-1 flex justify-between text-xs text-[#828282]"><span>{prompt.length > 0 && prompt.trim().length < 10 ? <span className="text-rose-600">Add a little more detail (10+ characters)</span> : "Describe only what you want different."}</span><span className="tabular-nums">{prompt.length}/{options?.limits.changeMax || 500}</span></div>
+            </div>
+          </>
+        ) : editTemplateId && !editLoadError ? (
+          <p className="text-sm text-[#828282]">Loading the design to edit…</p>
+        ) : editLoadError ? (
+          <ErrorBanner error={{ title: "This design cannot be edited", message: editLoadError, retryable: false, kind: "validation" }} />
+        ) : (
+          <>
         <fieldset>
           <legend className="block text-sm font-medium text-gray-900 mb-1.5">What are you making?</legend>
           <div className="grid grid-cols-2 gap-2" role="radiogroup">
@@ -271,10 +322,13 @@ export default function AiTemplateStudio() {
           <CustomDropdown ariaLabel="Options to generate" value={String(variantCount)} onChange={(v) => setVariantCount(Number(v))} options={Array.from({ length: options.limits.maxVariants }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))} />
         </div>
 
+          </>
+        )}
+
         {error && !job && <ErrorBanner error={error} />}
 
-        <button type="submit" disabled={busy !== null || running || promptTooShort || usageExhausted(usage)} className="w-full rounded-md bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-3 cursor-pointer">
-          {busy === "starting" ? "Starting…" : running ? "Designing…" : "Generate designs"}
+        <button type="submit" disabled={busy !== null || running || promptTooShort || usageExhausted(usage) || (!!editTemplateId && !editTarget)} className="w-full rounded-md bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-3 cursor-pointer">
+          {busy === "starting" ? "Starting…" : running ? "Designing…" : editTarget ? "Apply edit" : "Generate designs"}
         </button>
         <p className={`text-xs text-center ${usageExhausted(usage) ? "text-amber-700 font-medium" : "text-[#828282]"}`} aria-live="polite">{usageLabel(usage) || `Up to ${options.limits.dailyQuota} generations per day.`}</p>
       </form>
@@ -400,9 +454,14 @@ export default function AiTemplateStudio() {
                           <label htmlFor="ai-name" className="block text-sm font-medium text-gray-900 mb-1.5">Template name</label>
                           <input id="ai-name" value={saveName} onChange={(e) => setSaveName(e.target.value)} maxLength={100} placeholder="e.g. Gala gold invitation" className={inputClass} />
                         </div>
+                        {editTarget && (
+                          <div className="flex flex-wrap gap-3">
+                            <button type="button" disabled={busy !== null} onClick={() => save(false, true)} className="px-5 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 text-white text-sm font-medium rounded-md cursor-pointer">{busy === "saving" ? "Saving…" : `Replace “${editTarget.name}”`}</button>
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-3">
-                          <button type="button" disabled={busy !== null} onClick={() => save(true)} className="px-5 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 text-white text-sm font-medium rounded-md cursor-pointer">{busy === "saving" ? "Saving…" : "Save and use"}</button>
-                          <button type="button" disabled={busy !== null} onClick={() => save(false)} className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-800 text-sm font-medium rounded-md cursor-pointer">Save as draft</button>
+                          <button type="button" disabled={busy !== null} onClick={() => save(true)} className="px-5 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] disabled:opacity-50 text-white text-sm font-medium rounded-md cursor-pointer">{busy === "saving" ? "Saving…" : editTarget ? "Save as new template" : "Save and use"}</button>
+                          <button type="button" disabled={busy !== null} onClick={() => save(false)} className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-800 text-sm font-medium rounded-md cursor-pointer">{editTarget ? "Save new one as draft" : "Save as draft"}</button>
                         </div>
                       </div>
                     ) : (

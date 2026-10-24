@@ -1,11 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/common/PageHeader";
 import AiTemplateStudio from "@/components/templates/AiTemplateStudio";
 
 // Organizers and admins design a template from a description; it becomes a normal template they can use for events.
+function AiTemplateContent() {
+  const edit = useSearchParams().get("edit");
+  return <AiTemplateStudio editTemplateId={edit && /^[0-9a-fA-F]{24}$/.test(edit) ? edit : undefined} />;
+}
+
 export default function AiTemplatePage() {
   return (
     <div className="w-full min-h-full bg-white">
@@ -15,7 +21,9 @@ export default function AiTemplatePage() {
         actions={<Link href="/templates" className="hidden sm:inline-block text-sm text-gray-700 hover:text-[#FF651D] mr-2">All templates</Link>}
       />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24">
-        <AiTemplateStudio />
+        <Suspense fallback={<p className="py-16 text-center text-sm text-[#828282]">Loading…</p>}>
+          <AiTemplateContent />
+        </Suspense>
       </div>
     </div>
   );

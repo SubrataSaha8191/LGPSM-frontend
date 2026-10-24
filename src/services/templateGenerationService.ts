@@ -64,6 +64,9 @@ export const templateGenerationService = {
     apiClient<GenerationJob>(`${base}/${id}/variants/${index}/edit`, { method: "POST", body: JSON.stringify({ prompt, idempotencyKey }) }, true) as Promise<GenerationResult<GenerationJob>>,
   variations: (id: string, index: number, prompt: string, variantCount: number, idempotencyKey?: string) =>
     apiClient<GenerationJob>(`${base}/${id}/variants/${index}/variations`, { method: "POST", body: JSON.stringify({ prompt, variantCount, idempotencyKey }) }, true) as Promise<GenerationResult<GenerationJob>>,
-  save: (id: string, index: number, payload: { name: string; categoryId?: string; subcategoryId?: string; publish?: boolean }) =>
+  /** Change a design that is already saved as a template; the result can replace that template (see save) */
+  editSaved: (templateId: string, prompt: string, idempotencyKey?: string) =>
+    apiClient<GenerationJob>(`${base}/from-template/${templateId}/edit`, { method: "POST", body: JSON.stringify({ prompt, idempotencyKey }) }, true) as Promise<GenerationResult<GenerationJob>>,
+  save: (id: string, index: number, payload: { name: string; categoryId?: string; subcategoryId?: string; publish?: boolean; replaceTemplateId?: string }) =>
     apiClient<Template>(`${base}/${id}/variants/${index}/save`, { method: "POST", body: JSON.stringify(payload) }, true),
 };
