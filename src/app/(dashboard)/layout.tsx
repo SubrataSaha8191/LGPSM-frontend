@@ -34,6 +34,8 @@ export default function DashboardLayout({
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated) {
+      // Drop a leftover "signed in" marker (storage cleared, session ended elsewhere) so it stops redirecting the home page here
+      if (!tokenStorage.getAccessToken()) tokenStorage.clearTokens();
       // After a deliberate logout there is nothing to return to; an expired session keeps the page for the next sign-in
       router.replace(loginRedirectPath(isExplicitLogout() ? undefined : pathname || undefined));
       return;
