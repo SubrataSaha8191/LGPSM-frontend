@@ -80,7 +80,7 @@ function TemplatesPageContent() {
           ? {
               key: requestKey,
               templates: res.data
-                .filter((t: Template) => view !== "mine" || (t.cardDesign === "CUSTOM" && !!user?._id && t.ownerId === user._id))
+                .filter((t: Template) => view !== "mine" || (!!user?._id && t.ownerId === user._id))
                 .map(toCard(view === "mine")),
               error: null,
             }
@@ -126,7 +126,7 @@ function TemplatesPageContent() {
       <PageHeader title="Templates" actions={<Link href="/templates/ai" className="mr-2 inline-flex items-center gap-1.5 rounded-md bg-[#FF651D] px-3 py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E5520F]"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>Design with AI</Link>} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 pb-24">
         <div role="tablist" aria-label="Template list" className="inline-flex rounded-md bg-[#F4F5F8] p-1 text-sm">
-          {([["all", "All templates"], ["mine", "My AI templates"]] as const).map(([key, label]) => (
+          {([["all", "All templates"], ["mine", "My templates"]] as const).map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={view === key} onClick={() => { setView(key); setPreview(null); }} className={`rounded px-4 py-1.5 cursor-pointer ${view === key ? "bg-white shadow-sm font-medium text-gray-900" : "text-gray-600"}`}>
               {label}
             </button>
@@ -165,7 +165,7 @@ function TemplatesPageContent() {
           <p className="py-16 text-center text-sm text-[#828282]">
             {templates.length === 0
               ? view === "mine"
-                ? "You haven't saved any AI templates yet."
+                ? "You haven't saved any templates yet."
                 : "No templates are available yet."
               : "No templates match the selected category."}
             {templates.length === 0 && view === "mine" && (
@@ -248,9 +248,9 @@ function TemplatesPageContent() {
                       Create an Event
                     </Link>
                   )}
-                  {preview.isMine && preview.isCustom && (
+                  {preview.isMine && (
                     <Link href={`/templates/ai?edit=${preview.id}`} className="px-5 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-800 text-sm font-medium rounded-md">
-                      Edit design
+                      Edit with AI
                     </Link>
                   )}
                   {preview.isMine && preview.isCustom && (

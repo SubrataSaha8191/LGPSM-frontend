@@ -72,10 +72,10 @@ export default function AiTemplateStudio({ editTemplateId }: { editTemplateId?: 
     templateService.getTemplateById(editTemplateId).then((res) => {
       if (cancelled) return;
       const t = res.data;
-      if (res.success && t && t.cardDesign === "CUSTOM") {
+      if (res.success && t) {
         setEditTarget({ id: t._id || t.id || editTemplateId, name: t.name, imageKey: t.previewImageKey || null, kind: t.kind === "POSTER" ? "POSTER" : "INVITATION" });
         setSaveName(t.name);
-      } else setEditLoadError(res.message || "This template cannot be edited with AI.");
+      } else setEditLoadError(res.message || "This template could not be loaded.");
     });
     return () => {
       cancelled = true;
