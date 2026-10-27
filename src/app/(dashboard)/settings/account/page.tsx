@@ -71,8 +71,8 @@ export default function AccountSettingsPage() {
       </header>
 
       {/* Content */}
-      <div className="p-6 max-w-4xl w-full mx-auto space-y-6 pb-24">
-        <h2 className="text-base font-bold text-gray-800">Edit Profile</h2>
+      <div className="p-6 w-full mx-auto space-y-6 pb-24">
+        <h2 className="max-w-[850px] w-full mx-auto text-base font-bold text-gray-800">Edit Profile</h2>
 
         {savedMessage && (
           <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-semibold transition-all">
@@ -86,7 +86,7 @@ export default function AccountSettingsPage() {
           </div>
         )}
 
-        <form onSubmit={handleSave} className="bg-white rounded-md border border-gray-200/80 p-8 shadow-xs">
+        <form onSubmit={handleSave} className="max-w-[850px] w-full mx-auto bg-white rounded-md border border-gray-200/80 p-8 shadow-xs">
           <div className="flex flex-col md:flex-row items-start gap-8">
             {/* Interactive Avatar Area with Dropdown & Default Profile Icon */}
             <AvatarSection

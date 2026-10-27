@@ -161,14 +161,10 @@ export type DraftErrors = Record<string, string>;
 export interface DraftValidationOptions {
   // True when the chosen category offers subcategories
   subcategoryRequired?: boolean;
-  isAdmin?: boolean;
 }
 
 export function validateEventDraft(draft: EventDraft, options: DraftValidationOptions = {}): DraftErrors {
   const errors: DraftErrors = {};
-  if (options.isAdmin && (!draft.organizerIds || draft.organizerIds.length === 0)) {
-    errors.organizerIds = "Select at least one organizer for the event.";
-  }
   if (!draft.title.trim()) errors.title = "Title is required.";
   else if (draft.title.trim().length > EVENT_TITLE_MAX_LENGTH) errors.title = `Title cannot exceed ${EVENT_TITLE_MAX_LENGTH} characters.`;
   if (draft.description.length > EVENT_DESCRIPTION_MAX_LENGTH) errors.description = `Description cannot exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters.`;

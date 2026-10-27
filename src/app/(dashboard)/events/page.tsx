@@ -5,12 +5,12 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { eventService } from "@/services/eventService";
+import { sessionService } from "@/services/sessionService";
 import { useCategories } from "@/hooks/useCategories";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import { formatEventId } from "@/utils/formatId";
 import { formatCompactDateTime, formatDateTime } from "@/utils/dateTime";
 import PageHeader from "@/components/common/PageHeader";
-import CustomDropdown from "@/components/common/CustomDropdown";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Completed" | "Invitation not send" | "Cancelled";
 
@@ -26,6 +26,7 @@ interface EventRow {
   end?: string;
   status: RowStatus;
   sessionsCount?: number;
+  canEdit: boolean;
 }
 
 const STATUS_STYLE: Record<RowStatus, string> = {
@@ -35,6 +36,19 @@ const STATUS_STYLE: Record<RowStatus, string> = {
   "Invitation not send": "bg-[#FFE9C0] text-[#9E8C00]",
   Cancelled: "bg-gray-200 text-gray-700",
 };
+
+function FilterSelect({ value, onChange, ariaLabel, options }: { value: string; onChange: (value: string) => void; ariaLabel: string; options: { value: string; label: string }[] }) {
+  return (
+    <div className="relative">
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} className="w-full h-[47px] appearance-none px-3.5 pr-10 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D] cursor-pointer">
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+  );
+}
 
 interface RawEvent {
   _id?: string;
@@ -69,6 +83,7 @@ function toRow(e: RawEvent): EventRow {
     end: e.schedule?.end,
     status,
     sessionsCount: e.sessionsCount ?? e.sessionCount ?? e.sessions?.length,
+    canEdit: !(e.invitationsSent && e.invitationsSent > 0),
   };
 }
 
@@ -89,7 +104,8 @@ function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow
     if (open) { setOpen(false); return; }
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const menuHeight = row.status === "Cancelled" ? 40 : 112;
+    const menuItems = 1 + (row.canEdit ? 1 : 0) + (row.status !== "Cancelled" ? 1 : 0);
+    const menuHeight = menuItems * 36 + 8;
     const top = rect.bottom + menuHeight + 8 > window.innerHeight ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4;
     setPosition({ top, left: Math.max(8, Math.min(rect.right - 150, window.innerWidth - 158)) });
     setOpen(true);
@@ -101,9 +117,9 @@ function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" /></svg>
       </button>
       {open && position && createPortal(
-        <div ref={menuRef} onClick={(e) => e.stopPropagation()} style={position} className="fixed z-[100] min-w-[150px] rounded-md bg-[#1E232A] text-white py-1 shadow-xl">
+        <div ref={menuRef} onClick={(e) => e.stopPropagation()} style={{ position: "fixed", ...position }} className="z-[9999] min-w-[150px] rounded-md bg-[#1E232A] text-white py-1 shadow-xl">
           <Link href={`/events/${row.id}`} className={item}>View Event</Link>
-          {row.status !== "Cancelled" && <Link href={`/events/${row.id}/edit`} className={item}>Edit Event</Link>}
+          {row.status !== "Cancelled" && row.canEdit && <Link href={`/events/${row.id}/edit`} className={item}>Edit Event</Link>}
           {row.status !== "Cancelled" && (
             <button type="button" onClick={() => { setOpen(false); onDelete(row); }} className={`${item} text-rose-300 cursor-pointer`}>
               Delete Event
@@ -125,6 +141,9 @@ export default function EventListingPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState({ name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
   const [draftFilters, setDraftFilters] = useState(filters);
+  const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
+  const [applyingFilters, setApplyingFilters] = useState(false);
+  const [filterApplyError, setFilterApplyError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<EventRow | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -162,8 +181,8 @@ export default function EventListingPage() {
     if (filters.organizer && !r.organizer.toLowerCase().includes(filters.organizer.trim().toLowerCase())) return false;
     if (filters.category && r.categoryId !== filters.category) return false;
     if (filters.status && r.status !== filters.status) return false;
-    if (filters.sessions && r.sessionsCount !== undefined) {
-      const count = r.sessionsCount;
+    const count = sessionCounts[r.id] ?? r.sessionsCount;
+    if (filters.sessions && count !== undefined) {
       if (filters.sessions === "0" && count !== 0) return false;
       if (filters.sessions === "1" && count !== 1) return false;
       if (filters.sessions === "2-5" && (count < 2 || count > 5)) return false;
@@ -175,6 +194,53 @@ export default function EventListingPage() {
     return true;
   });
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  const applyFilters = async () => {
+    setFilterApplyError(null);
+    if (draftFilters.sessions) {
+      const draftFrom = draftFilters.from ? new Date(`${draftFilters.from}T00:00:00`) : null;
+      const draftTo = draftFilters.to ? new Date(`${draftFilters.to}T23:59:59.999`) : null;
+      const candidates = rows.filter((r) => {
+        if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
+        if (draftFilters.name && !r.name.toLowerCase().includes(draftFilters.name.trim().toLowerCase())) return false;
+        if (draftFilters.organizer && !r.organizer.toLowerCase().includes(draftFilters.organizer.trim().toLowerCase())) return false;
+        if (draftFilters.category && r.categoryId !== draftFilters.category) return false;
+        if (draftFilters.status && r.status !== draftFilters.status) return false;
+        const start = r.start ? new Date(r.start) : null;
+        if (draftFrom && (!start || start < draftFrom)) return false;
+        if (draftTo && (!start || start > draftTo)) return false;
+        return true;
+      });
+      const missing = candidates.filter((r) => r.sessionsCount === undefined && sessionCounts[r.id] === undefined);
+      if (missing.length) {
+        setApplyingFilters(true);
+        const counts: Record<string, number> = {};
+        const failures: string[] = [];
+        let cursor = 0;
+        const workers = Array.from({ length: Math.min(6, missing.length) }, async () => {
+          while (cursor < missing.length) {
+            const row = missing[cursor++];
+            try {
+              const res = await sessionService.getSessions(row.id);
+              if (res.success && Array.isArray(res.data)) counts[row.id] = res.data.length;
+              else failures.push(row.name);
+            } catch {
+              failures.push(row.name);
+            }
+          }
+        });
+        await Promise.all(workers);
+        setSessionCounts((prev) => ({ ...prev, ...counts }));
+        setApplyingFilters(false);
+        if (failures.length) {
+          setFilterApplyError(`Could not load session totals for ${failures.length} event${failures.length === 1 ? "" : "s"}. Try Apply again.`);
+          return;
+        }
+      }
+    }
+    setFilters(draftFilters);
+    setFilterOpen(false);
+  };
 
   return (
     <div className="w-full min-h-full bg-white">
@@ -287,9 +353,9 @@ export default function EventListingPage() {
             <div className="flex-1 overflow-y-auto space-y-4 pt-5">
               <input aria-label="Event Name" type="text" value={draftFilters.name} onChange={(e) => setDraftFilters((f) => ({ ...f, name: e.target.value }))} placeholder="Event Name" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
               <input aria-label="Event Organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Event Organizer" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
-              <CustomDropdown value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Category" }, ...categories.categoryOptions]} ariaLabel="Event Category" />
-              <CustomDropdown value={draftFilters.sessions} onChange={(v) => setDraftFilters((f) => ({ ...f, sessions: v }))} options={[{ value: "", label: "No. of Sessions" }, { value: "0", label: "0 sessions" }, { value: "1", label: "1 session" }, { value: "2-5", label: "2–5 sessions" }, { value: "6+", label: "6+ sessions" }]} ariaLabel="No. of Sessions" />
-              <CustomDropdown
+              <FilterSelect value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Category" }, ...categories.categoryOptions]} ariaLabel="Event Category" />
+              <FilterSelect value={draftFilters.sessions} onChange={(v) => setDraftFilters((f) => ({ ...f, sessions: v }))} options={[{ value: "", label: "No. of Sessions" }, { value: "0", label: "0 sessions" }, { value: "1", label: "1 session" }, { value: "2-5", label: "2–5 sessions" }, { value: "6+", label: "6+ sessions" }]} ariaLabel="No. of Sessions" />
+              <FilterSelect
                 value={draftFilters.status}
                 onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
                 options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((s) => ({ value: s, label: s }))]}
@@ -302,13 +368,14 @@ export default function EventListingPage() {
                   <input type="date" value={draftFilters.to} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} aria-label="To" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D]" />
                 </div>
               </fieldset>
+              {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
             </div>
             <div className="flex gap-3 pt-4 border-t border-[#E5E5E5]">
               <button type="button" onClick={() => { const empty = { name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
                 Clear
               </button>
-              <button type="button" onClick={() => { setFilters(draftFilters); setFilterOpen(false); }} className="flex-1 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] rounded-md text-sm font-medium text-white cursor-pointer">
-                Apply
+              <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] rounded-md text-sm font-medium text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                {applyingFilters ? "Loading sessions…" : "Apply"}
               </button>
             </div>
           </div>

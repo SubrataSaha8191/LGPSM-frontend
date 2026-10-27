@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -140,17 +140,17 @@ export default function EventDetailsPage() {
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setLoadError(null);
-    const [evRes, sessRes, asgRes, repRes, logRes] = await Promise.all([
+    const [evRes, sessRes] = await Promise.all([
       eventService.getEvent(eventId),
       sessionService.getSessions(eventId),
-      assignmentService.getEventAssignments(eventId),
-      reportService.getEventReport(eventId),
-      auditLogService.getAuditLogs({ eventId, limit: 10 }),
     ]);
+    if (requestId !== requestIdRef.current) return;
     if (!evRes.success || !evRes.data) {
       setLoadError(evRes.message || "Event not found or you do not have access to it.");
       setLoading(false);
@@ -164,10 +164,19 @@ export default function EventDetailsPage() {
     const ss = sessRes.success && Array.isArray(sessRes.data) ? sessRes.data : [];
     setSessions(ss);
     setAnalysisSession((prev) => prev || ss[0]?._id || "");
+    setLoading(false);
+
+    // The event and its sessions are enough to render the page shell. Load report widgets and audit logs after
+    // first paint so a slow analytics/log request cannot hold the whole event page behind a spinner.
+    const [asgRes, repRes, logRes] = await Promise.all([
+      assignmentService.getEventAssignments(eventId),
+      reportService.getEventReport(eventId),
+      auditLogService.getAuditLogs({ eventId, limit: 10 }),
+    ]);
+    if (requestId !== requestIdRef.current) return;
     setAssignmentsCount(asgRes.success && Array.isArray(asgRes.data) ? asgRes.data.length : 0);
     setReport(repRes.success && repRes.data ? repRes.data : null);
     setAccessLogs(logRes.success && Array.isArray(logRes.data) ? logRes.data : []);
-    setLoading(false);
 
     const ended = ev.schedule?.end && new Date(ev.schedule.end) < new Date();
     if (user?.role === "ADMIN" && ended && !ev.operationalDataCleared && sessionStorage.getItem(`dismiss_cleanup_${eventId}`) !== "true") {
@@ -177,6 +186,7 @@ export default function EventDetailsPage() {
 
   useEffect(() => {
     if (eventId) load();
+    return () => { requestIdRef.current += 1; };
   }, [eventId, load]);
 
   if (loading) {
@@ -209,6 +219,7 @@ export default function EventDetailsPage() {
   const organizer = typeof event.organizerId === "object" ? event.organizerId?.profile?.organizationName || "Organisation not set" : "Organisation not set";
   const venue = typeof event.location === "string" ? event.location : event.location?.address;
   const delivery = report?.deliverySummary || { SENT: 0, PENDING: 0, FAILED: 0 };
+  const invitationLifecycleStarted = delivery.SENT > 0 || delivery.FAILED > 0;
   const totalInvitees = report?.totalInvitees ?? 0;
   const timeStatus = event.status === "CANCELLED" ? "Cancelled" : getDynamicEventStatus(event.schedule?.start, event.schedule?.end, "Upcoming");
   const status = timeStatus === "Upcoming" && delivery.SENT === 0 && delivery.FAILED === 0 ? "Invitation not send" : timeStatus;
@@ -264,12 +275,12 @@ export default function EventDetailsPage() {
                 Clear Event Data
               </button>
             )}
-            <Link href={`/events/${eventId}/edit`} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
+            {!invitationLifecycleStarted && <Link href={`/events/${eventId}/edit`} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Edit
-            </Link>
+            </Link>}
           </div>
         </div>
 

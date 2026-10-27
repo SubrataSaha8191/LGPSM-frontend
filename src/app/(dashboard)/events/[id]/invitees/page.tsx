@@ -561,7 +561,7 @@ export default function InviteesManagementPage() {
                           )}
                           {lifecycleStarted && (
                             <td className="py-3 px-3">
-                              {i.rsvpStatus === "ACCEPTED" ? pill("bg-[#C0FFD5] text-[#1A9242]", "Accepted") : i.rsvpStatus === "DECLINED" ? pill("bg-rose-100 text-rose-700", "Declined") : pill("bg-[#FFE9C0] text-[#9E8C00]", "Pending")}
+                              {i.rsvpStatus === "ACCEPTED" ? pill("bg-[#C0FFD5] text-[#1A9242]", "Accepted") : i.rsvpStatus === "DECLINED" ? pill("bg-rose-100 text-rose-700", "Declined") : "—"}
                             </td>
                           )}
                           {showDietary && <td className="py-3 px-3">{i.dietaryPreference || "—"}</td>}

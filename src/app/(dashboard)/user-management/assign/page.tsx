@@ -183,6 +183,25 @@ export default function AssignedSystemUsersPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!activeActionId) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (target instanceof Element && !target.closest("[data-user-action-menu]")) {
+        setActiveActionId(null);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveActionId(null);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [activeActionId]);
+
   // Handle adding new SYSTEM_USER account via backend API
   const handleAddUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,6 +364,24 @@ export default function AssignedSystemUsersPage() {
       await loadData();
     } catch (err: any) {
       setErrorFeedback(err.message || "Failed to delete users.");
+    }
+  };
+
+  const handleDeleteUser = async (target: SystemUserRow) => {
+    if (!(await confirm({ title: "Remove user?", message: `${target.name} will be permanently deleted. This cannot be undone.`, confirmText: "Remove", tone: "danger" }))) return;
+    try {
+      setErrorFeedback(null);
+      const res = await userService.deleteUser(target.id);
+      if (!res.success) {
+        setErrorFeedback(res.message || "Failed to remove user.");
+        return;
+      }
+      setActiveActionId(null);
+      setSelectedIds((ids) => ids.filter((id) => id !== target.id));
+      await loadData();
+      notifyDbUpdate();
+    } catch (err: any) {
+      setErrorFeedback(err.message || "Failed to remove user.");
     }
   };
 
@@ -594,7 +631,7 @@ export default function AssignedSystemUsersPage() {
                       <td className="py-4 px-4 text-gray-600">{u.email}</td>
                       <td className="py-4 px-4 text-gray-600">{u.phone}</td>
 
-                      <td className="py-4 px-4 text-right relative">
+                      <td data-user-action-menu className="py-4 px-4 text-right relative">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
@@ -625,18 +662,14 @@ export default function AssignedSystemUsersPage() {
                         {isActionActive && (
                           <div className="absolute right-4 top-12 z-30 bg-[#1E232A] text-white text-xs font-semibold px-3 py-2 rounded-md shadow-xl border border-gray-700 flex flex-col gap-1 cursor-pointer">
                             <button
-                              onClick={() => handleOpenEdit(u)}
-                              className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1"
+                              type="button"
+                              onClick={() => handleDeleteUser(u)}
+                              className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1 cursor-pointer"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 11v5m4-5v5" />
                               </svg>
-                              <span>Edit User</span>
+                              <span>Remove User</span>
                             </button>
                           </div>
                         )}
@@ -666,7 +699,8 @@ export default function AssignedSystemUsersPage() {
           <button
             type="button"
             onClick={() => { setSessionScope(null); setErrorFeedback(null); setIsAssignModalOpen(true); }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22] hover:text-white font-bold text-xs rounded-md transition-colors cursor-pointer shrink-0"
+            disabled={selectedIds.length === 0}
+            className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22] hover:text-white font-bold text-xs rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#FF5B22]"
           >
             <span>Assign {selectedIds.length} users</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -121,7 +121,7 @@ export default function EventWizard({
 
   const subcategoryRequired = !!draft.categoryId && categories.subcategoryOptionsFor(draft.categoryId).length > 0;
   const isAdmin = user?.role === "ADMIN";
-  const allErrors = useMemo(() => validateEventDraft(draft, { subcategoryRequired, isAdmin }), [draft, subcategoryRequired, isAdmin]);
+  const allErrors = useMemo(() => validateEventDraft(draft, { subcategoryRequired }), [draft, subcategoryRequired]);
   const visibleErrors: DraftErrors = showErrors ? allErrors : {};
 
   const step1Valid = useMemo(() => !Object.keys(allErrors).some((k) => stepOfError(k) === 1), [allErrors]);

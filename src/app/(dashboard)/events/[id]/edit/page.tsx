@@ -18,6 +18,7 @@ import {
   ServerEvent,
 } from "@/components/add-event/eventDraft";
 import { persistSessionsAndInvitees } from "@/components/add-event/persistEventExtras";
+import { reportService } from "@/services/reportService";
 import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
 
 export default function EditEventPage() {
@@ -29,6 +30,7 @@ export default function EditEventPage() {
 
   const [isFetchingEvent, setIsFetchingEvent] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lockedAfterInvitation, setLockedAfterInvitation] = useState(false);
   const [baseVersion, setBaseVersion] = useState<string | undefined>(undefined);
   // Server state the edit started from; used for "discard changes" and to detect changed sessions
   const serverDraftRef = useRef<EventDraft | null>(null);
@@ -52,13 +54,19 @@ export default function EditEventPage() {
     (async () => {
       setIsFetchingEvent(true);
       setLoadError(null);
-      const [eventRes, sessionsRes] = await Promise.all([
+      const [eventRes, sessionsRes, reportRes] = await Promise.all([
         eventService.getEvent(eventId),
         sessionService.getSessions(eventId),
+        reportService.getEventReport(eventId),
       ]);
       if (cancelled) return;
       if (!eventRes.success || !eventRes.data) {
         setLoadError(eventRes.message || "Event not found or you do not have access to it.");
+        setIsFetchingEvent(false);
+        return;
+      }
+      if (reportRes.success && reportRes.data && (reportRes.data.deliverySummary.SENT > 0 || reportRes.data.deliverySummary.FAILED > 0)) {
+        setLockedAfterInvitation(true);
         setIsFetchingEvent(false);
         return;
       }
@@ -123,6 +131,18 @@ export default function EditEventPage() {
           <Link href="/events" className="inline-block px-4 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white rounded-md text-xs font-semibold">
             Back to Events
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (lockedAfterInvitation) {
+    return (
+      <div className="w-full min-h-full flex items-center justify-center bg-[#F4F5F8] p-6">
+        <div className="max-w-md w-full bg-white border border-gray-200 rounded-md p-8 text-center space-y-4">
+          <h2 className="text-lg font-bold text-gray-900">Event details are locked</h2>
+          <p className="text-sm text-gray-600">This event can’t be edited after invitations have been sent.</p>
+          <Link href={`/events/${eventId}`} className="inline-block px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white rounded-md text-sm font-semibold">Back to Event</Link>
         </div>
       </div>
     );

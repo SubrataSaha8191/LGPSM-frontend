@@ -15,6 +15,7 @@ import { inviteeService } from "@/services/inviteeService";
 import { checkInService, CheckInRecord } from "@/services/checkInService";
 import { auditLogService } from "@/services/auditLogService";
 import { reportService, EventReportData } from "@/services/reportService";
+import { formatDateTime } from "@/utils/dateTime";
 
 const ACCESS_CONTROL_LABELS: Record<string, string> = {
   NO_RESTRICTION: "No Restrictions",
@@ -192,7 +193,9 @@ export default function ReportsPage() {
         sessions.map((s, idx) => ({
           id: idx + 1,
           name: s.name,
-          dateTime: s.schedule?.start ? new Date(s.schedule.start).toLocaleString() : "TBD",
+          dateTime: s.schedule?.start
+            ? `${formatDateTime(s.schedule.start)}${s.schedule.end ? ` – ${formatDateTime(s.schedule.end)}` : ""}`
+            : "TBD",
           invitees: s.invitedCount ?? 0,
           attendees: s.attendeeCount ?? s.checkInCount ?? 0,
           accessControl: ACCESS_CONTROL_LABELS[s.accessControl || ""] || s.accessControl || "—",

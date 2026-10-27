@@ -28,6 +28,7 @@ export default function EventAssignUsersPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAllSystemUsers, setShowAllSystemUsers] = useState(false);
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null);
 
@@ -219,7 +220,8 @@ export default function EventAssignUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
+  const eventUsers = showAllSystemUsers ? users : users.filter((u) => u.assignments.some((assignment) => assignment.eventId === eventId));
+  const filteredUsers = eventUsers.filter((u) => {
     return (
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -286,6 +288,9 @@ export default function EventAssignUsersPage() {
                 className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22]"
               />
             </div>
+            <button type="button" onClick={() => { setShowAllSystemUsers((show) => !show); setSelectedUserIds([]); }} className="shrink-0 text-xs font-medium text-[#E5520F] hover:underline cursor-pointer">
+              {showAllSystemUsers ? "Show assigned only" : "Show all system users"}
+            </button>
           </div>
 
           <div className="flex items-center gap-3 shrink-0 w-fit self-start">
@@ -345,7 +350,13 @@ export default function EventAssignUsersPage() {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500 text-sm">
-                    No SYSTEM_USER accounts found for assignment.
+                    {users.length === 0 ? (
+                      <span>No SYSTEM_USER accounts found. <Link href="/user-management/add" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
+                    ) : !showAllSystemUsers && !searchQuery.trim() ? (
+                      <span>No system users are assigned to this event yet. <button type="button" onClick={() => setShowAllSystemUsers(true)} className="font-semibold text-[#E5520F] underline cursor-pointer">Show all system users</button> to assign one.</span>
+                    ) : (
+                      "No system users match your search."
+                    )}
                   </td>
                 </tr>
               ) : (

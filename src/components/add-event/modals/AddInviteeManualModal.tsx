@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { inviteeService, CreateInviteePayload } from "@/services/inviteeService";
+import CustomDropdown, { CustomDropdownOption } from "@/components/common/CustomDropdown";
 
 interface AddInviteeManualModalProps {
   isOpen: boolean;
@@ -17,6 +18,14 @@ const inputClass =
   "w-full px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D] transition-colors";
 
 const labelClass = "block text-sm font-medium text-gray-900 mb-1";
+
+const professionalIdentityOptions: CustomDropdownOption[] = [
+  { value: "Corporate ID", label: "Corporate ID" },
+  { value: "Employee ID", label: "Employee ID" },
+  { value: "Student ID", label: "Student ID" },
+  { value: "Professional License", label: "Professional License" },
+  { value: "Other", label: "Other" },
+];
 
 export default function AddInviteeManualModal({
   isOpen,
@@ -33,6 +42,9 @@ export default function AddInviteeManualModal({
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [identityType, setIdentityType] = useState("");
+  const [identityValue, setIdentityValue] = useState("");
+  const [dietaryPreference, setDietaryPreference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitInFlight = useRef(false);
@@ -42,6 +54,9 @@ export default function AddInviteeManualModal({
     setEmail("");
     setMobile("");
     setCompanyName("");
+    setIdentityType("");
+    setIdentityValue("");
+    setDietaryPreference("");
     setError(null);
     onClose();
   };
@@ -73,7 +88,7 @@ export default function AddInviteeManualModal({
       return;
     }
     if (!email.trim() && !mobile.trim()) {
-      setError("Please provide at least an email address or a mobile number.");
+      setError("Either an email address or a mobile number is required.");
       return;
     }
     const emailKey = email.trim().toLowerCase();
@@ -92,6 +107,8 @@ export default function AddInviteeManualModal({
       ...(email.trim() && { email: email.trim() }),
       ...(mobile.trim() && { mobile: mobile.trim() }),
       ...(companyName.trim() && { companyName: companyName.trim() }),
+      ...(identityType && identityValue.trim() && { designation: `${identityType}: ${identityValue.trim()}` }),
+      ...(dietaryPreference.trim() && { dietaryPreference: dietaryPreference.trim() }),
     };
 
     setSubmitting(true);
@@ -215,9 +232,50 @@ export default function AddInviteeManualModal({
               </div>
             )}
 
+            {/* Professional identity */}
+            <div>
+              <label className={labelClass}>
+                Professional Identity <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
+              </label>
+              <CustomDropdown
+                value={identityType}
+                onChange={setIdentityType}
+                options={professionalIdentityOptions}
+                placeholder="Select an identity type"
+                ariaLabel="Professional identity type"
+              />
+              {identityType && (
+                <input
+                  type="text"
+                  value={identityValue}
+                  onChange={(e) => setIdentityValue(e.target.value)}
+                  placeholder={`Enter ${identityType.toLowerCase()}`}
+                  className={`${inputClass} mt-2`}
+                  autoComplete="off"
+                  aria-label={`${identityType} value`}
+                />
+              )}
+            </div>
+
+            {/* Dietary preference */}
+            <div>
+              <label htmlFor="ai-dietary-preference" className={labelClass}>
+                Dietary Preference <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
+              </label>
+              <input
+                id="ai-dietary-preference"
+                type="text"
+                value={dietaryPreference}
+                onChange={(e) => setDietaryPreference(e.target.value)}
+                placeholder="e.g. Vegetarian, Vegan, or No preference"
+                className={inputClass}
+                autoComplete="off"
+              />
+            </div>
+
             {/* Error */}
             {error && (
-              <div role="alert" className="px-3.5 py-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+              <div role="alert" aria-live="assertive" className="px-3.5 py-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-sm">
                 {error}
               </div>
             )}

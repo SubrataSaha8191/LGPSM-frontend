@@ -114,7 +114,7 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
                 return (
                   <span
                     key={`${arc.key}-label`}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 size-10 rounded-full bg-white border border-gray-100 shadow-xs flex items-center justify-center text-[10px] font-bold text-gray-800"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 h-10 w-10 aspect-square rounded-full bg-white border border-gray-100 shadow-xs flex items-center justify-center text-[10px] font-bold text-gray-800"
                     style={{ left: `${left}%`, top: `${top}%` }}
                   >
                     {Math.round(arc.pct)}%
@@ -152,7 +152,7 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
           </div>
         ) : (
           <div className="relative h-64 w-full pt-7 pb-2 border-l border-b border-gray-200 pl-8">
-            <span className="absolute left-8 top-1 text-[10px] font-semibold text-gray-500">Head Count</span>
+            <span className="absolute left-8 top-1 whitespace-nowrap bg-white px-0.5 text-[10px] font-semibold text-gray-500">Head Count</span>
             <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-gray-400 font-medium">
               {ticks.map((t, i) => (
                 <span key={i}>{t}</span>

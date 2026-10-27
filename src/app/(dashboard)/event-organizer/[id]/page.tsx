@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import UserNavDropdown from "@/components/common/UserNavDropdown";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { eventService } from "@/services/eventService";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
@@ -34,6 +34,7 @@ interface OrganizerDetail {
 
 export default function OrganizerDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const organizerId = (params?.id as string) || "";
 
   const [organizer, setOrganizer] = useState<OrganizerDetail | null>(null);
@@ -367,7 +368,7 @@ export default function OrganizerDetailsPage() {
                     <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-sm">No events found for this organizer.</td></tr>
                   )}
                   {filteredEvents.map((ev) => (
-                    <tr key={ev.id} className="hover:bg-gray-50/80 transition-colors">
+                    <tr key={ev.id} onClick={() => router.push(`/events/${ev.id}`)} onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") router.push(`/events/${ev.id}`); }} tabIndex={0} role="link" aria-label={`Open ${ev.name}`} className="hover:bg-gray-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF5B22] transition-colors cursor-pointer">
                       <td className="py-4 px-4 font-medium text-gray-900"><Link className="hover:text-[#FF5B22]" href={`/events/${ev.id}`}>{ev.eventId}</Link></td>
                       <td className="py-4 px-4 font-medium text-gray-900"><Link className="hover:text-[#FF5B22]" href={`/events/${ev.id}`}>{ev.name}</Link></td>
                       <td className="py-4 px-4 text-gray-600">{ev.organizer}</td>

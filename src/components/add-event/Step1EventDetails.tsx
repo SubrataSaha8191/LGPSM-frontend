@@ -106,7 +106,7 @@ function OrganizerSelectField({
     <div className="space-y-1.5" ref={dropdownRef}>
       <div className="flex items-center justify-between">
         <label className={labelClass}>
-          Select Organizer(s)<Req />
+          Select Organizer(s)
         </label>
         {selectedIds.length > 0 && (
           <span className="text-xs text-[#FF651D] font-semibold">
@@ -114,6 +114,7 @@ function OrganizerSelectField({
           </span>
         )}
       </div>
+      <p className="-mt-1 text-xs text-[#828282]">Choose organizers to create this event for them, or leave empty to create it under your admin account.</p>
 
       <div className="relative">
         <button
