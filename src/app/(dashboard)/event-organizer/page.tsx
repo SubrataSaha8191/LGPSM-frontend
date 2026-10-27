@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 interface OrganizerRow {
   id: string;
   name: string;
+  accountName: string;
   email: string;
   phone: string;
   status: "Active" | "In Active" | "Deactivate";
@@ -41,7 +42,8 @@ export default function AllOrganizersPage() {
           const organizerUsersOnly = res.data.filter((u: any) => u.role === "ORGANIZER");
           const apiOrgs = organizerUsersOnly.map((u: any, idx: number) => ({
             id: u._id || u.id || `org_${idx}`,
-            name: u.fullName || u.name || "Event Organizer",
+            name: u.profile?.organizationName || "Organisation not set",
+            accountName: u.fullName || u.name || "Event Organizer",
             email: u.email || "--",
             phone: u.phone || u.contactNo || "--",
             status: (u.isActive === false ? "In Active" : "Active") as any,
@@ -79,6 +81,7 @@ export default function AllOrganizersPage() {
   const filteredOrganizers = organizers.filter(
     (o) =>
       o.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.accountName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.phone.includes(searchQuery)
   );
@@ -253,6 +256,7 @@ export default function AllOrganizersPage() {
                             className="hover:text-[#FF5B22] transition-colors cursor-pointer"
                           >
                             {org.name}
+                            <span className="block text-xs font-normal text-gray-500">Account: {org.accountName}</span>
                           </Link>
                         </td>
 

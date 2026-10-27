@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import { eventService } from "@/services/eventService";
 import { useCategories } from "@/hooks/useCategories";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
@@ -24,6 +25,7 @@ interface EventRow {
   start?: string;
   end?: string;
   status: RowStatus;
+  sessionsCount?: number;
 }
 
 const STATUS_STYLE: Record<RowStatus, string> = {
@@ -44,6 +46,9 @@ interface RawEvent {
   categoryId?: { _id?: string; name?: string } | string;
   organizerId?: { fullName?: string; profile?: { organizationName?: string } } | string;
   invitationsSent?: number;
+  sessionCount?: number;
+  sessionsCount?: number;
+  sessions?: unknown[];
 }
 
 function toRow(e: RawEvent): EventRow {
@@ -56,33 +61,47 @@ function toRow(e: RawEvent): EventRow {
     id,
     displayId: formatEventId(id),
     name: e.title || "Untitled event",
-    organizer: org?.profile?.organizationName || org?.fullName || "—",
+    organizer: org?.profile?.organizationName || "Organisation not set",
     categoryId: cat?._id || "",
     category: cat?.name || "—",
     createdAt: e.createdAt,
     start: e.schedule?.start,
     end: e.schedule?.end,
     status,
+    sessionsCount: e.sessionsCount ?? e.sessionCount ?? e.sessions?.length,
   };
 }
 
 function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const close = (e: MouseEvent) => {
+      if (!buttonRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuHeight = row.status === "Cancelled" ? 40 : 112;
+    const top = rect.bottom + menuHeight + 8 > window.innerHeight ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4;
+    setPosition({ top, left: Math.max(8, Math.min(rect.right - 150, window.innerWidth - 158)) });
+    setOpen(true);
+  };
   const item = "w-full text-left px-3 py-2 text-sm hover:bg-white/10 flex items-center gap-2";
   return (
-    <div ref={ref} className="relative inline-block">
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-label={`Actions for ${row.name}`} aria-expanded={open} className="p-1.5 rounded text-[#828282] hover:text-gray-900 hover:bg-gray-100 cursor-pointer">
+    <div className="inline-block">
+      <button ref={buttonRef} type="button" onClick={toggle} aria-label={`Actions for ${row.name}`} aria-expanded={open} className="p-1.5 rounded text-[#828282] hover:text-gray-900 hover:bg-gray-100 cursor-pointer">
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" /></svg>
       </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-30 min-w-[150px] rounded-md bg-[#1E232A] text-white py-1 shadow-xl">
+      {open && position && createPortal(
+        <div ref={menuRef} onClick={(e) => e.stopPropagation()} style={position} className="fixed z-[100] min-w-[150px] rounded-md bg-[#1E232A] text-white py-1 shadow-xl">
           <Link href={`/events/${row.id}`} className={item}>View Event</Link>
           {row.status !== "Cancelled" && <Link href={`/events/${row.id}/edit`} className={item}>Edit Event</Link>}
           {row.status !== "Cancelled" && (
@@ -90,22 +109,21 @@ function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow
               Delete Event
             </button>
           )}
-        </div>
+        </div>, document.body
       )}
     </div>
   );
 }
 
 export default function EventListingPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const router = useRouter();
   const categories = useCategories();
   const [rows, setRows] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ category: "", status: "", organizer: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
   const [draftFilters, setDraftFilters] = useState(filters);
   const [deleting, setDeleting] = useState<EventRow | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -139,10 +157,18 @@ export default function EventListingPage() {
   const fromDate = filters.from ? new Date(`${filters.from}T00:00:00`) : null;
   const toDate = filters.to ? new Date(`${filters.to}T23:59:59.999`) : null;
   const visible = rows.filter((r) => {
+    if (filters.name && !r.name.toLowerCase().includes(filters.name.trim().toLowerCase())) return false;
     if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
+    if (filters.organizer && !r.organizer.toLowerCase().includes(filters.organizer.trim().toLowerCase())) return false;
     if (filters.category && r.categoryId !== filters.category) return false;
     if (filters.status && r.status !== filters.status) return false;
-    if (filters.organizer && !r.organizer.toLowerCase().includes(filters.organizer.trim().toLowerCase())) return false;
+    if (filters.sessions && r.sessionsCount !== undefined) {
+      const count = r.sessionsCount;
+      if (filters.sessions === "0" && count !== 0) return false;
+      if (filters.sessions === "1" && count !== 1) return false;
+      if (filters.sessions === "2-5" && (count < 2 || count > 5)) return false;
+      if (filters.sessions === "6+" && count < 6) return false;
+    }
     const start = r.start ? new Date(r.start) : null;
     if (fromDate && (!start || start < fromDate)) return false;
     if (toDate && (!start || start > toDate)) return false;
@@ -218,7 +244,7 @@ export default function EventListingPage() {
                 </tr>
               ) : (
                 visible.map((r) => (
-                  <tr key={r.id} className="border-b border-[#D3D3D3] hover:bg-gray-50/70">
+                  <tr key={r.id} onClick={() => router.push(`/events/${r.id}`)} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/events/${r.id}`); }} tabIndex={0} role="link" aria-label={`Open ${r.name}`} className="border-b border-[#D3D3D3] hover:bg-gray-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF651D] cursor-pointer">
                     <td className="h-[46px] px-2.5 font-medium whitespace-nowrap"><Link href={`/events/${r.id}`} className="hover:text-[#FF651D]">{r.displayId}</Link></td>
                     <td className="px-2.5 max-w-[220px]"><Link href={`/events/${r.id}`} className="text-gray-900 hover:text-[#FF651D] line-clamp-2 break-words">{r.name}</Link></td>
                     <td className="px-2.5 max-w-[180px] truncate" title={r.organizer}>{r.organizer}</td>
@@ -227,7 +253,7 @@ export default function EventListingPage() {
                     <td className="px-2.5 whitespace-nowrap">{formatDateTime(r.start, "—")}</td>
                     <td className="px-2.5 whitespace-nowrap">{formatDateTime(r.end, "—")}</td>
                     <td className="px-2.5"><span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLE[r.status]}`}>{r.status}</span></td>
-                    <td className="px-2.5 text-right"><RowActions row={r} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} /></td>
+                    <td className="px-2.5 text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}><RowActions row={r} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} /></td>
                   </tr>
                 ))
               )}
@@ -259,35 +285,26 @@ export default function EventListingPage() {
               <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-4 pt-5">
-              <div>
-                <span className="block text-sm font-medium text-gray-900 mb-1.5">Event Category</span>
-                <CustomDropdown value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "All categories" }, ...categories.categoryOptions]} ariaLabel="Category filter" />
-              </div>
-              <div>
-                <span className="block text-sm font-medium text-gray-900 mb-1.5">Event Status</span>
-                <CustomDropdown
-                  value={draftFilters.status}
-                  onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
-                  options={[{ value: "", label: "All statuses" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((s) => ({ value: s, label: s }))]}
-                  ariaLabel="Status filter"
-                />
-              </div>
-              {isAdmin && (
-                <div>
-                  <label htmlFor="filter-organizer" className="block text-sm font-medium text-gray-900 mb-1.5">Organizer</label>
-                  <input id="filter-organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Organisation or name" className="w-full px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
-                </div>
-              )}
+              <input aria-label="Event Name" type="text" value={draftFilters.name} onChange={(e) => setDraftFilters((f) => ({ ...f, name: e.target.value }))} placeholder="Event Name" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
+              <input aria-label="Event Organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Event Organizer" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
+              <CustomDropdown value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Category" }, ...categories.categoryOptions]} ariaLabel="Event Category" />
+              <CustomDropdown value={draftFilters.sessions} onChange={(v) => setDraftFilters((f) => ({ ...f, sessions: v }))} options={[{ value: "", label: "No. of Sessions" }, { value: "0", label: "0 sessions" }, { value: "1", label: "1 session" }, { value: "2-5", label: "2–5 sessions" }, { value: "6+", label: "6+ sessions" }]} ariaLabel="No. of Sessions" />
+              <CustomDropdown
+                value={draftFilters.status}
+                onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
+                options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((s) => ({ value: s, label: s }))]}
+                ariaLabel="Event Status"
+              />
               <fieldset>
-                <legend className="text-sm font-medium text-gray-900 mb-1.5">Event start date</legend>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="text-xs text-[#828282]">From<input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value }))} className="mt-1 w-full px-3 py-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900" /></label>
-                  <label className="text-xs text-[#828282]">To<input type="date" value={draftFilters.to} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full px-3 py-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900" /></label>
+                <legend className="text-sm font-medium text-gray-900 mb-2">Date range</legend>
+                <div className="space-y-2">
+                  <input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value }))} aria-label="From" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D]" />
+                  <input type="date" value={draftFilters.to} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} aria-label="To" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D]" />
                 </div>
               </fieldset>
             </div>
             <div className="flex gap-3 pt-4 border-t border-[#E5E5E5]">
-              <button type="button" onClick={() => { const empty = { category: "", status: "", organizer: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
+              <button type="button" onClick={() => { const empty = { name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
                 Clear
               </button>
               <button type="button" onClick={() => { setFilters(draftFilters); setFilterOpen(false); }} className="flex-1 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] rounded-md text-sm font-medium text-white cursor-pointer">

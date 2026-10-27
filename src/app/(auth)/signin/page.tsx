@@ -95,13 +95,20 @@ function SigninContent() {
 
   const onSuccess = (role?: string) => {
     clearExplicitLogout();
+    const newAccountPending = sessionStorage.getItem("lgpsm_new_account_popup_pending") === "true";
+    if (newAccountPending) {
+      sessionStorage.removeItem("lgpsm_new_account_popup_pending");
+      sessionStorage.setItem("show_dashboard_popup", "true");
+    } else {
+      // Clear any stale flag left by an earlier session: returning accounts never see onboarding again.
+      sessionStorage.removeItem("show_dashboard_popup");
+    }
     const from = searchParams.get("from");
     // Return to the earlier page only when this account may open it; otherwise (for example a different role
     // signing in after someone else's session ended) start from the dashboard
     if (isSafeReturnPath(from) && canAccessRoute(role, from.split("?")[0])) {
       router.push(from);
     } else {
-      sessionStorage.setItem("show_dashboard_popup", "true");
       router.push("/dashboard");
     }
   };

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import { invitationService } from "@/services/invitationService";
+import InvitationCardImage from "@/components/events/InvitationCardImage";
 
 interface CardPreviewModalProps {
   eventId: string;
@@ -54,7 +54,7 @@ export default function CardPreviewModal({ eventId, inviteeId, inviteeName, onCl
             <p role="alert" className="text-sm text-rose-600 text-center">{error}</p>
           ) : url ? (
             <div className="relative w-full max-w-[320px] mx-auto aspect-[393/682]">
-              <Image src={url} alt="Invitation card" fill unoptimized className="object-contain" />
+              <InvitationCardImage src={url} alt="Invitation card" />
             </div>
           ) : (
             <p className="text-sm text-[#828282]">Generating preview...</p>

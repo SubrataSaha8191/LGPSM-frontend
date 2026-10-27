@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { sessionService } from "@/services/sessionService";
 import { userService } from "@/services/userService";
 import { assignmentService, AssignmentData } from "@/services/assignmentService";
+import { eventService } from "@/services/eventService";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import PageHeader from "@/components/common/PageHeader";
@@ -21,6 +22,7 @@ export default function EventAssignUsersPage() {
 
   const [users, setUsers] = useState<SystemUserRow[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [eventTitle, setEventTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -40,19 +42,23 @@ export default function EventAssignUsersPage() {
       setIsLoading(true);
       setErrorFeedback(null);
 
-      // 1. Fetch sessions for current event
-      const sessionsRes = await sessionService.getSessions(eventId);
+      // These resources are independent; load them together instead of serializing four network round trips.
+      const [sessionsRes, eventRes, usersRes, assignRes] = await Promise.all([
+        sessionService.getSessions(eventId),
+        eventService.getEvent(eventId),
+        userService.getUsers("SYSTEM_USER"),
+        assignmentService.getAssignmentsByEvent(eventId),
+      ]);
       const sessionList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : [];
       setSessions(sessionList);
+      if (eventRes.success && eventRes.data) setEventTitle(eventRes.data.title || "");
 
-      // 2. Fetch system users only (role === SYSTEM_USER)
-      const usersRes = await userService.getUsers("SYSTEM_USER");
+      // System users only (role === SYSTEM_USER)
       if (!usersRes.success) throw new Error(usersRes.message || "Failed to load system users.");
       const rawUsers = Array.isArray(usersRes?.data) ? usersRes.data : [];
       const systemUsersOnly = rawUsers.filter(u => u.role === "SYSTEM_USER");
 
-      // 3. Fetch assignments for this event
-      const assignRes = await assignmentService.getAssignmentsByEvent(eventId);
+      // Assignments for this event
       if (!assignRes.success) throw new Error(assignRes.message || "Failed to load assignments.");
       const assignmentsList: AssignmentData[] = Array.isArray(assignRes?.data) ? assignRes.data : [];
 
@@ -253,7 +259,10 @@ export default function EventAssignUsersPage() {
         {/* Controls Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-6 flex-1 max-w-xl">
-            <h2 className="text-xl font-bold text-gray-900 shrink-0">System Users</h2>
+            <div className="min-w-0 shrink-0">
+              <h2 className="text-xl font-bold text-gray-900">System Users</h2>
+              {eventTitle && <p className="text-xs text-gray-500 mt-0.5">Assigned to {eventTitle}</p>}
+            </div>
 
             <div className="relative flex-1">
               <svg
@@ -280,16 +289,9 @@ export default function EventAssignUsersPage() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0 w-fit self-start">
-            <Link
-              href={`/events/${eventId}`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22]/5 text-xs font-semibold rounded-md transition-colors cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>Back to Event</span>
+            <Link href="/user-management/add" className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22]/5 text-xs font-semibold rounded-md transition-colors">
+              <span aria-hidden>＋</span><span>Add User</span>
             </Link>
-
             <button
               type="button"
               onClick={openAssignModal}

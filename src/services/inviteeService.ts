@@ -67,8 +67,9 @@ export const inviteeService = {
    * List invitees for event
    * GET /api/v1/events/:eventId/invitees
    */
-  async getInvitees(eventId: string): Promise<ApiResponse<InviteeData[]>> {
-    return apiClient<InviteeData[]>(`/api/v1/events/${eventId}/invitees?limit=1000`, {
+  async getInvitees(eventId: string, options: { page?: number; limit?: number } = {}): Promise<ApiResponse<InviteeData[]>> {
+    const params = new URLSearchParams({ page: String(options.page ?? 1), limit: String(options.limit ?? 1000) });
+    return apiClient<InviteeData[]>(`/api/v1/events/${eventId}/invitees?${params}`, {
       method: "GET",
     }, true);
   },

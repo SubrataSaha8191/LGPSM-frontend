@@ -3,6 +3,7 @@
 
 import { addHours, isAfter, isValidIso, nextWholeHourIso, parseIso } from "@/utils/dateTime";
 import { resolveImageUrl } from "@/utils/mediaUrl";
+import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import type { CreateEventRequest, UpdateEventRequest } from "@/services/eventService";
 import type { SessionRequest } from "@/services/sessionService";
 
@@ -169,7 +170,8 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
     errors.organizerIds = "Select at least one organizer for the event.";
   }
   if (!draft.title.trim()) errors.title = "Title is required.";
-  else if (draft.title.trim().length > 100) errors.title = "Title cannot exceed 100 characters.";
+  else if (draft.title.trim().length > EVENT_TITLE_MAX_LENGTH) errors.title = `Title cannot exceed ${EVENT_TITLE_MAX_LENGTH} characters.`;
+  if (draft.description.length > EVENT_DESCRIPTION_MAX_LENGTH) errors.description = `Description cannot exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters.`;
   if (!draft.description.trim()) errors.description = "Description is required.";
   if (!draft.categoryId) errors.categoryId = "Choose an event category.";
   else if (options.subcategoryRequired && !draft.subcategoryId) errors.subcategoryId = "Choose a subcategory.";

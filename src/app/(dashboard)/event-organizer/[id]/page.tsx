@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import UserNavDropdown from "@/components/common/UserNavDropdown";
 import { useParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { userService } from "@/services/userService";
 import { eventService } from "@/services/eventService";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
@@ -21,7 +20,7 @@ interface EventRow {
   category: string;
   startDate: string;
   endDate: string;
-  status: "Upcoming" | "Completed" | "Ongoing" | "Invitation not send";
+  status: "Upcoming" | "Completed" | "Ongoing" | "Invitation not send" | "Cancelled";
 }
 
 interface OrganizerDetail {
@@ -35,7 +34,6 @@ interface OrganizerDetail {
 
 export default function OrganizerDetailsPage() {
   const params = useParams();
-  const { user } = useAuth();
   const organizerId = (params?.id as string) || "";
 
   const [organizer, setOrganizer] = useState<OrganizerDetail | null>(null);
@@ -80,7 +78,7 @@ export default function OrganizerDetailsPage() {
 
       const foundOrg: OrganizerDetail = {
         id: matched._id || matched.id,
-        name: matched.fullName || matched.name || "",
+        name: matched.profile?.organizationName || "Organisation not set",
         email: matched.email || "—",
         phone: matched.phone || "—",
         logoUrl: matched.avatarUrl || matched.profile?.avatarUrl,
@@ -105,12 +103,12 @@ export default function OrganizerDetailsPage() {
           id: rawId,
           eventId: formatEventId(ev.eventId || rawId),
           name: ev.title || ev.eventName || "Untitled Event",
-          organizer: ev.organizerId?.fullName || foundOrg.name,
+          organizer: ev.organizerId?.profile?.organizationName || "Organisation not set",
           createdOn: ev.createdAt ? new Date(ev.createdAt).toLocaleDateString() : "—",
           category: ev.categoryId?.name || ev.category || "—",
           startDate: start ? new Date(start).toLocaleString() : "TBD",
           endDate: end ? new Date(end).toLocaleString() : "TBD",
-          status: (rawStatus === "CANCELLED" ? "Cancelled" : getDynamicEventStatus(start, end, ev.status)) as any,
+          status: rawStatus === "CANCELLED" ? "Cancelled" : getDynamicEventStatus(start, end, ev.status) as EventRow["status"],
         };
       });
 
@@ -370,8 +368,8 @@ export default function OrganizerDetailsPage() {
                   )}
                   {filteredEvents.map((ev) => (
                     <tr key={ev.id} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="py-4 px-4 font-medium text-gray-900">{ev.eventId}</td>
-                      <td className="py-4 px-4 font-medium text-gray-900">{ev.name}</td>
+                      <td className="py-4 px-4 font-medium text-gray-900"><Link className="hover:text-[#FF5B22]" href={`/events/${ev.id}`}>{ev.eventId}</Link></td>
+                      <td className="py-4 px-4 font-medium text-gray-900"><Link className="hover:text-[#FF5B22]" href={`/events/${ev.id}`}>{ev.name}</Link></td>
                       <td className="py-4 px-4 text-gray-600">{ev.organizer}</td>
                       <td className="py-4 px-4 text-gray-600">{ev.createdOn}</td>
                       <td className="py-4 px-4 text-gray-600">{ev.category}</td>

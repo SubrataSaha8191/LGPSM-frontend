@@ -12,6 +12,7 @@ import { assignmentService, AssignmentData } from "@/services/assignmentService"
 import UserNavDropdown from "@/components/common/UserNavDropdown";
 import { useAlert } from "@/context/AlertContext";
 import { notifyDbUpdate } from "@/components/EventSubNav";
+import { mapWithConcurrency } from "@/utils/mapWithConcurrency";
 
 export interface AssignedSession {
   id: string;
@@ -95,17 +96,19 @@ export default function AssignedSystemUsersPage() {
       setErrorFeedback(null);
 
       // 1. Fetch system users only (role === SYSTEM_USER)
-      const usersRes = await userService.getUsers("SYSTEM_USER");
+      const [usersRes, eventsRes] = await Promise.all([
+        userService.getUsers("SYSTEM_USER"),
+        eventService.getEvents(),
+      ]);
       const rawUsers = Array.isArray(usersRes?.data) ? usersRes.data : [];
 
       // Filter out ADMIN & ORGANIZER strictly as UX defense
       const systemUsersOnly = rawUsers.filter((u) => u.role === "SYSTEM_USER");
 
-      // 2. Fetch events
-      const eventsRes = await eventService.getEvents();
+      // Events loaded alongside users above.
       const rawEvents = Array.isArray(eventsRes?.data) ? eventsRes.data : ((eventsRes?.data as any)?.events || []);
-      const formattedEvents = rawEvents.map((ev: any) => ({
-        id: ev._id || ev.id,
+      const formattedEvents: { id: string; title: string }[] = rawEvents.map((ev: any) => ({
+        id: String(ev._id || ev.id || ""),
         title: ev.title || ev.eventName || "Untitled Event",
       }));
       setEventsList(formattedEvents);
@@ -116,12 +119,17 @@ export default function AssignedSystemUsersPage() {
       // 3. Collect assignments across events
       const userAssignmentsMap: Record<string, SystemUserRow["assignments"]> = {};
 
-      for (const ev of formattedEvents) {
-        if (!ev.id) continue;
+      const assignmentResults = await mapWithConcurrency(formattedEvents, 8, async (ev) => {
+        if (!ev.id) return { ev, assignmentsList: [] as AssignmentData[] };
         try {
           const assignRes = await assignmentService.getAssignmentsByEvent(ev.id);
-          const assignmentsList: AssignmentData[] = Array.isArray(assignRes?.data) ? assignRes.data : [];
+          return { ev, assignmentsList: Array.isArray(assignRes?.data) ? assignRes.data : [] };
+        } catch {
+          return { ev, assignmentsList: [] as AssignmentData[] };
+        }
+      });
 
+      for (const { ev, assignmentsList } of assignmentResults) {
           assignmentsList.forEach((asn) => {
             const userId = typeof asn.userId === "object" ? asn.userId?._id : asn.userId;
             if (!userId) return;
@@ -148,9 +156,6 @@ export default function AssignedSystemUsersPage() {
               sessions,
             });
           });
-        } catch (e) {
-          // Ignore individual event assignment fetch errors
-        }
       }
 
       // Format final SystemUserRow list - FILTER strictly for ASSIGNED users on this page!

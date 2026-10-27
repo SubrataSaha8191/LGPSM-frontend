@@ -293,7 +293,7 @@ export default function EventWizard({
       )}
 
       <div className="p-4 sm:p-6 flex-1">
-        <div className="border border-[#E0E0E0] rounded-lg overflow-hidden flex flex-col xl:flex-row bg-white">
+        <div className="border border-[#E0E0E0] rounded-lg flex flex-col xl:flex-row bg-white">
           <div className="w-full xl:w-[62%] flex flex-col min-w-0">
             <StepHeader currentStep={currentStep} onStepClick={handleStepChange} maxUnlockedStep={maxUnlockedStep} />
             <div ref={stepContentRef} className="flex-1">
@@ -335,7 +335,7 @@ export default function EventWizard({
               )}
             </div>
           </div>
-          <div className="w-full xl:w-[38%] shrink-0 border-t xl:border-t-0 xl:border-l border-[#E0E0E0]">
+          <div className="w-full xl:w-[38%] shrink-0 border-t xl:border-t-0 xl:border-l border-[#E0E0E0] xl:sticky xl:top-20 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto">
             <MobileCardPreview
               template={draft.template}
               eventTitle={draft.title}

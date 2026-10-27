@@ -49,24 +49,43 @@ export default function EventSubNav({
     fallbackCounts.current = { propSessionsCount, propInviteesCount, propAssignmentsCount };
   }, [propSessionsCount, propInviteesCount, propAssignmentsCount]);
 
-  const fetchUnifiedCounts = useCallback(async () => {
+  const fetchUnifiedCounts = useCallback(async (force = false) => {
     const { propSessionsCount, propInviteesCount, propAssignmentsCount } = fallbackCounts.current;
     if (!eventId || eventId === "1" || eventId === "select") return;
+
+    const previous = countsCache.get(eventId);
+    const known: Counts = {
+      sessions: propSessionsCount ?? (force ? -1 : previous?.sessions ?? -1),
+      invitees: propInviteesCount ?? (force ? -1 : previous?.invitees ?? -1),
+      assignments: propAssignmentsCount ?? (force ? -1 : previous?.assignments ?? -1),
+    };
+    countsCache.set(eventId, {
+      sessions: known.sessions >= 0 ? known.sessions : previous?.sessions ?? -1,
+      invitees: known.invitees >= 0 ? known.invitees : previous?.invitees ?? -1,
+      assignments: known.assignments >= 0 ? known.assignments : previous?.assignments ?? -1,
+    });
+    if (known.sessions >= 0 && known.invitees >= 0 && known.assignments >= 0) {
+      setSessionsCount(known.sessions);
+      setInviteesCount(known.invitees);
+      setAssignmentsCount(known.assignments);
+      return;
+    }
 
     let request = countsInflight.get(eventId);
     if (!request) {
       request = (async () => {
         try {
           const [sessRes, invRes, assignRes] = await Promise.all([
-            sessionService.getSessions(eventId),
-            inviteeService.getInvitees(eventId),
-            assignmentService.getEventAssignments(eventId),
+            known.sessions < 0 ? sessionService.getSessions(eventId) : Promise.resolve(null),
+            known.invitees < 0 ? inviteeService.getInvitees(eventId, { limit: 1 }) : Promise.resolve(null),
+            known.assignments < 0 ? assignmentService.getEventAssignments(eventId) : Promise.resolve(null),
           ]);
-          const previous = countsCache.get(eventId);
+          const cachedCounts = countsCache.get(eventId);
+          const inviteeMeta = (invRes as (typeof invRes & { meta?: { total?: number } }) | null)?.meta;
           const next: Counts = {
-            sessions: sessRes?.success ? (sessRes as any).meta?.total ?? (Array.isArray(sessRes.data) ? sessRes.data.length : 0) : previous?.sessions ?? -1,
-            invitees: invRes?.success ? (invRes as any).meta?.total ?? (Array.isArray(invRes.data) ? invRes.data.length : 0) : previous?.invitees ?? -1,
-            assignments: assignRes?.success ? (Array.isArray(assignRes.data) ? assignRes.data.length : 0) : previous?.assignments ?? -1,
+            sessions: known.sessions >= 0 ? known.sessions : sessRes?.success ? (sessRes as any).meta?.total ?? (Array.isArray(sessRes.data) ? sessRes.data.length : 0) : cachedCounts?.sessions ?? -1,
+            invitees: known.invitees >= 0 ? known.invitees : invRes?.success ? inviteeMeta?.total ?? (Array.isArray(invRes.data) && invRes.data.length < 1 ? 0 : cachedCounts?.invitees ?? -1) : cachedCounts?.invitees ?? -1,
+            assignments: known.assignments >= 0 ? known.assignments : assignRes?.success ? (Array.isArray(assignRes.data) ? assignRes.data.length : 0) : cachedCounts?.assignments ?? -1,
           };
           countsCache.set(eventId, next);
           return next;
@@ -95,15 +114,13 @@ export default function EventSubNav({
     fetchUnifiedCounts();
 
     const handleUpdate = () => {
-      fetchUnifiedCounts();
+      fetchUnifiedCounts(true);
     };
 
     window.addEventListener("lgpsm-db-update", handleUpdate);
-    window.addEventListener("focus", handleUpdate);
 
     return () => {
       window.removeEventListener("lgpsm-db-update", handleUpdate);
-      window.removeEventListener("focus", handleUpdate);
     };
   }, [fetchUnifiedCounts]);
 

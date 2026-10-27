@@ -16,7 +16,7 @@ export default function StepHeader({ currentStep, onStepClick, maxUnlockedStep }
   ];
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-0 font-sans">
+    <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-0 font-sans sticky top-16 z-20">
       <div className="flex items-center gap-8 relative">
         {steps.map((step) => {
           const isActive = currentStep === step.num;

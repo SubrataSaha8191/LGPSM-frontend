@@ -8,11 +8,12 @@ import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
+import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 
 export type EventDateField = "start" | "end" | "rsvpDeadline";
 
-export const TITLE_MAX = 100;
-export const DESCRIPTION_MAX = 500;
+export const TITLE_MAX = EVENT_TITLE_MAX_LENGTH;
+export const DESCRIPTION_MAX = EVENT_DESCRIPTION_MAX_LENGTH;
 
 interface Step1EventDetailsProps {
   draft: EventDraft;
@@ -140,7 +141,7 @@ function OrganizerSelectField({
                     </span>
                   );
                 }
-                const name = org.fullName || org.email;
+                const name = org.profile?.organizationName || "Organisation not set";
                 return (
                   <span
                     key={id}
@@ -202,6 +203,7 @@ function OrganizerSelectField({
             ) : (
               filtered.map((org) => {
                 const isSelected = selectedIds.includes(org._id);
+                const organizationName = org.profile?.organizationName || "Organisation not set";
                 return (
                   <div
                     key={org._id}
@@ -218,7 +220,8 @@ function OrganizerSelectField({
                         className="w-4 h-4 rounded border-gray-300 accent-[#FF651D] cursor-pointer"
                       />
                       <div className="truncate">
-                        <div className="text-xs font-semibold text-gray-900 truncate">{org.fullName}</div>
+                        <div className="text-xs font-semibold text-gray-900 truncate">{organizationName}</div>
+                        <div className="text-[10px] text-gray-500 truncate">Account: {org.fullName || "Organizer"}</div>
                         <div className="text-[11px] text-gray-500 truncate">{org.email}</div>
                       </div>
                     </div>

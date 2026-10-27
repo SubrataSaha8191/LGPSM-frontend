@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { InviteeLog, AccessLog, SessionReport, ReportSessionColumn } from "@/types/reports";
 import ReportsHeaderControls from "@/components/reports/ReportsHeaderControls";
@@ -63,6 +64,8 @@ export default function ReportsPage() {
   const [sessionsReport, setSessionsReport] = useState<SessionReport[]>([]);
   const [sessionColumns, setSessionColumns] = useState<ReportSessionColumn[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [loadingInviteeDetails, setLoadingInviteeDetails] = useState(false);
+  const [loadingAccessDetails, setLoadingAccessDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -158,7 +161,7 @@ export default function ReportsPage() {
     setCheckInPage(1);
   }, [selectedEventId, methodFilter]);
 
-  // 4. Event report, invitee log, session and activity data for the selected event
+  // Load the compact event report up front. Heavy invitee and audit datasets are fetched only when their tab is opened.
   useEffect(() => {
     if (!selectedEventId) {
       setEventReport(null);
@@ -174,12 +177,7 @@ export default function ReportsPage() {
       setLoadingDetails(true);
       setDetailsError(null);
 
-      const [reportRes, inviteesRes, allCheckInsRes, auditRes] = await Promise.all([
-        reportService.getEventReport(selectedEventId),
-        inviteeService.getInvitees(selectedEventId),
-        checkInService.getCheckIns(selectedEventId, { page: 1, limit: 1000 }),
-        auditLogService.getAuditLogs({ eventId: selectedEventId, limit: 100 }),
-      ]);
+      const reportRes = await reportService.getEventReport(selectedEventId);
       if (cancelled) return;
 
       if (!reportRes.success || !reportRes.data) {
@@ -202,60 +200,6 @@ export default function ReportsPage() {
         }))
       );
 
-      // Per-invitee check-in summary built from real check-in records
-      const checkIns: CheckInRecord[] = allCheckInsRes.success && Array.isArray(allCheckInsRes.data) ? allCheckInsRes.data : [];
-      const byInvitee = new Map<string, CheckInRecord[]>();
-      checkIns.forEach((ci) => {
-        const id = ci.invitee?._id ? String(ci.invitee._id) : "";
-        if (!id) return;
-        byInvitee.set(id, [...(byInvitee.get(id) || []), ci]);
-      });
-
-      const invitees: any[] = inviteesRes.success && Array.isArray(inviteesRes.data) ? inviteesRes.data : [];
-      setInviteeLogs(
-        invitees.map((inv) => {
-          const id = String(inv._id || inv.id);
-          const records = byInvitee.get(id) || [];
-          const sessionCheckIns: Record<string, boolean> = {};
-          records.forEach((r) => {
-            if (r.session?._id) sessionCheckIns[String(r.session._id)] = true;
-          });
-          const attendedSessions = Object.keys(sessionCheckIns).length;
-          const latest = records.reduce<string | null>(
-            (acc, r) => (!acc || new Date(r.checkInAt) > new Date(acc) ? r.checkInAt : acc),
-            null
-          );
-          const invitationStatus = String(inv.invitationStatus || "PENDING").toUpperCase();
-          const rsvp = String(inv.rsvpStatus || "PENDING").toUpperCase();
-          return {
-            id,
-            name: inv.name || "",
-            mobile: inv.mobile || "—",
-            invitationStatus: invitationStatus === "SENT" ? "Sent" : invitationStatus === "FAILED" ? "Failed" : "Pending",
-            rsvpStatus: rsvp === "ACCEPTED" ? "Accepted" : rsvp === "DECLINED" ? "Declined" : "Pending",
-            checkInStatus:
-              records.length === 0
-                ? "Not Checked-in"
-                : sessions.length > 0 && attendedSessions > 0 && attendedSessions < sessions.length
-                  ? "Partially Checked-in"
-                  : "Checked-in",
-            lastCheckInTime: latest ? new Date(latest).toLocaleString() : "—",
-            sessionCheckIns,
-          } as InviteeLog;
-        })
-      );
-
-      const logs: any[] = auditRes.success && Array.isArray(auditRes.data) ? auditRes.data : [];
-      setAccessLogs(
-        logs.map((log) => ({
-          id: log._id,
-          userType: ROLE_LABELS[log.actorType] || log.actorType || "—",
-          dateTime: log.createdAt ? new Date(log.createdAt).toLocaleString() : "—",
-          action: log.action,
-          status: log.status === "FAILED" ? "failed" : "Successful",
-        }))
-      );
-
       setLoadingDetails(false);
     }
 
@@ -264,6 +208,80 @@ export default function ReportsPage() {
       cancelled = true;
     };
   }, [selectedEventId, reloadKey]);
+
+  useEffect(() => {
+    if (!selectedEventId || activeTab !== "invitees") {
+      setInviteeLogs([]);
+      return;
+    }
+    let cancelled = false;
+    async function loadInviteeDetails() {
+      setLoadingInviteeDetails(true);
+      const [inviteesRes, allCheckInsRes] = await Promise.all([
+        inviteeService.getInvitees(selectedEventId),
+        checkInService.getCheckIns(selectedEventId, { page: 1, limit: 1000 }),
+      ]);
+      if (cancelled) return;
+
+      const checkIns: CheckInRecord[] = allCheckInsRes.success && Array.isArray(allCheckInsRes.data) ? allCheckInsRes.data : [];
+      const byInvitee = new Map<string, CheckInRecord[]>();
+      checkIns.forEach((ci) => {
+        const id = ci.invitee?._id ? String(ci.invitee._id) : "";
+        if (!id) return;
+        const records = byInvitee.get(id) || [];
+        records.push(ci);
+        byInvitee.set(id, records);
+      });
+
+      const invitees: any[] = inviteesRes.success && Array.isArray(inviteesRes.data) ? inviteesRes.data : [];
+      const sessionCount = eventReport?.sessionReports?.length || 0;
+      setInviteeLogs(invitees.map((inv) => {
+        const id = String(inv._id || inv.id);
+        const records = byInvitee.get(id) || [];
+        const sessionCheckIns: Record<string, boolean> = {};
+        records.forEach((r) => { if (r.session?._id) sessionCheckIns[String(r.session._id)] = true; });
+        const attendedSessions = Object.keys(sessionCheckIns).length;
+        const latest = records.reduce<string | null>((acc, r) => (!acc || new Date(r.checkInAt) > new Date(acc) ? r.checkInAt : acc), null);
+        const invitationStatus = String(inv.invitationStatus || "PENDING").toUpperCase();
+        const rsvp = String(inv.rsvpStatus || "PENDING").toUpperCase();
+        return {
+          id,
+          name: inv.name || "",
+          mobile: inv.mobile || "—",
+          invitationStatus: invitationStatus === "SENT" ? "Sent" : invitationStatus === "FAILED" ? "Failed" : "Pending",
+          rsvpStatus: rsvp === "ACCEPTED" ? "Accepted" : rsvp === "DECLINED" ? "Declined" : "Pending",
+          checkInStatus: records.length === 0 ? "Not Checked-in" : sessionCount > 0 && attendedSessions > 0 && attendedSessions < sessionCount ? "Partially Checked-in" : "Checked-in",
+          lastCheckInTime: latest ? new Date(latest).toLocaleString() : "—",
+          sessionCheckIns,
+        } as InviteeLog;
+      }));
+      setLoadingInviteeDetails(false);
+    }
+    loadInviteeDetails();
+    return () => { cancelled = true; };
+  }, [selectedEventId, activeTab, reloadKey, eventReport]);
+
+  useEffect(() => {
+    if (!selectedEventId || activeTab !== "access") {
+      setAccessLogs([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAccessDetails(true);
+    auditLogService.getAuditLogs({ eventId: selectedEventId, limit: 100 }).then((auditRes) => {
+      if (cancelled) return;
+      const logs: any[] = auditRes.success && Array.isArray(auditRes.data) ? auditRes.data : [];
+      setAccessLogs(logs.map((log) => ({
+        id: log._id,
+        userType: ROLE_LABELS[log.actorType] || log.actorType || "—",
+        dateTime: log.createdAt ? new Date(log.createdAt).toLocaleString() : "—",
+        action: log.action,
+        status: log.status === "FAILED" ? "failed" : "Successful",
+      })));
+      setLoadingAccessDetails(false);
+    });
+    return () => { cancelled = true; };
+  }, [selectedEventId, activeTab, reloadKey]);
 
   const downloadReportCSV = () => {
     let content = "";
@@ -374,6 +392,7 @@ export default function ReportsPage() {
                     {selectedEvent.categoryId.name}
                   </span>
                 )}
+                {selectedEventId && <Link href={`/events/${selectedEventId}`} className="text-xs font-semibold text-[#E5520F] underline underline-offset-2">Open event</Link>}
               </div>
               {selectedEvent && (
                 <p className="text-xs text-gray-500 font-medium">
@@ -430,7 +449,7 @@ export default function ReportsPage() {
           accessLogs={filteredAccessLogs}
           sessionsReport={filteredSessions}
           sessionColumns={sessionColumns}
-          loadingDetails={loadingDetails}
+          loadingDetails={loadingDetails || (activeTab === "invitees" && loadingInviteeDetails) || (activeTab === "access" && loadingAccessDetails)}
         />
       </div>
 

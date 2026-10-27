@@ -2,18 +2,15 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
 import { userService } from '@/services/userService';
 import UserNavDropdown from "@/components/common/UserNavDropdown";
 
 export default function AddEventOrganizerPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: "",
+    organizationName: "",
     email: "",
     phone: "",
-    organizerName: "",
     password: "",
   });
   const [isSuccess, setIsSuccess] = useState(false);
@@ -50,12 +47,14 @@ export default function AddEventOrganizerPage() {
     setIsSuccess(false);
 
     const res = await userService.createUser({
-      fullName: formData.fullName.trim(),
+      // The API requires fullName for the user account; use the organization name as
+      // the account's displayed name and store it in the dedicated organization field.
+      fullName: formData.organizationName.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim() || undefined,
       password: formData.password,
       role: 'ORGANIZER',
-      ...(formData.organizerName.trim() ? { profile: { organizationName: formData.organizerName.trim() } } : {}),
+      profile: { organizationName: formData.organizationName.trim() },
     });
 
     setIsSubmitting(false);
@@ -89,17 +88,17 @@ export default function AddEventOrganizerPage() {
             <h2 className="text-lg font-bold text-gray-900">Event Organizer</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Full Name */}
+              {/* Organization Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-800">
-                  Full Name<span className="text-red-500">*</span>
+                  Organisation Name<span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Type Name"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  placeholder="Type Organisation Name"
+                  value={formData.organizationName}
+                  onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                 />
               </div>
@@ -136,21 +135,6 @@ export default function AddEventOrganizerPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              {/* Organizer Name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Organizer Name<span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Type Name"
-                  value={formData.organizerName}
-                  onChange={(e) => setFormData({ ...formData, organizerName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
-                />
-              </div>
-
               {/* Temporary Password (the organizer signs in with this) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-gray-800">

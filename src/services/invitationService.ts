@@ -3,24 +3,28 @@ import { tokenStorage } from "./tokenStorage";
 
 export interface SendInvitationsPayload {
   inviteeIds: string[];
-  channel?: "EMAIL" | "SMS" | "WHATSAPP";
+  channel?: "EMAIL" | "SMS" | "WHATSAPP" | "BOTH";
 }
 
 export interface ResendInvitationsPayload {
   invitationIds: string[];
-  channel?: "EMAIL" | "SMS" | "WHATSAPP";
+  channel?: "EMAIL" | "SMS" | "WHATSAPP" | "BOTH";
 }
 
 export interface SendResult {
   inviteeId: string;
   status: "SENT" | "PENDING" | "FAILED";
   failureReason?: string;
+  emailStatus?: "SENT" | "FAILED" | "PENDING";
+  whatsappStatus?: "SENT" | "FAILED" | "PENDING";
 }
 
 export interface ResendResult {
   invitationId: string;
   status: "SENT" | "PENDING" | "FAILED";
   failureReason?: string;
+  emailStatus?: "SENT" | "FAILED" | "PENDING";
+  whatsappStatus?: "SENT" | "FAILED" | "PENDING";
 }
 
 export interface InvitationData {
@@ -34,7 +38,7 @@ export interface InvitationData {
     invitationStatus?: string;
     rsvpStatus?: string;
   } | string;
-  channel: "EMAIL" | "SMS" | "WHATSAPP";
+  channel: "EMAIL" | "SMS" | "WHATSAPP" | "BOTH";
   status: "SENT" | "PENDING" | "FAILED";
   failureReason?: string;
   sentAt?: string;

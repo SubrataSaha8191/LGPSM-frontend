@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SelectedTemplate } from "./eventDraft";
 import { templateService, TemplatePreviewPayload } from "@/services/templateService";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import InvitationCardImage from "@/components/events/InvitationCardImage";
 
 interface MobileCardPreviewProps {
   template: SelectedTemplate | null;
@@ -19,6 +20,19 @@ interface MobileCardPreviewProps {
 }
 
 const ZOOM_SCALE: Record<string, number> = { "100%": 1, "75%": 0.75, "50%": 0.5 };
+
+function formatEventDateRange(start: string, end: string): string | null {
+  if (!start || !end) return null;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+  const format = (date: Date) => new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+  return `${format(startDate)} – ${format(endDate)}`;
+}
 
 export default function MobileCardPreview({
   template,
@@ -92,6 +106,7 @@ export default function MobileCardPreview({
 
   const showLive = live?.key === (template?.id ?? "by-event-type");
   const usesSamplePhoto = !payload.logoKey;
+  const eventDateRange = formatEventDateRange(eventStart, eventEnd);
 
   return (
     <div className="h-full bg-[#F7F3F0] p-4 sm:p-6 flex flex-col items-center">
@@ -115,8 +130,7 @@ export default function MobileCardPreview({
         >
           <div className="relative w-full h-full rounded-[30px] overflow-hidden bg-[#EFEFEF]">
             {showLive && live && (
-              // eslint-disable-next-line @next/next/no-img-element -- a blob URL from the server-rendered card; next/image cannot optimise it
-              <img src={live.url} alt={`${template?.name || "Template"} invitation card`} className="absolute inset-0 w-full h-full object-cover" />
+              <InvitationCardImage src={live.url} alt={`${template?.name || "Template"} invitation card`} imageClassName="object-cover" />
             )}
             {loading && (
               <div role="status" aria-label="Updating preview" className="absolute top-3 right-3 h-6 w-6 rounded-full bg-white/90 shadow flex items-center justify-center">
@@ -148,6 +162,11 @@ export default function MobileCardPreview({
         <p className="mt-2 text-xs text-[#4B4F52] text-center break-words">
           {template ? `Template: ${template.name}` : "No template chosen: the design follows the event type."}
         </p>
+        {eventDateRange && (
+          <p className="mt-1 text-xs font-medium text-[#25216F] text-center" aria-label="Event date range">
+            {eventDateRange}
+          </p>
+        )}
         {showLive && (
           <p className="mt-1 text-[11px] text-[#828282] text-center max-w-[260px]">
             {usesSamplePhoto ? "Sample photo, guest and QR. Add an event image to use your own." : "Sample guest and QR."} Each guest gets their own QR when invitations are sent.

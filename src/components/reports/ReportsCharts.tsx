@@ -23,14 +23,6 @@ interface ReportsChartsProps {
 
 const DONUT_RADIUS = 15.91549430918954; // circumference of 100 so dash values read as percentages
 
-function ExpandIcon() {
-  return (
-    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-  );
-}
-
 // Round the axis maximum up to a readable step so ticks are whole numbers
 function niceMax(value: number): number {
   if (value <= 5) return 5;
@@ -68,7 +60,6 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
       <div className="lg:col-span-4 bg-white border border-gray-200/80 rounded-md p-6 shadow-xs relative space-y-4 flex flex-col justify-between min-w-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800">Guest Logs</h3>
-          <ExpandIcon />
         </div>
 
         {/* Chart Legend */}
@@ -123,7 +114,7 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
                 return (
                   <span
                     key={`${arc.key}-label`}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-100 shadow-xs px-2 py-0.5 rounded text-[11px] font-bold text-gray-800"
+                    className="absolute -translate-x-1/2 -translate-y-1/2 size-10 rounded-full bg-white border border-gray-100 shadow-xs flex items-center justify-center text-[10px] font-bold text-gray-800"
                     style={{ left: `${left}%`, top: `${top}%` }}
                   >
                     {Math.round(arc.pct)}%
@@ -139,7 +130,6 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
       <div className="lg:col-span-8 bg-white border border-gray-200/80 rounded-md p-6 shadow-xs relative space-y-4 flex flex-col justify-between min-w-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-800">Invited vs. Attendees</h3>
-          <ExpandIcon />
         </div>
 
         {/* Chart Legend */}
@@ -161,16 +151,13 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
             No sessions for this event yet
           </div>
         ) : (
-          <div className="relative h-64 w-full pt-4 pb-2 border-l border-b border-gray-200 pl-8">
+          <div className="relative h-64 w-full pt-7 pb-2 border-l border-b border-gray-200 pl-8">
+            <span className="absolute left-8 top-1 text-[10px] font-semibold text-gray-500">Head Count</span>
             <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[10px] text-gray-400 font-medium">
               {ticks.map((t, i) => (
                 <span key={i}>{t}</span>
               ))}
             </div>
-
-            <span className="absolute -left-7 top-1/2 -rotate-90 -translate-y-1/2 text-[10px] font-semibold text-gray-500 tracking-tight">
-              Head Count
-            </span>
 
             <div className="absolute inset-x-0 top-4 bottom-6 flex flex-col justify-between pointer-events-none -z-0">
               <div className="border-b border-gray-100 w-full" />

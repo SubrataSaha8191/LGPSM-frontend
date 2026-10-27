@@ -92,9 +92,9 @@ function DeliveryDonut({ sent, notSent, failed }: { sent: number; notSent: numbe
   ];
   let offset = 0;
   return (
-    <div className="flex items-center gap-5">
-      <div className="relative size-28 shrink-0">
-        <svg viewBox="0 0 100 100" className="size-28 -rotate-90" role="img" aria-label={`${sent} sent, ${notSent} not sent, ${failed} failed`}>
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="relative size-24 shrink-0">
+        <svg viewBox="0 0 100 100" className="size-24 -rotate-90" role="img" aria-label={`${sent} sent, ${notSent} not sent, ${failed} failed`}>
           <circle cx="50" cy="50" r={r} fill="none" stroke="#E5E5E5" strokeWidth="14" />
           {total > 0 &&
             parts.map((p) => {
@@ -109,9 +109,9 @@ function DeliveryDonut({ sent, notSent, failed }: { sent: number; notSent: numbe
           <span className="text-[10px] text-[#828282]">guests</span>
         </span>
       </div>
-      <ul className="space-y-2 text-sm text-[#4B4F52]">
+      <ul className="min-w-0 space-y-2 text-xs text-[#4B4F52]">
         {parts.map((p) => (
-          <li key={p.label} className="flex items-center gap-2 whitespace-nowrap">
+          <li key={p.label} className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="size-2.5 rounded-full shrink-0" style={{ background: p.color }} />
             {p.label} <span className="text-gray-900 font-medium">{p.v}</span>
           </li>
@@ -206,7 +206,7 @@ export default function EventDetailsPage() {
 
   const categoryName = typeof event.categoryId === "object" ? event.categoryId?.name : "";
   const categoryPill = [categoryName, event.subcategory?.name].filter(Boolean).join(" · ");
-  const organizer = typeof event.organizerId === "object" ? event.organizerId?.profile?.organizationName || event.organizerId?.fullName : "";
+  const organizer = typeof event.organizerId === "object" ? event.organizerId?.profile?.organizationName || "Organisation not set" : "Organisation not set";
   const venue = typeof event.location === "string" ? event.location : event.location?.address;
   const delivery = report?.deliverySummary || { SENT: 0, PENDING: 0, FAILED: 0 };
   const totalInvitees = report?.totalInvitees ?? 0;

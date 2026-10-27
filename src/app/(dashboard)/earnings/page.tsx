@@ -57,7 +57,7 @@ export default function EarningsPage() {
           return {
             id,
             eventName: ev.title || "Untitled Event",
-            organizer: ev.organizerId?.fullName || "—",
+            organizer: ev.organizerId?.profile?.organizationName || "Organisation not set",
             invites: report.success && report.data ? report.data.deliverySummary?.SENT ?? 0 : 0,
             eventStart: ev.schedule?.start,
           };

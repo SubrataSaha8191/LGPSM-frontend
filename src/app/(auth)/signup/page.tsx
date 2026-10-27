@@ -212,6 +212,7 @@ export default function SignupPage() {
       const res = await authService.verifyEmail(email, code);
       if (res.success) {
         sessionStorage.removeItem("lgpsm_pending_verification_email");
+        sessionStorage.setItem("lgpsm_new_account_popup_pending", "true");
         setSuccessMessage("Email verified successfully! Redirecting to sign in...");
         setTimeout(() => {
           router.push(signinHref("organizer") + (signinHref("organizer").includes("?") ? "&" : "?") + "verified=true");

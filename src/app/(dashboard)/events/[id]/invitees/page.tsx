@@ -21,6 +21,7 @@ import { formatPhoneNumber } from "@/utils/eventUtils";
 import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
+import { mergeInviteeImport } from "@/utils/mergeInviteeImport.mjs";
 
 interface Invitee {
   _id: string;
@@ -35,7 +36,9 @@ interface Invitee {
   sessionAccess?: { sessionId: string; allowed: boolean }[];
 }
 
-type Channel = "EMAIL" | "WHATSAPP";
+const INVITEE_PAGE_SIZE = 50;
+
+type Channel = "EMAIL" | "WHATSAPP" | "BOTH";
 type Feedback = { type: "success" | "error" | "info"; message: string; details?: string[] } | null;
 
 const pill = (cls: string, text: string) => <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>{text}</span>;
@@ -59,7 +62,7 @@ export default function InviteesManagementPage() {
   const { showAlert, confirm } = useAlert();
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
-  const [event, setEvent] = useState<{ title?: string; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
+  const [event, setEvent] = useState<{ title?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [history, setHistory] = useState<InvitationData[]>([]);
@@ -67,6 +70,7 @@ export default function InviteesManagementPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [inviteePage, setInviteePage] = useState(1);
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
   const [channel, setChannel] = useState<Channel>("EMAIL");
@@ -82,6 +86,9 @@ export default function InviteesManagementPage() {
   const [showChooser, setShowChooser] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const sendInFlight = useRef(false);
+  const resendInFlight = useRef(false);
+  const importInFlight = useRef(false);
 
   useEffect(() => {
     if (!sidebarFlow) return;
@@ -140,23 +147,54 @@ export default function InviteesManagementPage() {
 
   const filterSession = sessions.find((s) => s._id === sessionFilter);
   const term = search.trim().toLowerCase();
-  const visible = invitees.filter(
+  const filteredInvitees = invitees.filter(
     (i) =>
       (!term || [i.name, i.email, i.mobile, i.companyName].some((v) => (v || "").toLowerCase().includes(term))) &&
       (!filterSession || allowedIn(i, filterSession))
   );
+  const inviteePageCount = Math.max(1, Math.ceil(filteredInvitees.length / INVITEE_PAGE_SIZE));
+  const visible = filteredInvitees.slice((inviteePage - 1) * INVITEE_PAGE_SIZE, inviteePage * INVITEE_PAGE_SIZE);
   const allVisibleSelected = visible.length > 0 && visible.every((i) => selectedIds.includes(i._id));
 
-  const summarize = (results: { status: string; failureReason?: string }[], verb: string): Feedback => {
+  useEffect(() => {
+    setInviteePage(1);
+  }, [term, sessionFilter]);
+
+  useEffect(() => {
+    if (inviteePage > inviteePageCount) setInviteePage(inviteePageCount);
+  }, [inviteePage, inviteePageCount]);
+
+  const summarize = (results: { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[], verb: string): Feedback => {
     const sent = results.filter((r) => r.status === "SENT").length;
     const failed = results.filter((r) => r.status === "FAILED");
     if (results.length === 0) return { type: "error", message: `Nothing was ${verb}.` };
+    if (channel === "BOTH") {
+      const channelCounts = (key: "emailStatus" | "whatsappStatus") => ({
+        sent: results.filter((r) => r[key] === "SENT").length,
+        failed: results.filter((r) => r[key] === "FAILED").length,
+      });
+      const email = channelCounts("emailStatus");
+      const whatsapp = channelCounts("whatsappStatus");
+      const skippedEmail = Math.max(0, results.length - email.sent - email.failed);
+      const skippedWhatsApp = Math.max(0, results.length - whatsapp.sent - whatsapp.failed);
+      const details = [
+        `Email: ${email.sent} sent, ${email.failed} failed, ${skippedEmail} skipped`,
+        `WhatsApp: ${whatsapp.sent} sent, ${whatsapp.failed} failed, ${skippedWhatsApp} skipped`,
+        ...[...new Set(failed.map((f) => f.failureReason).filter((reason): reason is string => !!reason))],
+      ];
+      return {
+        type: failed.length ? (sent ? "info" : "error") : "success",
+        message: `${sent} invitee(s) received at least one delivery; ${failed.length} received no successful delivery.`,
+        details,
+      };
+    }
     if (failed.length === 0) return { type: "success", message: `${sent} invitation(s) ${verb}.` };
     const reasons = [...new Set(failed.map((f) => f.failureReason || "Unknown error"))];
     return { type: "error", message: `${sent} ${verb}, ${failed.length} failed.`, details: reasons };
   };
 
   const handleSend = async () => {
+    if (sendInFlight.current) return;
     // Selected guests who were never invited, or every not-yet-invited guest when nothing is selected
     const targets = (selected.length ? selected : notInvited).filter((i) => i.invitationStatus === "PENDING");
     if (targets.length === 0) {
@@ -164,26 +202,40 @@ export default function InviteesManagementPage() {
       return;
     }
     setBusy("send");
+    sendInFlight.current = true;
     setFeedback(null);
-    const res = await invitationService.sendInvitations(eventId, { inviteeIds: targets.map((t) => t._id), channel });
-    const results = (res.data?.results || (res as { results?: { status: string; failureReason?: string }[] }).results || []) as { status: string; failureReason?: string }[];
-    setFeedback(res.success || results.length ? summarize(results, "sent") : { type: "error", message: res.message || "Invitations could not be sent." });
-    setSelectedIds([]);
-    setBusy(null);
-    await load();
-    notifyDbUpdate();
+    try {
+      const res = await invitationService.sendInvitations(eventId, { inviteeIds: targets.map((t) => t._id), channel });
+      const results = (res.data?.results || (res as { results?: { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[] }).results || []) as { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[];
+      setFeedback(res.success || results.length ? summarize(results, "sent") : { type: "error", message: res.message || "Invitations could not be sent." });
+      if (res.success || results.length) setSelectedIds([]);
+      await load();
+      notifyDbUpdate();
+    } catch {
+      setFeedback({ type: "error", message: "The invitation request could not reach the server. Your selections are kept; please retry." });
+    } finally {
+      sendInFlight.current = false;
+      setBusy(null);
+    }
   };
 
   const handleResend = async () => {
-    if (resendTargets.length === 0) return;
+    if (resendTargets.length === 0 || resendInFlight.current) return;
     setBusy("resend");
+    resendInFlight.current = true;
     setFeedback(null);
-    const res = await invitationService.resendInvitations(eventId, { invitationIds: resendTargets.map((h) => h._id), channel });
-    const results = (res.data?.results || (res as { results?: { status: string; failureReason?: string }[] }).results || []) as { status: string; failureReason?: string }[];
-    setFeedback(res.success || results.length ? summarize(results, "resent") : { type: "error", message: res.message || "Invitations could not be resent." });
-    setSelectedIds([]);
-    setBusy(null);
-    await load();
+    try {
+      const res = await invitationService.resendInvitations(eventId, { invitationIds: resendTargets.map((h) => h._id), channel });
+      const results = (res.data?.results || (res as { results?: { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[] }).results || []) as { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[];
+      setFeedback(res.success || results.length ? summarize(results, "resent") : { type: "error", message: res.message || "Invitations could not be resent." });
+      if (res.success || results.length) setSelectedIds([]);
+      await load();
+    } catch {
+      setFeedback({ type: "error", message: "The resend request could not reach the server. Your selections are kept; please retry." });
+    } finally {
+      resendInFlight.current = false;
+      setBusy(null);
+    }
   };
 
   const handleClearHistory = async () => {
@@ -211,7 +263,7 @@ export default function InviteesManagementPage() {
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const parsed = await parseInviteeSheet(file);
+      const parsed = await parseInviteeSheet(file, ownListSessions.map((session) => session.name));
       if (parsed.rows.length === 0) {
         setFeedback({ type: "error", message: "The sheet has no invitee rows." });
         return;
@@ -223,18 +275,40 @@ export default function InviteesManagementPage() {
   };
 
   const handleImport = async (rows: InviteeSheetRow[]) => {
-    if (!upload) return;
+    if (!upload || importInFlight.current) return;
+    const merge = mergeInviteeImport(
+      rows,
+      invitees,
+      ownListSessions.map((session) => ({ id: String(session._id), name: session.name }))
+    );
+    if (merge.rows.length > 1000) {
+      setFeedback({ type: "error", message: "The combined invitee list exceeds the 1,000 row import limit. Remove some new rows or split the upload." });
+      return;
+    }
     setBusy("import");
+    importInFlight.current = true;
     setFeedback(null);
-    const res = await inviteeService.importExcel(eventId, rowsToSheetFile(rows, upload.file.name));
-    setBusy(null);
+    let res: Awaited<ReturnType<typeof inviteeService.importExcel>>;
+    try {
+      res = await inviteeService.importExcel(eventId, rowsToSheetFile(merge.rows, upload.file.name, ownListSessions.map((session) => session.name)));
+    } catch {
+      setFeedback({ type: "error", message: "The import request could not reach the server. Existing invitees are unchanged; please retry." });
+      return;
+    } finally {
+      importInFlight.current = false;
+      setBusy(null);
+    }
     setUpload(null);
     if (!res.success || !res.data) {
       setFeedback({ type: "error", message: res.message || "The invitee list could not be imported." });
       return;
     }
     const d = res.data;
-    const parts = [`${d.imported} added`, `${d.updated ?? 0} updated`];
+    const parts = [`${d.imported} added`, `${d.updated ?? 0} kept or updated`, `${merge.retained} existing pending retained`];
+    if (merge.matchedExisting) parts.push(`${merge.matchedExisting} uploaded row(s) matched existing invitees`);
+    if (merge.duplicateInUpload) parts.push(`${merge.duplicateInUpload} duplicate row(s) in the upload skipped`);
+    if (merge.conflicts) parts.push(`${merge.conflicts} conflicting contact row(s) skipped`);
+    if (merge.invalidRows) parts.push(`${merge.invalidRows} row(s) need a valid name and contact`);
     if (d.removed) parts.push(`${d.removed} removed (not in the new file)`);
     if (d.rejected) parts.push(`${d.rejected} rejected`);
     setFeedback({
@@ -292,6 +366,10 @@ export default function InviteesManagementPage() {
       <PageHeader title={sidebarFlow ? "Add Invitees" : event?.title || "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={invitees.length} />}
+
+        {!sidebarFlow && eventId && event?.title && (
+          <p className="text-sm text-gray-600">Managing invitees and delivery for <span className="font-semibold text-gray-900">{event.title}</span></p>
+        )}
 
         {sidebarFlow && (
           <div className="max-w-md">
@@ -371,6 +449,7 @@ export default function InviteesManagementPage() {
                           </svg>
                         ),
                       },
+                      { value: "BOTH", label: "All (Email + WhatsApp)" },
                     ]}
                   />
                 </div>
@@ -507,6 +586,16 @@ export default function InviteesManagementPage() {
                     )}
                   </tbody>
                 </table>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E0E0E0] px-3 py-2.5 text-xs text-[#4B4F52]">
+                  <span>
+                    {filteredInvitees.length === 0 ? "No matching invitees" : `Showing ${(inviteePage - 1) * INVITEE_PAGE_SIZE + 1}–${Math.min(inviteePage * INVITEE_PAGE_SIZE, filteredInvitees.length)} of ${filteredInvitees.length}`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setInviteePage((page) => Math.max(1, page - 1))} disabled={inviteePage <= 1} className="rounded border border-[#E0E0E0] px-2.5 py-1.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+                    <span>Page {inviteePage} of {inviteePageCount}</span>
+                    <button type="button" onClick={() => setInviteePage((page) => Math.min(inviteePageCount, page + 1))} disabled={inviteePage >= inviteePageCount} className="rounded border border-[#E0E0E0] px-2.5 py-1.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                  </div>
+                </div>
               </div>
             )}
           </>
@@ -516,7 +605,7 @@ export default function InviteesManagementPage() {
       {upload && (
         <InviteesPreviewModal
           title="Invitees List Preview"
-          subtitle={`${upload.file.name} · Importing replaces the current not-yet-invited list. Guests who were already invited are kept.`}
+          subtitle={`${upload.file.name} · Existing pending invitees are retained; only new contacts are added.`}
           rows={upload.rows}
           showCompany={isCorporate || upload.rows.some((r) => r.company)}
           onClose={() => setUpload(null)}
@@ -544,6 +633,7 @@ export default function InviteesManagementPage() {
       <AddInviteeManualModal
         isOpen={showManualAdd}
         eventId={eventId}
+        existingInvitees={invitees}
         showCompany={showCompany}
         onClose={() => setShowManualAdd(false)}
         onSaved={async () => { await load(); notifyDbUpdate(); }}

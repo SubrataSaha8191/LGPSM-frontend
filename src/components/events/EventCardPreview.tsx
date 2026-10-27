@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { invitationService } from "@/services/invitationService";
+import InvitationCardImage from "@/components/events/InvitationCardImage";
 
 interface EventCardPreviewProps {
   eventId: string;
@@ -47,10 +48,9 @@ export default function EventCardPreview({ eventId, refreshKey, label }: EventCa
   );
 
   return (
-    <div className="relative w-full aspect-[393/682] bg-[#F4F5F8]">
+    <div className="relative w-full h-52 sm:h-60 bg-[#F4F5F8]">
       {url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- a blob URL from the server-rendered card
-        <img src={url} alt={`${label} invitation card`} className="absolute inset-0 w-full h-full object-cover" />
+        <InvitationCardImage src={url} alt={`${label} invitation card`} />
       ) : failed ? (
         <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
           <p className="text-xs text-[#4B4F52]">The card preview could not be loaded.</p>

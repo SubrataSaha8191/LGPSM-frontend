@@ -42,7 +42,10 @@ export default function DashboardPage() {
     if (typeof window === "undefined" || sessionStorage.getItem("show_dashboard_popup") !== "true") return;
     // Wait for the dashboard's own page fade-in (~0.45s) to finish. Opened any earlier, the popup's entrance
     // plays underneath a still-transparent page and the user just sees it appear.
-    const timer = window.setTimeout(() => setShowWelcomePopup(true), 650);
+    const timer = window.setTimeout(() => {
+      sessionStorage.removeItem("show_dashboard_popup");
+      setShowWelcomePopup(true);
+    }, 650);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -82,7 +85,7 @@ export default function DashboardPage() {
             const owned = events.filter((e) => String(e.organizerId?._id || e.organizerId) === String(org._id));
             return {
               id: org._id,
-              name: org.fullName,
+              name: org.profile?.organizationName || "Organisation not set",
               email: org.email,
               phone: org.phone || "—",
               totalEvents: owned.length,

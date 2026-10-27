@@ -9,6 +9,7 @@ export interface InviteeSheetRow {
   email: string;
   phone: string;
   company: string;
+  sessions?: Record<string, boolean>;
 }
 
 export interface ParsedInviteeSheet {
@@ -19,7 +20,7 @@ export interface ParsedInviteeSheet {
 
 const clean = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
 
-export async function parseInviteeSheet(file: File): Promise<ParsedInviteeSheet> {
+export async function parseInviteeSheet(file: File, sessionNames: string[] = []): Promise<ParsedInviteeSheet> {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const raw = sheet ? XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) : [];
@@ -27,6 +28,7 @@ export async function parseInviteeSheet(file: File): Promise<ParsedInviteeSheet>
   if (nonBlank.length === 0) return { rows: [], problems: [] };
 
   let nameIdx = -1, emailIdx = -1, mobileIdx = -1, companyIdx = -1;
+  const sessionColumns = new Map<number, string>();
   const header = nonBlank[0].map((c) => clean(c).toLowerCase());
   const hasHeader = header.some((c) => c.includes("name") || c.includes("email") || c.includes("mobile") || c.includes("phone") || c.includes("company"));
   if (hasHeader) {
@@ -36,6 +38,8 @@ export async function parseInviteeSheet(file: File): Promise<ParsedInviteeSheet>
       else if (c.includes("name")) nameIdx = i;
       else if (c.includes("email") || c.includes("mail")) emailIdx = i;
       else if (c.includes("mobile") || c.includes("phone") || c.includes("contact") || c.includes("whatsapp")) mobileIdx = i;
+      const sessionName = sessionNames.find((name) => name.trim().toLowerCase() === c);
+      if (sessionName) sessionColumns.set(i, sessionName);
     });
   } else {
     nameIdx = 0; emailIdx = 1; mobileIdx = 2; companyIdx = 3;
@@ -47,7 +51,8 @@ export async function parseInviteeSheet(file: File): Promise<ParsedInviteeSheet>
   const problems: ParsedInviteeSheet["problems"] = [];
   dataRows.forEach((r, i) => {
     const rowNo = String(i + (hasHeader ? 2 : 1));
-    const row: InviteeSheetRow = { id: rowNo, name: cell(r, nameIdx), email: cell(r, emailIdx).toLowerCase(), phone: cell(r, mobileIdx), company: cell(r, companyIdx) };
+    const sessionValues = sessionColumns.size ? Object.fromEntries([...sessionColumns].map(([idx, name]) => [name, !["N", "NO", "FALSE", "0"].includes(cell(r, idx).toUpperCase())])) : undefined;
+    const row: InviteeSheetRow = { id: rowNo, name: cell(r, nameIdx), email: cell(r, emailIdx).toLowerCase(), phone: cell(r, mobileIdx), company: cell(r, companyIdx), sessions: sessionValues };
     const problem = rowProblem(row);
     if (problem) problems.push({ row: rowNo, error: problem });
     rows.push(row);
@@ -66,8 +71,11 @@ export function rowProblem(row: Pick<InviteeSheetRow, "name" | "email" | "phone"
 }
 
 // Rebuilds a sheet from (edited) rows so edits go through the same import as an uploaded file
-export function rowsToSheetFile(rows: InviteeSheetRow[], fileName: string): File {
-  const sheet = XLSX.utils.json_to_sheet(rows.map((r) => ({ Name: r.name, Email: r.email, Mobile: r.phone, "Company Name": r.company })));
+export function rowsToSheetFile(rows: InviteeSheetRow[], fileName: string, sessionNames: string[] = []): File {
+  const sheet = XLSX.utils.json_to_sheet(rows.map((r) => ({
+    Name: r.name, Email: r.email, Mobile: r.phone, "Company Name": r.company,
+    ...Object.fromEntries(sessionNames.map((name) => [name, r.sessions?.[name] === false ? "N" : "Y"])),
+  })));
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Invitees");
   const data = XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as ArrayBuffer;

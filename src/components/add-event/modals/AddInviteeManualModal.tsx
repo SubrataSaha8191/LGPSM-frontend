@@ -1,6 +1,5 @@
 "use client";
 
-import CustomDropdown from "@/components/common/CustomDropdown";
 import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { inviteeService, CreateInviteePayload } from "@/services/inviteeService";
@@ -8,6 +7,7 @@ import { inviteeService, CreateInviteePayload } from "@/services/inviteeService"
 interface AddInviteeManualModalProps {
   isOpen: boolean;
   eventId: string;
+  existingInvitees?: Array<{ name: string; email?: string; mobile?: string }>;
   showCompany?: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -18,20 +18,10 @@ const inputClass =
 
 const labelClass = "block text-sm font-medium text-gray-900 mb-1";
 
-const DIETARY_OPTIONS = [
-  "None",
-  "Vegetarian",
-  "Vegan",
-  "Gluten Free",
-  "Halal",
-  "Kosher",
-  "Nut Free",
-  "Dairy Free",
-];
-
 export default function AddInviteeManualModal({
   isOpen,
   eventId,
+  existingInvitees = [],
   showCompany = false,
   onClose,
   onSaved,
@@ -43,23 +33,18 @@ export default function AddInviteeManualModal({
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [companyName, setCompanyName] = useState("");
-  const [designation, setDesignation] = useState("");
-  const [dietaryPreference, setDietaryPreference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submitInFlight = useRef(false);
 
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setEmail("");
-      setMobile("");
-      setCompanyName("");
-      setDesignation("");
-      setDietaryPreference("");
-      setError(null);
-    }
-  }, [isOpen]);
+  const closeModal = () => {
+    setName("");
+    setEmail("");
+    setMobile("");
+    setCompanyName("");
+    setError(null);
+    onClose();
+  };
 
   useEffect(() => {
     if (isOpen && overlayRef.current && modalRef.current) {
@@ -79,6 +64,7 @@ export default function AddInviteeManualModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitInFlight.current) return;
     setError(null);
 
     const trimmed = name.trim();
@@ -90,34 +76,47 @@ export default function AddInviteeManualModal({
       setError("Please provide at least an email address or a mobile number.");
       return;
     }
+    const emailKey = email.trim().toLowerCase();
+    const phoneKey = mobile.replace(/\D/g, "");
+    const existing = existingInvitees.find((item) =>
+      (emailKey && item.email?.trim().toLowerCase() === emailKey) ||
+      (phoneKey && item.mobile?.replace(/\D/g, "") === phoneKey)
+    );
+    if (existing) {
+      setError(`This contact is already on the event invitee list as ${existing.name}. Edit that invitee instead of adding a duplicate.`);
+      return;
+    }
 
     const payload: CreateInviteePayload = {
       name: trimmed,
       ...(email.trim() && { email: email.trim() }),
       ...(mobile.trim() && { mobile: mobile.trim() }),
       ...(companyName.trim() && { companyName: companyName.trim() }),
-      ...(designation.trim() && { designation: designation.trim() }),
-      ...(dietaryPreference && { dietaryPreference }),
     };
 
     setSubmitting(true);
-    const res = await inviteeService.createInvitee(eventId, payload);
-    setSubmitting(false);
-
-    if (!res.success) {
-      setError(res.message || "Failed to add invitee. Please try again.");
-      return;
+    submitInFlight.current = true;
+    try {
+      const res = await inviteeService.createInvitee(eventId, payload);
+      if (!res.success) {
+        setError(res.message || "Failed to add invitee. Please try again.");
+        return;
+      }
+      onSaved();
+      closeModal();
+    } catch {
+      setError("The request could not reach the server. Your entries are kept; please retry.");
+    } finally {
+      submitInFlight.current = false;
+      setSubmitting(false);
     }
-
-    onSaved();
-    onClose();
   };
 
   return (
     <div
       ref={overlayRef}
       className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto font-sans"
-      onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}
+      onClick={(e) => { if (e.target === e.currentTarget && !submitting) closeModal(); }}
     >
       <div
         ref={modalRef}
@@ -133,7 +132,7 @@ export default function AddInviteeManualModal({
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeModal}
             disabled={submitting}
             aria-label="Close"
             className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md cursor-pointer disabled:opacity-50"
@@ -216,30 +215,6 @@ export default function AddInviteeManualModal({
               </div>
             )}
 
-            {/* Designation */}
-            <div>
-              <label htmlFor="ai-designation" className={labelClass}>
-                Designation <span className="text-[#828282] font-normal text-xs">(optional)</span>
-              </label>
-              <input
-                id="ai-designation"
-                type="text"
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-                placeholder="e.g. Product Manager"
-                className={inputClass}
-                autoComplete="off"
-              />
-            </div>
-
-            {/* Dietary Preference */}
-            <div>
-              <span className={labelClass}>
-                Dietary Preference <span className="text-[#828282] font-normal text-xs">(optional)</span>
-              </span>
-              <CustomDropdown ariaLabel="Dietary Preference" value={dietaryPreference} onChange={setDietaryPreference} placeholder="Select preference" options={DIETARY_OPTIONS.map((opt) => ({ value: opt === "None" ? "" : opt, label: opt }))} />
-            </div>
-
             {/* Error */}
             {error && (
               <div role="alert" className="px-3.5 py-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-sm">
@@ -252,7 +227,7 @@ export default function AddInviteeManualModal({
           <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2.5">
             <button
               type="button"
-              onClick={onClose}
+              onClick={closeModal}
               disabled={submitting}
               className="px-4 py-2 text-sm font-medium border border-[#E0E0E0] text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
             >
