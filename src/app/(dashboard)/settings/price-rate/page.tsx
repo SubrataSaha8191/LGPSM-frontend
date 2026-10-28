@@ -40,7 +40,7 @@ export default function PriceRateSettingsPage() {
       <PageHeader title="Price Rate Settings" />
 
       {/* Page Content */}
-      <div className="p-6 max-w-7xl w-full mx-auto space-y-6 pb-24">
+      <div className="px-4 sm:px-6 pt-7 w-full space-y-6 pb-24">
         <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs font-medium">
           Price-rate changes are not stored on the server yet. They apply to this session only and reset on reload.
         </div>

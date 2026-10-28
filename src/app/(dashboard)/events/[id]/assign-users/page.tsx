@@ -16,6 +16,7 @@ import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-mana
 import { useAlert } from "@/context/AlertContext";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
 
 export default function EventAssignUsersPage() {
   const { confirm } = useAlert();
@@ -32,10 +33,11 @@ export default function EventAssignUsersPage() {
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllSystemUsers, setShowAllSystemUsers] = useState(false);
-  const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null);
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  // Ticks that were there before a row's own "⋯ > Change sessions" borrowed the selection; put back if that is cancelled
+  const [selectionBeforeRowAction, setSelectionBeforeRowAction] = useState<string[] | null>(null);
   const [isAssignSuccessModalOpen, setIsAssignSuccessModalOpen] = useState(false);
   // null = all sessions of this event
   const [sessionScope, setSessionScope] = useState<string[] | null>(null);
@@ -122,12 +124,18 @@ export default function EventAssignUsersPage() {
     }
   }, [eventId]);
 
+  // Someone already on this event is not assigned a second time: choosing them again changes which sessions they cover
+  const selectedRows = users.filter((u) => selectedUserIds.includes(u.id));
+  const alreadyOnEvent = selectedRows.filter((u) => u.assignments.some((a) => a.eventId === eventId)).length;
+  const allAlreadyOnEvent = selectedRows.length > 0 && alreadyOnEvent === selectedRows.length;
+
   // Opening the popup starts from the selected user's current sessions (or "All sessions")
   const openAssignModal = () => {
     setErrorFeedback(null);
     const only = selectedUserIds.length === 1 ? users.find((u) => u.id === selectedUserIds[0]) : undefined;
     const current = only?.assignments.find((a) => a.eventId === eventId);
     setSessionScope(current && current.sessions.length > 0 ? current.sessions.map((s) => s.id) : null);
+    setSelectionBeforeRowAction(null); // the bottom button works on the ticks as they are
     setIsAssignModalOpen(true);
   };
 
@@ -153,6 +161,23 @@ export default function EventAssignUsersPage() {
     } else {
       setSelectedUserIds(filteredUsers.map((u) => u.id));
     }
+  };
+
+  // The row's "⋯" menu works on that one person: change (or give) their sessions, or take them off this event
+  const closeAssignModal = () => {
+    setIsAssignModalOpen(false);
+    if (selectionBeforeRowAction) setSelectedUserIds(selectionBeforeRowAction);
+    setSelectionBeforeRowAction(null);
+  };
+
+  const openAssignFor = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
+    const current = user?.assignments.find((a) => a.eventId === eventId);
+    setErrorFeedback(null);
+    setSelectionBeforeRowAction(selectedUserIds);
+    setSelectedUserIds([userId]);
+    setSessionScope(current && current.sessions.length > 0 ? current.sessions.map((s) => s.id) : null);
+    setIsAssignModalOpen(true);
   };
 
   // Handle unassigning via DELETE /api/v1/assignments/:assignmentId
@@ -208,6 +233,7 @@ export default function EventAssignUsersPage() {
 
       // Only confirm success when at least one assignment was actually saved
       setIsAssignModalOpen(false);
+      setSelectionBeforeRowAction(null);
       // Never carry a previous selection or session scope into the next assignment
       setSelectedUserIds([]);
       setSessionScope(null);
@@ -351,7 +377,6 @@ export default function EventAssignUsersPage() {
                 filteredUsers.map((u) => {
                   const isSelected = selectedUserIds.includes(u.id);
                   const isExpanded = expandedUserIds.includes(u.id);
-                  const isActionActive = activeActionId === u.id;
                   const countText = getAssignedCountText(u.assignments);
 
                   return (
@@ -401,7 +426,7 @@ export default function EventAssignUsersPage() {
                                 className="bg-white border border-gray-200 rounded-md p-3 shadow-2xs space-y-2 whitespace-normal"
                               >
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="text-xs font-semibold text-gray-800">
+                                  <div className="text-sm font-medium text-[#15191C]">
                                     {asn.eventName}
                                   </div>
                                   <button
@@ -438,16 +463,19 @@ export default function EventAssignUsersPage() {
                       <td className="py-4 px-4 text-gray-600">{u.email}</td>
                       <td className="py-4 px-4 text-gray-600">{u.phone}</td>
 
-                      <td className="py-4 px-4 text-right relative">
-                        <button
-                          type="button"
-                          onClick={() => setActiveActionId(isActionActive ? null : u.id)}
-                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
-                          </svg>
-                        </button>
+                      <td className="py-4 px-4 text-right">
+                        {(() => {
+                          const onThisEvent = u.assignments.find((a) => a.eventId === eventId);
+                          return (
+                            <RowMenu
+                              label={`Actions for ${u.name}`}
+                              items={[
+                                { label: onThisEvent ? "Change sessions" : "Assign to this event", icon: EditIcon, onClick: () => openAssignFor(u.id) },
+                                ...(onThisEvent ? [{ label: "Remove from this event", icon: TrashIcon, onClick: () => handleUnassignAssignment(onThisEvent.assignmentId) }] : []),
+                              ]}
+                            />
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -465,30 +493,33 @@ export default function EventAssignUsersPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-            <button
-              type="button"
-              onClick={openAssignModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22] hover:text-white font-bold text-xs rounded-md transition-colors cursor-pointer"
-            >
-              <span>Assign {selectedUserIds.length} users</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
-          </div>
+          {/* Nothing ticked, nothing to act on: the button appears once someone is selected */}
+          {selectedUserIds.length > 0 && (
+            <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={openAssignModal}
+                className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22] hover:text-white font-bold text-xs rounded-md transition-colors cursor-pointer"
+              >
+                <span>{allAlreadyOnEvent ? `Change sessions for ${selectedUserIds.length} ${selectedUserIds.length === 1 ? "user" : "users"}` : `Assign ${selectedUserIds.length} ${selectedUserIds.length === 1 ? "user" : "users"}`}</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Assign Sessions Modal ── */}
       {isAssignModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-md w-full overflow-hidden space-y-6 animate-modal">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Assign Sessions to Selected System Users</h3>
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">{allAlreadyOnEvent ? "Change Sessions for Selected System Users" : "Assign Sessions to Selected System Users"}</h3>
               <button
                 type="button"
-                onClick={() => setIsAssignModalOpen(false)}
+                onClick={closeAssignModal}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,7 +528,14 @@ export default function EventAssignUsersPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAssignSubmit} className="px-6 space-y-5">
+            <form onSubmit={handleAssignSubmit} className="px-6 pt-5 space-y-5">
+              {alreadyOnEvent > 0 && (
+                <p className="p-3 rounded-md bg-[#FFF3EC] border border-[#FFE3D7] text-xs text-[#4B4F52]">
+                  {allAlreadyOnEvent
+                    ? `${selectedRows.length === 1 ? "This user is" : "These users are"} already assigned to this event, so nothing is added twice. Pick the sessions ${selectedRows.length === 1 ? "they" : "they each"} should cover; this replaces the current choice.`
+                    : `${alreadyOnEvent} of the ${selectedRows.length} selected ${alreadyOnEvent === 1 ? "is" : "are"} already assigned to this event. Their sessions are replaced by what you pick here; the others are newly assigned.`}
+                </p>
+              )}
               <SessionScopePicker
                 sessions={sessions.map((sess, idx) => ({ id: String(sess._id || sess.id), name: sess.name || `Session ${idx + 1}` }))}
                 value={sessionScope}
@@ -508,20 +546,20 @@ export default function EventAssignUsersPage() {
                 <p role="alert" className="text-xs font-medium text-rose-600 break-words">{errorFeedback}</p>
               )}
 
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsAssignModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  onClick={closeAssignModal}
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingAssign}
-                  className="px-6 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {submittingAssign ? "Saving..." : "Assign"}
+                  {submittingAssign ? "Saving..." : allAlreadyOnEvent ? "Save" : "Assign"}
                 </button>
               </div>
             </form>

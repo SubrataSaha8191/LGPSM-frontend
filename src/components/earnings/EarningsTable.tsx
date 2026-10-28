@@ -42,7 +42,7 @@ export default function EarningsTable({
   return (
     <div className="bg-white border border-gray-200 rounded-md p-6 shadow-2xs space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">Earnings</h2>
+        <h2 className="text-xl font-medium text-[#15191C]">Earnings</h2>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-gray-500">68 Records:</span>
           <button
@@ -164,9 +164,9 @@ export default function EarningsTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs whitespace-nowrap">
+        <table className="w-full text-left text-sm whitespace-nowrap">
           <thead>
-            <tr className="border-b border-gray-200 text-gray-500 font-medium text-[11px]">
+            <tr className="border-b border-gray-200 text-[#828282] font-medium text-sm">
               <th className="py-3 px-4 w-10"></th>
               <th className="py-3 px-4 font-medium">
                 {activeTab === "organizer" ? "Organizer" : "Event Name"}
@@ -181,7 +181,7 @@ export default function EarningsTable({
               <th className="py-3 px-4 text-right font-medium">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 text-gray-800">
+          <tbody className="divide-y divide-gray-200 text-[#4B4F52]">
             {loading && <TableSkeletonRows rows={5} cols={8} />}
             {!loading && records.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">

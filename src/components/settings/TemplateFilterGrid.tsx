@@ -28,8 +28,8 @@ export default function TemplateFilterGrid({ templates, categories, loading = fa
   );
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-[18px] gap-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1.5">Event Category</label>
           <CustomDropdown
@@ -66,7 +66,7 @@ export default function TemplateFilterGrid({ templates, categories, loading = fa
       </div>
 
       {loading ? (
-        <SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+        <SkeletonRegion label="Loading templates" className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-5">
 {Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}
 </SkeletonRegion>
       ) : filtered.length === 0 ? (
@@ -74,7 +74,7 @@ export default function TemplateFilterGrid({ templates, categories, loading = fa
           {templates.length === 0 ? "No templates have been added yet." : "No templates match the selected filters."}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-5">
           {filtered.map((t) => (
             <TemplateGridItem
               key={t.id}

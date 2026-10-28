@@ -16,6 +16,8 @@ interface ImageUploadFieldProps {
   aspectClassName?: string;
   /** Stretch to the height of the row it sits in (the box grows instead of keeping its own aspect ratio) */
   fill?: boolean;
+  /** Extra classes for the empty drop area (e.g. a minimum height) */
+  emptyClassName?: string;
   disabled?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
 }
@@ -30,6 +32,7 @@ export default function ImageUploadField({
   hint = "JPG, PNG or WEBP, up to 5 MB",
   aspectClassName = "aspect-[3/4]",
   fill = false,
+  emptyClassName = "",
   disabled = false,
   onUploadingChange,
 }: ImageUploadFieldProps) {
@@ -102,7 +105,7 @@ export default function ImageUploadField({
           }}
           className={`group relative w-full rounded-md p-6 text-center text-sm transition-colors cursor-pointer disabled:cursor-not-allowed ${
             fill ? "flex flex-1 flex-col items-center justify-center" : ""
-          } ${
+          } ${emptyClassName} ${
             dragOver ? "bg-orange-50/50" : "bg-[#FAFAFA]"
           }`}
         >

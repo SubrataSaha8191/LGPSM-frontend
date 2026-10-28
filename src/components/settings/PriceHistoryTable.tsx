@@ -25,10 +25,10 @@ export default function PriceHistoryTable({ history }: PriceHistoryTableProps) {
   };
 
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 p-6 shadow-xs space-y-4">
+    <div className="bg-white rounded-lg border border-[#E0E0E0] p-6 space-y-4">
       {/* Table Header Row */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-gray-800">Price Change History</h2>
+        <h2 className="text-xl font-medium text-[#15191C]">Price Change History</h2>
         <button
           onClick={handleExportCSV}
           className="text-xs font-semibold text-[#FF5B22] hover:underline transition-all"
@@ -39,9 +39,9 @@ export default function PriceHistoryTable({ history }: PriceHistoryTableProps) {
 
       {/* History Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="border-b border-gray-100 text-gray-400 font-medium">
+            <tr className="border-b border-[#D3D3D3] text-[#828282] font-medium">
               <th className="py-3 px-4 font-normal">Date & Time</th>
               <th className="py-3 px-4 font-normal">Previous Rate</th>
               <th className="py-3 px-4 font-normal">New Rate</th>
@@ -49,7 +49,7 @@ export default function PriceHistoryTable({ history }: PriceHistoryTableProps) {
               <th className="py-3 px-4 font-normal">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-gray-700">
+          <tbody className="divide-y divide-[#D3D3D3] text-[#4B4F52]">
             {history.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-gray-400 font-medium">

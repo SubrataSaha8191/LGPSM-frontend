@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CategoriesApi } from "@/hooks/useCategories";
 
@@ -19,6 +20,8 @@ interface CategoryFieldsProps {
   categoryError?: string;
   subcategoryError?: string;
   labelClassName?: string;
+  /** Layout of the two fields; "contents" lets them sit in the parent form's own grid */
+  gridClassName?: string;
 }
 
 // Category -> Subcategory pair used by event creation and template settings so both behave the same.
@@ -34,6 +37,7 @@ export default function CategoryFields({
   categoryError,
   subcategoryError,
   labelClassName = "block text-sm font-medium text-gray-900 mb-1.5",
+  gridClassName = "grid grid-cols-1 sm:grid-cols-2 gap-4",
 }: CategoryFieldsProps) {
   const [modal, setModal] = useState<ModalState>(null);
   const subOptions = categoryId ? api.subcategoryOptionsFor(categoryId) : [];
@@ -44,7 +48,7 @@ export default function CategoryFields({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className={gridClassName}>
         <div>
           <label className={labelClassName}>
             {categoryLabel}
@@ -80,7 +84,8 @@ export default function CategoryFields({
         </div>
       </div>
 
-      {modal && (
+      {/* Portalled to <body>: this component sits inside the Add Event form, and a <form> may not nest inside a <form> */}
+      {modal && createPortal(
         <CategoryModal
           key={modal.kind === "category" ? "category" : `sub-${modal.categoryId}`}
           api={api}
@@ -91,7 +96,8 @@ export default function CategoryFields({
             if (created.kind === "category") onChange({ categoryId: created.id, subcategoryId: "" });
             else onChange({ categoryId: created.categoryId, subcategoryId: created.id });
           }}
-        />
+        />,
+        document.body
       )}
     </>
   );
@@ -118,7 +124,12 @@ export function CategoryModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || (isSub && !parentId)) return;
+    // React events bubble through a portal to the parent tree, where Add Event's own form would take this submit as "Next"
+    e.stopPropagation();
+    if (isSub && !parentId) return setError("Choose the category first.");
+    if (!name.trim()) return setError(`Enter a ${isSub ? "subcategory" : "category"} name.`);
+    // The API asks for 2+ characters on a category; say so here rather than showing a generic validation failure
+    if (!isSub && name.trim().length < 2) return setError("A category name needs at least 2 characters.");
     setSubmitting(true);
     setError(null);
     if (isSub) {
@@ -134,52 +145,53 @@ export function CategoryModal({
     }
   };
 
+  // Figma 2050:2411 / 2050:2142: a 486px card in the upper third, a divider above the footer, 47px field, solid Add button
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E5E5]">
-          <h3 id="category-modal-title" className="text-base font-medium text-gray-900">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4 pt-[14vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+      <div className="w-full max-w-[486px] bg-white rounded-lg shadow-xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#E0E0E0]">
+          <h3 id="category-modal-title" className="text-base font-medium text-[#15191C]">
             {isSub ? "Add Subcategory" : "Add Category"}
           </h3>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-[#15191C] hover:text-gray-600 cursor-pointer">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <form onSubmit={submit} className="p-6 space-y-4">
-          {error && <p role="alert" className="p-3 rounded-md bg-rose-50 border border-rose-200 text-sm text-rose-700">{error}</p>}
-          {isSub && (
+        <form onSubmit={submit} noValidate>
+          <div className="px-6 pt-5 pb-6 space-y-5">
+            {error && <p role="alert" className="p-3 rounded-md bg-rose-50 border border-rose-200 text-sm text-rose-700">{error}</p>}
+            {isSub && (
+              <div>
+                <label className="block text-sm font-medium text-[#15191C] mb-2">Category</label>
+                <CustomDropdown value={parentId} onChange={setParentId} options={api.categoryOptions} placeholder="- Category -" compact />
+              </div>
+            )}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1.5">Category</label>
-              <CustomDropdown value={parentId} onChange={setParentId} options={api.categoryOptions} placeholder="- Category -" />
+              <label htmlFor="category-modal-name" className="block text-sm font-medium text-[#15191C] mb-2">
+                {isSub ? "Subcategory Name" : "Category Name"}
+              </label>
+              <input
+                id="category-modal-name"
+                autoFocus
+                type="text"
+                maxLength={100}
+                placeholder="Type"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full h-[47px] px-3.5 text-xs border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900 placeholder:text-[#828282]"
+              />
             </div>
-          )}
-          <div>
-            <label htmlFor="category-modal-name" className="block text-sm font-medium text-gray-900 mb-1.5">
-              {isSub ? "Subcategory Name" : "Category Name"}
-              <span className="text-[#FF651D] ml-0.5">*</span>
-            </label>
-            <input
-              id="category-modal-name"
-              autoFocus
-              type="text"
-              required
-              maxLength={100}
-              placeholder="Type"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
-            />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0]">
+            <button type="button" onClick={onClose} className="px-6 py-[11px] text-base font-semibold text-[#15191C] bg-white border border-[#E0E0E0] rounded-lg hover:bg-gray-50 cursor-pointer">
               Cancel
             </button>
             <button
               type="submit"
-              disabled={submitting || !name.trim() || (isSub && !parentId)}
-              className="px-5 py-2 text-sm font-medium text-white bg-[#FF651D] rounded-lg hover:bg-[#E5520F] disabled:opacity-60 cursor-pointer"
+              disabled={submitting}
+              className="px-6 py-[11px] text-base font-semibold text-white bg-[#FF651D] rounded-lg hover:bg-[#E5520F] disabled:opacity-60 cursor-pointer"
             >
               {submitting ? "Adding..." : "Add"}
             </button>

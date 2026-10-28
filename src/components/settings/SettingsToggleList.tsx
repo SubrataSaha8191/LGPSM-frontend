@@ -58,7 +58,7 @@ export default function SettingsToggleList<K extends string>({ title, descriptio
     <section className="max-w-[576px] space-y-6" aria-labelledby="settings-list-title">
       <div className="border border-[#E0E0E0] rounded-lg p-5 pb-8 space-y-5">
       <div>
-        <h2 id="settings-list-title" className="text-lg font-medium text-[#15191C]">{title}</h2>
+        <h2 id="settings-list-title" className="text-[22px] font-medium text-[#15191C]">{title}</h2>
         {description && <p className="text-xs text-[#828282] mt-1">{description}</p>}
       </div>
       {loadError ? (

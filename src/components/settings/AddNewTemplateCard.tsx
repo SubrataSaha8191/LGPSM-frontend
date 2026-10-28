@@ -59,13 +59,15 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
     }
   };
 
+  const labelCls = "block text-sm font-medium text-gray-900 mb-1.5";
   return (
-    <section className="bg-white rounded-md border border-[#E0E0E0] p-4 sm:p-6">
-      <h2 className="text-base font-medium text-gray-900 mb-5">Add New Template</h2>
-      <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
-        <div className="space-y-5 min-w-0">
-          <div>
-            <label htmlFor="new-template-name" className="block text-sm font-medium text-gray-900 mb-1.5">
+    // Figma 2029:1828: name, category and subcategory share one row; the upload box sits under them, then Publish and the button
+    <section className="bg-white rounded-lg border border-[#E0E0E0] p-5 sm:p-7">
+      <h2 className="text-[22px] font-medium text-[#15191C] mb-5">Add New Template</h2>
+      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-[18px] gap-y-5">
+          <div className="min-w-0">
+            <label htmlFor="new-template-name" className={labelCls}>
               Template Name<span className="text-[#FF651D] ml-0.5">*</span>
             </label>
             <input
@@ -76,7 +78,7 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
               value={name}
               onChange={(e) => setName(e.target.value)}
               aria-invalid={!!shown.name}
-              className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
+              className="w-full h-[44px] px-3.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
             />
             {shown.name && <p className="mt-1 text-xs font-medium text-rose-600">{shown.name}</p>}
           </div>
@@ -87,48 +89,54 @@ export default function AddNewTemplateCard({ categories, onAddTemplate }: AddNew
             onChange={setCat}
             canManage
             required
+            gridClassName="contents"
             categoryError={shown.category}
             subcategoryError={shown.subcategory}
           />
-          <div>
-            <span className="block text-sm font-medium text-gray-900 mb-1.5">
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-[18px] gap-y-5">
+          <div className="min-w-0">
+            <ImageUploadField
+              label={<>Upload Card Template<span className="text-[#FF651D] ml-0.5">*</span></>}
+              value={imageKey}
+              onChange={setImageKey}
+              purpose="TEMPLATE"
+              aspectClassName="aspect-[334/120]"
+              emptyClassName="flex flex-col items-center justify-center min-h-[120px]"
+              onUploadingChange={setUploading}
+            />
+            {shown.image && <p className="mt-1 text-xs font-medium text-rose-600">{shown.image}</p>}
+          </div>
+          {/* Not in the Figma frame, but every template needs one: it fills the empty space beside the upload box */}
+          <div className="min-w-0">
+            <span className={labelCls}>
               Invitation Card Design<span className="text-[#FF651D] ml-0.5">*</span>
             </span>
             <CustomDropdown ariaLabel="Invitation Card Design" value={cardDesign} onChange={(v) => setCardDesign(v as CardDesign)} options={CARD_DESIGNS.map((d) => ({ value: d, label: CARD_DESIGN_LABELS[d] }))} />
-            <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image above.</p>
+            <p className="mt-1 text-xs text-[#828282]">The layout generated for each invitee&apos;s PDF/QR card — separate from the preview image.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <span id="new-template-publish" className="text-sm font-medium text-gray-900">Publish</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={isPublished}
-              aria-labelledby="new-template-publish"
-              onClick={() => setIsPublished((v) => !v)}
-              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isPublished ? "bg-[#FF651D]" : "bg-gray-300"}`}
-            >
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${isPublished ? "translate-x-4" : "translate-x-0"}`} />
-            </button>
-            <span className="text-xs text-[#828282]">{isPublished ? "Organizers can pick it" : "Saved as draft"}</span>
-          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span id="new-template-publish" className="text-sm font-medium text-gray-900">Publish</span>
           <button
-            type="submit"
-            disabled={submitting || uploading}
-            className="px-6 py-2.5 bg-[#FF651D] text-white text-sm font-medium rounded-md hover:bg-[#E5520F] disabled:opacity-60 cursor-pointer"
+            type="button"
+            role="switch"
+            aria-checked={isPublished}
+            aria-labelledby="new-template-publish"
+            onClick={() => setIsPublished((v) => !v)}
+            className={`relative inline-flex h-6 w-[50px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isPublished ? "bg-[#FF651D]" : "bg-[#E6E6E6]"}`}
           >
-            {submitting ? "Adding..." : "Add Template"}
+            <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${isPublished ? "translate-x-[26px]" : "translate-x-0"}`} />
           </button>
+          <span className="text-xs text-[#828282]">{isPublished ? "Organizers can pick it" : "Saved as draft"}</span>
         </div>
-        <div>
-          <ImageUploadField
-            label={<>Upload Card Template<span className="text-[#FF651D] ml-0.5">*</span></>}
-            value={imageKey}
-            onChange={setImageKey}
-            purpose="TEMPLATE"
-            onUploadingChange={setUploading}
-          />
-          {shown.image && <p className="mt-1 text-xs font-medium text-rose-600">{shown.image}</p>}
-        </div>
+        <button
+          type="submit"
+          disabled={submitting || uploading}
+          className="px-6 py-[11px] bg-[#FF651D] text-white text-base font-semibold rounded-lg hover:bg-[#E5520F] disabled:opacity-60 cursor-pointer"
+        >
+          {submitting ? "Adding..." : "Add Template"}
+        </button>
       </form>
     </section>
   );

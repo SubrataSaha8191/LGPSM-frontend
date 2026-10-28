@@ -15,6 +15,7 @@ import { useAlert } from "@/context/AlertContext";
 import { notifyDbUpdate } from "@/components/EventSubNav";
 import { mapWithConcurrency } from "@/utils/mapWithConcurrency";
 import { TableSkeleton } from "@/components/common/Skeleton";
+import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
 
 export interface AssignedSession {
   id: string;
@@ -69,7 +70,6 @@ export default function AssignedSystemUsersPage() {
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeActionId, setActiveActionId] = useState<string | null>(null);
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null);
 
   // Modals
@@ -185,25 +185,6 @@ export default function AssignedSystemUsersPage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (!activeActionId) return;
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      const target = event.target;
-      if (target instanceof Element && !target.closest("[data-user-action-menu]")) {
-        setActiveActionId(null);
-      }
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveActionId(null);
-    };
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [activeActionId]);
-
   // Handle adding new SYSTEM_USER account via backend API
   const handleAddUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,7 +228,6 @@ export default function AssignedSystemUsersPage() {
       email: u.email,
       phone: u.phone === "--" ? "" : u.phone,
     });
-    setActiveActionId(null);
     setIsEditModalOpen(true);
   };
 
@@ -378,7 +358,6 @@ export default function AssignedSystemUsersPage() {
         setErrorFeedback(res.message || "Failed to remove user.");
         return;
       }
-      setActiveActionId(null);
       setSelectedIds((ids) => ids.filter((id) => id !== target.id));
       await loadData();
       notifyDbUpdate();
@@ -499,7 +478,6 @@ export default function AssignedSystemUsersPage() {
                 filteredUsers.map((u) => {
                   const isSelected = selectedIds.includes(u.id);
                   const isExpanded = expandedUserIds.includes(u.id);
-                  const isActionActive = activeActionId === u.id;
                   const countText = getAssignedCountText(u.assignments);
 
                   return (
@@ -554,7 +532,7 @@ export default function AssignedSystemUsersPage() {
                                 className="bg-white border border-gray-200 rounded-md p-3 shadow-2xs space-y-2 whitespace-normal"
                               >
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="text-xs font-semibold text-gray-800">
+                                  <div className="text-sm font-medium text-[#15191C]">
                                     {asn.eventName}
                                   </div>
                                   <button
@@ -591,46 +569,14 @@ export default function AssignedSystemUsersPage() {
                       <td className="py-4 px-4 text-gray-600">{u.email}</td>
                       <td className="py-4 px-4 text-gray-600">{u.phone}</td>
 
-                      <td data-user-action-menu className="py-4 px-4 text-right relative">
-                        <button
-                          type="button"
-                          aria-label={`Actions for ${u.name}`}
-                          aria-haspopup="menu"
-                          aria-expanded={isActionActive}
-                          onClick={() => setActiveActionId(isActionActive ? null : u.id)}
-                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
-                          </svg>
-                        </button>
-
-                        {isActionActive && (
-                          <div role="menu" className="absolute right-4 top-12 z-30 bg-[#1E232A] text-white text-xs font-semibold px-3 py-2 rounded-md shadow-xl border border-gray-700 flex flex-col gap-1 cursor-pointer">
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => { setActiveActionId(null); handleOpenEdit(u); }}
-                              className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1 cursor-pointer"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                              <span>Edit User</span>
-                            </button>
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => handleDeleteUser(u)}
-                              className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1 cursor-pointer"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 11v5m4-5v5" />
-                              </svg>
-                              <span>Remove User</span>
-                            </button>
-                          </div>
-                        )}
+                      <td className="py-4 px-4 text-right">
+                        <RowMenu
+                          label={`Actions for ${u.name}`}
+                          items={[
+                            { label: "Edit User", icon: EditIcon, onClick: () => handleOpenEdit(u) },
+                            { label: "Remove User", icon: TrashIcon, onClick: () => handleDeleteUser(u) },
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -671,9 +617,9 @@ export default function AssignedSystemUsersPage() {
       {/* ── Edit User Modal ── */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-md w-full overflow-hidden space-y-6 animate-modal">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Edit System User</h3>
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">Edit System User</h3>
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
@@ -687,7 +633,7 @@ export default function AssignedSystemUsersPage() {
 
             <form onSubmit={handleEditSubmit} className="px-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+                <label className="text-sm font-medium text-[#15191C]">
                   User Name<span className="text-[#FF5B22]">*</span>
                 </label>
                 <input
@@ -695,12 +641,12 @@ export default function AssignedSystemUsersPage() {
                   required
                   value={editFormData.name}
                   onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+                <label className="text-sm font-medium text-[#15191C]">
                   Email<span className="text-[#FF5B22]">*</span>
                 </label>
                 <input
@@ -708,32 +654,32 @@ export default function AssignedSystemUsersPage() {
                   required
                   value={editFormData.email}
                   onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">Contact No</label>
+                <label className="text-sm font-medium text-[#15191C]">Contact No</label>
                 <input
                   type="tel"
                   value={editFormData.phone}
                   onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingEdit}
-                  className="px-6 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {submittingEdit ? "Saving..." : "Save Changes"}
                 </button>
@@ -746,9 +692,9 @@ export default function AssignedSystemUsersPage() {
       {/* ── Add User Modal ── */}
       {isAddUserModalOpen && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-md w-full overflow-hidden space-y-6 animate-modal">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Add System User</h3>
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">Add System User</h3>
               <button
                 type="button"
                 onClick={() => setIsAddUserModalOpen(false)}
@@ -762,8 +708,8 @@ export default function AssignedSystemUsersPage() {
 
             <form onSubmit={handleAddUserSubmit} className="px-6 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  User Name<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  User Name<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
@@ -771,13 +717,13 @@ export default function AssignedSystemUsersPage() {
                   placeholder="Enter Full Name"
                   value={addUserData.userName}
                   onChange={(e) => setAddUserData({ ...addUserData, userName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Contact No<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Contact No<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="tel"
@@ -785,13 +731,13 @@ export default function AssignedSystemUsersPage() {
                   placeholder="Enter Contact No"
                   value={addUserData.contactNo}
                   onChange={(e) => setAddUserData({ ...addUserData, contactNo: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Email<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Email<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="email"
@@ -799,13 +745,13 @@ export default function AssignedSystemUsersPage() {
                   placeholder="Enter Email"
                   value={addUserData.email}
                   onChange={(e) => setAddUserData({ ...addUserData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Password<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Password<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="password"
@@ -813,22 +759,22 @@ export default function AssignedSystemUsersPage() {
                   placeholder="Enter Initial Password"
                   value={addUserData.password}
                   onChange={(e) => setAddUserData({ ...addUserData, password: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAddUserModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingUser}
-                  className="px-6 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {submittingUser ? "Creating..." : "Add System User"}
                 </button>
@@ -841,9 +787,9 @@ export default function AssignedSystemUsersPage() {
       {/* ── Assign Attendees Modal ── */}
       {isAssignModalOpen && (
         <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-md w-full overflow-hidden space-y-6 animate-modal">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Assign System Users to Event</h3>
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">Assign System Users to Event</h3>
               <button
                 type="button"
                 onClick={() => setIsAssignModalOpen(false)}
@@ -855,9 +801,9 @@ export default function AssignedSystemUsersPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAssignSubmit} className="px-6 space-y-5">
+            <form onSubmit={handleAssignSubmit} className="px-6 pt-5 space-y-5">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+                <label className="text-sm font-medium text-[#15191C]">
                   Event<span className="text-[#FF5B22]">*</span>
                 </label>
                 <CustomDropdown
@@ -881,18 +827,18 @@ export default function AssignedSystemUsersPage() {
                 onChange={setSessionScope}
               />
 
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAssignModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingAssign}
-                  className="px-6 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {submittingAssign ? "Saving..." : "Assign"}
                 </button>

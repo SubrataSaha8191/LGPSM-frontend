@@ -180,10 +180,10 @@ function AddUserContent() {
       {/* Add User Modal (Image 2) */}
       {isAddUserModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-md w-full overflow-hidden space-y-6 animate-modal">
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Add User</h3>
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">Add User</h3>
               <button
                 onClick={cancelModal}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -195,11 +195,11 @@ function AddUserContent() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleAddUserSubmit} className="px-6 space-y-5">
+            <form onSubmit={handleAddUserSubmit} className="px-6 pt-5 space-y-5">
               {/* User Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  User Name<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  User Name<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="text"
@@ -207,14 +207,14 @@ function AddUserContent() {
                   placeholder="Enter User Name"
                   value={formData.userName}
                   onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               {/* Contact No */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Contact No<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Contact No<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="tel"
@@ -222,14 +222,14 @@ function AddUserContent() {
                   placeholder="Enter Contact No"
                   value={formData.contactNo}
                   onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Email<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Email<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="email"
@@ -237,14 +237,14 @@ function AddUserContent() {
                   placeholder="Enter Email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
               {/* Temporary Password */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Temporary Password<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Temporary Password<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <input
                   type="password"
@@ -254,7 +254,7 @@ function AddUserContent() {
                   placeholder="At least 6 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full min-h-[47px] px-3.5 py-3 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] transition-colors"
                 />
               </div>
 
@@ -263,18 +263,18 @@ function AddUserContent() {
               )}
 
               {/* Buttons */}
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={cancelModal}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? "Adding..." : "Add"}
                 </button>

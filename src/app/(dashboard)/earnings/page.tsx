@@ -174,7 +174,7 @@ export default function EarningsPage() {
     <div className="w-full min-h-full bg-white">
       <PageHeader title="Earnings" />
 
-      <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
+      <div className="px-4 sm:px-6 pt-7 w-full space-y-6 bg-white pb-24">
         <EarningsOverviewCard
           rate={rate}
           tempRate={tempRate}

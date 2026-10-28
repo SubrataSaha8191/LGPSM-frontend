@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { useAuth } from "@/context/AuthContext";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
+import RowMenu from "@/components/common/RowMenu";
 
 interface OrganizerRow {
   id: string;
@@ -25,7 +26,6 @@ export default function AllOrganizersPage() {
   const [organizers, setOrganizers] = useState<OrganizerRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeActionId, setActiveActionId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -190,13 +190,20 @@ export default function AllOrganizersPage() {
                   {!loading && !loadError && filteredOrganizers.length === 0 && (
                     <tr><td colSpan={6} className="py-12 text-center text-gray-400 text-sm">No organizers found.</td></tr>
                   )}
-                  {filteredOrganizers.map((org, idx) => {
+                  {filteredOrganizers.map((org) => {
                     const isSelected = selectedIds.includes(org.id);
-                    const isActionOpen = activeActionId === org.id;
-                    const shouldOpenUpwards = idx > 2 && idx >= filteredOrganizers.length - 2;
 
                     return (
-                      <tr key={org.id} className="hover:bg-gray-50/80 transition-colors">
+                      // The whole row opens the organizer; the checkbox, the name link and the ⋯ menu keep their own clicks
+                      <tr
+                        key={org.id}
+                        onClick={(e) => { if (!(e.target as Element).closest("button, a, input")) router.push(`/event-organizer/${org.id}`); }}
+                        onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") router.push(`/event-organizer/${org.id}`); }}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`Open ${org.name}`}
+                        className="hover:bg-gray-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF5B22] transition-colors cursor-pointer"
+                      >
                         <td className="py-4 px-4">
                           <button
                             type="button"
@@ -248,27 +255,7 @@ export default function AllOrganizersPage() {
 
                         {/* Action Column */}
                         <td className="py-4 px-4 text-right">
-                          <div className="relative inline-block text-left">
-                            <button
-                              onClick={() => setActiveActionId(isActionOpen ? null : org.id)}
-                              className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
-                              </svg>
-                            </button>
-
-                            {isActionOpen && (
-                              <div className={`absolute right-0 ${shouldOpenUpwards ? "bottom-full mb-1" : "top-full mt-1"} z-50 bg-[#1E232A] text-white text-xs font-medium py-1.5 px-3 rounded-md shadow-2xl border border-gray-700 animate-menu flex flex-col gap-1 min-w-[110px] text-left`}>
-                                <button
-                                  onClick={() => router.push(`/event-organizer/${org.id}`)}
-                                  className="py-1 hover:text-[#FF5B22] text-left transition-colors cursor-pointer"
-                                >
-                                  View Details
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <RowMenu label={`Actions for ${org.name}`} items={[{ label: "View Details", onClick: () => router.push(`/event-organizer/${org.id}`) }]} />
                         </td>
                       </tr>
                     );

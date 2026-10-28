@@ -1,7 +1,7 @@
 "use client";
 
 import PageHeader from "@/components/common/PageHeader";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { addButtonClass } from "@/components/common/ListControls";
 import { useParams, useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ interface EventRow {
   createdOn: string;
   category: string;
   startDate: string;
+  startTs: number | null;
   endDate: string;
   status: "Upcoming" | "Completed" | "Ongoing" | "Invitation not send" | "Cancelled";
 }
@@ -110,6 +111,7 @@ export default function OrganizerDetailsPage() {
           createdOn: ev.createdAt ? new Date(ev.createdAt).toLocaleDateString() : "—",
           category: ev.categoryId?.name || ev.category || "—",
           startDate: start ? new Date(start).toLocaleString() : "TBD",
+          startTs: start && !Number.isNaN(new Date(start).getTime()) ? new Date(start).getTime() : null,
           endDate: end ? new Date(end).toLocaleString() : "TBD",
           status: rawStatus === "CANCELLED" ? "Cancelled" : getDynamicEventStatus(start, end, ev.status) as EventRow["status"],
         };
@@ -139,11 +141,34 @@ export default function OrganizerDetailsPage() {
     setIsDeactivateModalOpen(false);
   };
 
+  // Filter panel: category, status and a start-date window. Changes are drafted in the panel and applied with "Apply".
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({ category: "", status: "", from: "", to: "" });
+  const [draftFilters, setDraftFilters] = useState(filters);
+  const filterRef = useRef<HTMLDivElement>(null);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const categoryChoices = Array.from(new Set(events.map((e) => e.category).filter((c) => c && c !== "—"))).sort();
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const onDown = (e: MouseEvent) => { if (!filterRef.current?.contains(e.target as Node)) setFilterOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFilterOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [filterOpen]);
+
+  const fromTs = filters.from ? new Date(`${filters.from}T00:00:00`).getTime() : null;
+  const toTs = filters.to ? new Date(`${filters.to}T23:59:59.999`).getTime() : null;
   const filteredEvents = events.filter(
     (ev) =>
-      ev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ev.eventId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ev.id.toLowerCase().includes(searchQuery.toLowerCase())
+      (ev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ev.eventId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ev.id.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (!filters.category || ev.category === filters.category) &&
+      (!filters.status || ev.status === filters.status) &&
+      (fromTs === null || (ev.startTs !== null && ev.startTs >= fromTs)) &&
+      (toTs === null || (ev.startTs !== null && ev.startTs <= toTs))
   );
 
   const upcomingEventsCount = events.filter((e) => e.status === "Upcoming" || e.status === "Ongoing").length;
@@ -311,11 +336,51 @@ export default function OrganizerDetailsPage() {
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-                <button className="p-2 border border-gray-200 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50 cursor-pointer">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
+                <div ref={filterRef} className="relative">
+                  <button
+                    type="button"
+                    aria-label={`Filter events${activeFilterCount ? ` (${activeFilterCount} active)` : ""}`}
+                    aria-expanded={filterOpen}
+                    onClick={() => { setDraftFilters(filters); setFilterOpen((o) => !o); }}
+                    className="relative p-2 border border-gray-200 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    {activeFilterCount > 0 && <span className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-[#FF651D] text-white text-[10px] flex items-center justify-center">{activeFilterCount}</span>}
+                  </button>
+                  {filterOpen && (
+                    <div role="dialog" aria-label="Filter events" className="absolute right-0 top-full mt-2 z-30 w-[320px] max-w-[calc(100vw-2rem)] bg-white border border-[#E0E0E0] rounded-lg shadow-xl p-4 space-y-3 text-left">
+                      <p className="text-sm font-medium text-[#15191C]">Filter events</p>
+                      <CustomDropdown
+                        ariaLabel="Category"
+                        value={draftFilters.category}
+                        onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))}
+                        options={[{ value: "", label: "All categories" }, ...categoryChoices.map((c) => ({ value: c, label: c }))]}
+                      />
+                      <CustomDropdown
+                        ariaLabel="Status"
+                        value={draftFilters.status}
+                        onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
+                        options={[{ value: "", label: "All statuses" }, ...["Upcoming", "Ongoing", "Completed", "Invitation not send", "Cancelled"].map((st) => ({ value: st, label: st }))]}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-xs font-medium text-[#4B4F52]">
+                          Starts from
+                          <input type="date" value={draftFilters.from} max={draftFilters.to || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-[#FF651D]" />
+                        </label>
+                        <label className="text-xs font-medium text-[#4B4F52]">
+                          Starts until
+                          <input type="date" value={draftFilters.to} min={draftFilters.from || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-[#FF651D]" />
+                        </label>
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button type="button" onClick={() => { const cleared = { category: "", status: "", from: "", to: "" }; setDraftFilters(cleared); setFilters(cleared); setFilterOpen(false); }} className="px-4 py-2 text-xs font-semibold text-[#595D60] bg-[#E6EAED] hover:bg-[#DCE1E5] rounded-md cursor-pointer">Reset</button>
+                        <button type="button" onClick={() => { setFilters(draftFilters); setFilterOpen(false); }} className="px-4 py-2 text-xs font-semibold text-white bg-[#FF651D] hover:bg-[#E5520F] rounded-md cursor-pointer">Apply</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <Link
                   href="/events/add"
                   className={`${addButtonClass} cursor-pointer`}
@@ -345,7 +410,7 @@ export default function OrganizerDetailsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-[#4B4F52]">
                   {filteredEvents.length === 0 && (
-                    <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-sm">No events found for this organizer.</td></tr>
+                    <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-sm">{events.length > 0 ? "No events match your search or filters." : "No events found for this organizer."}</td></tr>
                   )}
                   {filteredEvents.map((ev) => (
                     <tr key={ev.id} onClick={() => router.push(`/events/${ev.id}`)} onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") router.push(`/events/${ev.id}`); }} tabIndex={0} role="link" aria-label={`Open ${ev.name}`} className="hover:bg-gray-50/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF5B22] transition-colors cursor-pointer">
@@ -389,10 +454,10 @@ export default function OrganizerDetailsPage() {
       {/* Deactivate Organizer Modal (Image 4) */}
       {isDeactivateModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 animate-overlay">
-          <div className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-lg w-full overflow-hidden space-y-6 animate-modal">
+          <div className="bg-white rounded-lg shadow-2xl max-w-[486px] w-full overflow-hidden animate-modal">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">Deactivate Organizer</h3>
+            <div className="px-6 py-5 border-b border-[#E0E0E0] flex items-center justify-between">
+              <h3 className="text-base font-medium text-[#15191C]">Deactivate Organizer</h3>
               <button
                 onClick={() => setIsDeactivateModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
@@ -404,11 +469,11 @@ export default function OrganizerDetailsPage() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleDeactivate} className="px-6 space-y-5">
+            <form onSubmit={handleDeactivate} className="px-6 pt-5 space-y-5">
               {/* Reason Dropdown */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Reason<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Reason<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <CustomDropdown
                   value={deactivateReason}
@@ -425,11 +490,11 @@ export default function OrganizerDetailsPage() {
 
               {/* Message Organizer Textarea */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
-                  Message Organizer<span className="text-red-500">*</span>
+                <label className="text-sm font-medium text-[#15191C]">
+                  Message Organizer<span className="text-[#FF651D] ml-0.5">*</span>
                 </label>
                 <textarea
-                  rows={4}
+                  rows={6}
                   required
                   placeholder="Type"
                   value={deactivateMessage}
@@ -439,11 +504,11 @@ export default function OrganizerDetailsPage() {
               </div>
 
               {/* Modal Buttons */}
-              <div className="pt-2 pb-6 flex items-center justify-end gap-3">
+              <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsDeactivateModalOpen(false)}
-                  className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
+                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -453,7 +518,7 @@ export default function OrganizerDetailsPage() {
                 <button
                   type="submit"
                   disabled={isDeactivating}
-                  className="px-5 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs"
+                  className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-60"
                 >
                   Deactivate
                 </button>

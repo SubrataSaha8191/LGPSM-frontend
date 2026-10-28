@@ -20,32 +20,32 @@ export default function EarningsOverviewCard({
   return (
     <div>
       <div className="mb-4">
-        <h2 className="text-base font-bold text-gray-800">Earnings Overview</h2>
-        <p className="text-xs text-gray-500 font-medium mt-0.5">
+        <h2 className="text-xl font-medium text-[#15191C]">Earnings Overview</h2>
+        <p className="text-xs text-[#4B4F52] mt-0.5">
           Per-head billing · ${rate.toFixed(2)} / invitee (current rate)
         </p>
       </div>
 
-      <div className="bg-white border border-gray-200/100 rounded-md p-6 shadow-xs space-y-6">
+      <div className="bg-white border border-[#E0E0E0] rounded-lg p-6 space-y-6">
         {/* Main Flex Layout directly inside the outer card */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-1">
           {/* Left Side Rate Text (No extra box wrapper) */}
           <div className="space-y-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-extrabold text-[#FF5B22] tracking-tight">
+              <span className="text-5xl font-semibold text-[#FF651D]">
                 ${rate.toFixed(2)}
               </span>
-              <span className="text-xs font-semibold text-gray-500">Per head</span>
+              <span className="text-sm font-medium text-[#4B4F52]">Per head</span>
             </div>
-            <p className="text-xs text-gray-400 font-normal">
+            <p className="text-sm text-[#4B4F52]">
               Per-head billing · ${rate.toFixed(2)} / invitee (current rate)
             </p>
           </div>
 
           {/* Right Side Adjust Rate Box */}
-          <div className="bg-white border border-gray-200/60 rounded-md p-4 max-w-md w-full space-y-3">
+          <div className="bg-[#F7F7F7] rounded-md p-4 max-w-[480px] w-full space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-500 tracking-wider uppercase">
+              <span className="text-xs font-medium text-[#4B4F52] tracking-wide uppercase">
                 ADJUST RATE
               </span>
               {isSavedNotice && (
@@ -66,7 +66,7 @@ export default function EarningsOverviewCard({
                   onChange={(e) => setTempRate(parseFloat(e.target.value))}
                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#FF5B22]"
                 />
-                <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400 px-0.5">
+                <div className="flex items-center justify-between text-xs font-medium text-[#828282] px-0.5">
                   <span>$1</span>
                   <span>$10</span>
                   <span>$20</span>
@@ -76,7 +76,7 @@ export default function EarningsOverviewCard({
               <button
                 type="button"
                 onClick={onSaveRate}
-                className="px-5 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-xs"
+                className="px-5 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-semibold rounded-md transition-colors cursor-pointer shrink-0"
               >
                 Apply
               </button>

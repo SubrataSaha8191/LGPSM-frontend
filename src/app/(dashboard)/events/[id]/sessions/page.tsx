@@ -19,6 +19,7 @@ import EventSubNav from "@/components/EventSubNav";
 
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
+import InfoTip from "@/components/common/InfoTip";
 
 const ACCESS_LABELS: Record<string, string> = { NO_RESTRICTION: "No Restrictions", ONLY_ONCE: "Only Once" };
 
@@ -295,148 +296,101 @@ export default function EventSessionsPage() {
           </div>
         </div>
 
-      {/* Add Session Modal matching Image 1 */}
+      {/* Add Session popup (Figma 217:22172): no title bar; one bordered card holding the fields, then the outlined Add Session button */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Add Session">
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            className="absolute inset-0 bg-black/60 transition-opacity"
             onClick={() => setIsAddModalOpen(false)}
           />
 
-          <div className="relative bg-white rounded-md shadow-2xl max-w-lg w-full p-6 space-y-5 z-10">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-gray-900">Add Session</h3>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-md"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-[672px] p-4 z-10">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              aria-label="Close"
+              className="absolute -top-9 right-0 text-white/90 hover:text-white p-1 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
 
-            {/* Form Body */}
-            <form onSubmit={handleCreateSession} className="space-y-4 text-xs">
-              <div>
-                <label className="flex items-center justify-between text-xs font-semibold text-gray-800 mb-1">
-                  <span>
-                    Session Name<span className="text-[#FF5B22] ml-0.5">*</span>
-                  </span>
-                  <span className="text-gray-400 text-[10px]" title="Enter session name">ⓘ</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Entry Session"
-                  value={sessionName}
-                  onChange={(e) => setSessionName(e.target.value)}
-                  required
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-md text-gray-800 focus:outline-none focus:border-[#FF5B22]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <form onSubmit={handleCreateSession} className="space-y-4">
+              <div className="border border-[#E0E0E0] rounded-lg p-5 space-y-5">
                 <div>
-                  <label className="flex items-center justify-between text-[11px] font-semibold text-gray-800 mb-1">
-                    <span>Start Time<span className="text-[#FF5B22] ml-0.5">*</span></span>
-                    <span className="text-gray-400 text-[10px]">ⓘ</span>
+                  <label className="flex items-center justify-between gap-2 text-sm font-medium text-[#15191C] mb-1.5">
+                    <span>Session Name<span className="text-[#FF651D] ml-0.5">*</span></span>
+                    <InfoTip label="About the session name" text="Guests and system users see this name for the session, for example Entry or Lunch." />
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formatDateTime(startTime)}
-                      readOnly
-                      onClick={() => handleOpenDatePicker("start")}
-                      className="w-full p-2 pr-7 border border-gray-200 rounded-md text-gray-800 text-[11px] focus:outline-none focus:border-[#FF5B22] cursor-pointer"
-                    />
-                    <svg
-                      onClick={() => handleOpenDatePicker("start")}
-                      className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer hover:text-[#FF5B22]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center justify-between text-[11px] font-semibold text-gray-800 mb-1">
-                    <span>End Time<span className="text-[#FF5B22] ml-0.5">*</span></span>
-                    <span className="text-gray-400 text-[10px]">ⓘ</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formatDateTime(endTime)}
-                      readOnly
-                      onClick={() => handleOpenDatePicker("end")}
-                      className="w-full p-2 pr-7 border border-gray-200 rounded-md text-gray-800 text-[11px] focus:outline-none focus:border-[#FF5B22] cursor-pointer"
-                    />
-                    <svg
-                      onClick={() => handleOpenDatePicker("end")}
-                      className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer hover:text-[#FF5B22]"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center justify-between text-[11px] font-semibold text-gray-800 mb-1">
-                    <span>Access Control</span>
-                    <span className="text-gray-400 text-[10px]">ⓘ</span>
-                  </label>
-                  <CustomDropdown
-                    value={accessControl}
-                    onChange={(val) => setAccessControl(val as "NO_RESTRICTION" | "ONLY_ONCE")}
-                    options={[
-                      { value: "NO_RESTRICTION", label: "No Restrictions" },
-                      { value: "ONLY_ONCE", label: "Only Once" },
-                    ]}
-                    placeholder="Access Control"
+                  <input
+                    type="text"
+                    placeholder="Entry Session"
+                    value={sessionName}
+                    onChange={(e) => setSessionName(e.target.value)}
+                    required
+                    className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-800 mb-1">
-                  Add Invitees List
-                </label>
-                <div className="border border-gray-200 rounded-md p-2.5 flex items-center justify-between bg-white">
-                  <div className="flex items-center gap-3">
-                    <label className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded cursor-pointer transition-colors">
-                      Choose File
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {(["start", "end"] as const).map((field) => (
+                    <div key={field} className="min-w-0">
+                      <label className="flex items-center justify-between gap-2 text-sm font-medium text-[#15191C] mb-1.5">
+                        <span>{field === "start" ? "Start Time" : "End Time"}<span className="text-[#FF651D] ml-0.5">*</span></span>
+                        <InfoTip
+                          label={`About the session ${field} time`}
+                          text={field === "start" ? "When this session opens for check-in. It must fall within the event's dates." : "When this session closes. It must be after the start time."}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDatePicker(field)}
+                        className="w-full h-[47px] px-3 flex items-center justify-between gap-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 hover:border-[#FF651D] cursor-pointer text-left"
+                      >
+                        <span className="truncate">{formatDateTime(field === "start" ? startTime : endTime)}</span>
+                        <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+
+                  <div className="min-w-0">
+                    <label className="flex items-center justify-between gap-2 text-sm font-medium text-[#15191C] mb-1.5">
+                      <span>Access Control</span>
+                      <InfoTip label="About access control" text="If the invitees are allowed access to the Session any number of times, set No Restrictions." />
                     </label>
-                    <span className="text-xs text-gray-500 truncate">
-                      {uploadedFileName || "No file chosen"}
-                    </span>
+                    <CustomDropdown
+                      compact
+                      value={accessControl}
+                      onChange={(val) => setAccessControl(val as "NO_RESTRICTION" | "ONLY_ONCE")}
+                      options={[
+                        { value: "NO_RESTRICTION", label: "No Restrictions" },
+                        { value: "ONLY_ONCE", label: "Only Once" },
+                      ]}
+                      placeholder="Access Control"
+                    />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-1.5 mt-2 text-xs">
-                  <div className="w-4 h-4 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">
-                    X
+                <div>
+                  <label className="block text-sm font-medium text-[#15191C] mb-1.5">Add Invitees List</label>
+                  <div className="border border-[#E0E0E0] rounded-md flex items-center bg-[#FAFAFA] overflow-hidden min-h-[47px]">
+                    <label className="self-stretch flex items-center px-4 bg-[#EDEDED] hover:bg-[#E3E3E3] text-[#4B4F52] text-xs font-medium cursor-pointer transition-colors border-r border-[#E0E0E0]">
+                      Choose File
+                      <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="hidden" />
+                    </label>
+                    <span className="px-3 text-xs text-[#828282] truncate">{uploadedFileName || "No file chosen"}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => downloadInviteeTemplate()}
-                    className="text-gray-800 font-semibold underline hover:text-[#FF5B22]"
-                  >
-                    Download Excel Sample
-                  </button>
-                  <span className="text-gray-400 text-[10px]">ⓘ</span>
+
+                  <div className="flex items-center justify-end gap-2 mt-2 text-sm">
+                    <div className="w-4 h-4 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">X</div>
+                    <button type="button" onClick={() => downloadInviteeTemplate()} className="text-[#15191C] font-medium underline hover:text-[#FF651D] cursor-pointer">
+                      Download Excel Sample
+                    </button>
+                    <InfoTip label="About the Excel sample" text="Download the sample template from the link and enter your invitees in the same format. There are three main columns - Name, Email and Mobile. Name and Mobile are mandatory fields. All numbers must be with country code, for e.g. +91xxxxxxxxxx, without any space in between." />
+                  </div>
                 </div>
               </div>
 
@@ -444,18 +398,15 @@ export default function EventSessionsPage() {
                 <p role="alert" className="text-xs font-medium text-rose-600 break-words">{formError}</p>
               )}
 
-              {/* Submit button: Orange outlined button + Add Session matching Image 1 */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22]/5 text-xs font-semibold rounded-md transition-colors cursor-pointer inline-flex items-center gap-1.5 bg-white"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Add Session</span>
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="px-4 py-2.5 border border-[#FF651D] text-[#FF651D] hover:bg-[#FF651D]/5 text-sm font-medium rounded-md transition-colors cursor-pointer inline-flex items-center gap-2 bg-white"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Session</span>
+              </button>
             </form>
           </div>
         </div>

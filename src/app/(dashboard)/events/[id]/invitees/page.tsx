@@ -112,8 +112,8 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name:
 }
 
 // Borderless picker from Figma 217:21076 ("Product Launch Event 2026 ▾", "All Session ▾"): 12px medium grey text
-function PlainSelect({ value, onChange, options, ariaLabel }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; ariaLabel: string }) {
-  return <CustomDropdown variant="plain" value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} />;
+function PlainSelect({ value, onChange, options, ariaLabel, placeholder, disabled }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; ariaLabel: string; placeholder?: string; disabled?: boolean }) {
+  return <CustomDropdown variant="plain" value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} />;
 }
 
 export default function InviteesManagementPage() {
@@ -419,20 +419,6 @@ export default function InviteesManagementPage() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={invitees.length} />}
 
-        {sidebarFlow && (
-          <div className="max-w-md">
-            <span className="block text-sm font-medium text-gray-900 mb-1.5">Event</span>
-            <CustomDropdown
-              value={eventId}
-              onChange={(v) => router.replace(`/events/select/invitees?from=sidebar${v ? `&event=${v}` : ""}`)}
-              options={eventsOptions}
-              placeholder="Select an event"
-              emptyMessage="No events yet"
-              ariaLabel="Event"
-            />
-          </div>
-        )}
-
         {feedback && (
           <div role={feedback.type === "error" ? "alert" : "status"} className={`p-3.5 rounded-md border text-sm flex items-start justify-between gap-3 ${feedback.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : feedback.type === "info" ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
             <div className="min-w-0">
@@ -448,7 +434,43 @@ export default function InviteesManagementPage() {
         )}
 
         {!eventId ? (
-          <p className="py-16 text-center text-sm text-[#828282]">Select an event to add invitees and send invitations.</p>
+          // Figma 431:550 (Add Invitation step 1): the toolbar with nothing chosen yet, then the "No invitees yet" state
+          <>
+            <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+              <div className="flex flex-1 items-center gap-2.5 min-w-0">
+                <label htmlFor="invitee-search-empty" className="text-[17px] font-medium text-black shrink-0">Invitees</label>
+                <div className="relative flex-1 min-w-0">
+                  <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                  <input id="invitee-search-empty" type="search" value="" readOnly disabled placeholder="Search invitees" className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium placeholder:text-[#828282] cursor-not-allowed" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <PlainSelect
+                  ariaLabel="Select event"
+                  value=""
+                  placeholder="Select Event"
+                  onChange={(v) => router.replace(`/events/select/invitees?from=sidebar${v ? `&event=${v}` : ""}`)}
+                  options={eventsOptions}
+                />
+                <PlainSelect ariaLabel="Select session" value="" placeholder="Select Session" onChange={() => {}} options={[]} disabled />
+                <button type="button" onClick={() => showAlert("Select an event first, then add its invitees.", "info")} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer">
+                  <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                  Add Invitees
+                </button>
+                <button type="button" disabled className={primaryOutline}>
+                  <ButtonIcon name="send" />
+                  Send Invitation
+                </button>
+              </div>
+            </div>
+            <div className="py-[110px] flex flex-col items-center text-center gap-4">
+              <svg className="w-20 h-20 text-[#BDBDBD]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+              </svg>
+              <p className="max-w-[300px] text-base text-[#4B4F52]">No invitees yet. Add invitees to your event to get started.</p>
+              <button type="button" onClick={() => showAlert("Select an event first, then add its invitees.", "info")} className="px-6 py-2 rounded-md bg-[#F6F6F6] hover:bg-gray-200 text-base font-medium text-[#FF651D] cursor-pointer">Add Invitees</button>
+            </div>
+          </>
         ) : loadError ? (
           <div role="alert" className="py-12 text-center space-y-3">
             <p className="text-sm text-rose-600 break-words">{loadError}</p>
@@ -475,6 +497,14 @@ export default function InviteesManagementPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {/* The Super Admin frame (2114:6535) has no event picker on an event's own tab */}
+                {sidebarFlow && eventsOptions.length > 0 && (
+                  <PlainSelect
+                    ariaLabel="Event"
+                    value={eventId}
+                    onChange={(v) => router.replace(`/events/select/invitees?from=sidebar${v ? `&event=${v}` : ""}`)}
+                    options={eventsOptions}
+                  />
+                )}
                 {!sidebarFlow && !isAdmin && eventsOptions.length > 0 && (
                   <PlainSelect
                     ariaLabel="Event"

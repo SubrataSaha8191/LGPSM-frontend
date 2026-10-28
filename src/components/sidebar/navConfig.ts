@@ -83,7 +83,7 @@ export const NAV_ENTRIES: NavEntry[] = [
       { key: "template-settings", label: "Template Settings", href: "/settings/template", roles: ["ADMIN"] },
       { key: "event-settings", label: "Event Settings", href: "/settings/event", roles: ["ADMIN"] },
       { key: "price-rate-settings", label: "Price Rate Settings", href: "/settings/price-rate", roles: ["ADMIN"] },
-      { key: "notification-settings", label: "Notifications Settings", href: "/settings/notification", roles: ["ADMIN"] },
+      { key: "notification-settings", label: "Notification Settings", href: "/settings/notification", roles: ["ADMIN"] },
       { key: "account-settings", label: "Account Settings", href: "/settings/account", roles: ["ADMIN"] },
     ],
   },
