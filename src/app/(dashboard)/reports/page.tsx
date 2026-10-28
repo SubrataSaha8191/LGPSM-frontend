@@ -16,7 +16,8 @@ import { checkInService, CheckInRecord } from "@/services/checkInService";
 import { auditLogService } from "@/services/auditLogService";
 import { reportService, EventReportData } from "@/services/reportService";
 import { formatDateTime } from "@/utils/dateTime";
-import { Skeleton } from "@/components/common/Skeleton";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
+import DashedBorder from "@/components/common/DashedBorder";
 
 const ACCESS_CONTROL_LABELS: Record<string, string> = {
   NO_RESTRICTION: "No Restrictions",
@@ -353,6 +354,10 @@ export default function ReportsPage() {
   );
 
 
+  // Everything under the filters is one loading state: the events list, then the chosen event's report. Without this the
+  // tiles, charts and logs each flipped from "empty" to filled at their own moment while data arrived.
+  const bodyLoading = loadingEvents || loadingDetails || (!!selectedEventId && allEventsList.length > 0 && !eventReport && !detailsError);
+
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
       {/* Admin frame 713:5982 is titled "Reports", the Organiser frame 217:23715 "Report" */}
@@ -375,86 +380,114 @@ export default function ReportsPage() {
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium break-words">{pageError}</div>
         )}
 
-        {!loadingEvents && allEventsList.length === 0 && !pageError ? (
-          <div className="border border-dashed border-gray-200 rounded-md py-16 text-center text-sm font-medium text-gray-500">
-            No events found{selectedOrganizer ? " for this organizer" : ""}. Reports appear once an event exists.
-          </div>
+        {bodyLoading ? (
+          <ReportSkeleton />
         ) : (
           <>
-            <div className="space-y-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                {loadingEvents ? (
-                  <Skeleton className="h-9 w-72 max-w-full" />
-                ) : (
-                  <h2 className="text-[30px] leading-tight font-medium text-[#15191C] break-words min-w-0">{selectedEventTitle}</h2>
-                )}
-                {selectedEvent?.categoryId?.name && (
-                  <span className="border border-orange-400 text-[#FF5B22] rounded-md px-2 py-0.5 text-[10px] font-semibold bg-orange-50/50">
-                    {selectedEvent.categoryId.name}
-                  </span>
-                )}
-                {selectedEventId && <Link href={`/events/${selectedEventId}`} className="text-xs font-semibold text-[#E5520F] underline underline-offset-2">Open event</Link>}
-              </div>
-              {selectedEvent && (
-                <p className="text-xs text-gray-500 font-medium">
-                  <span className="font-semibold text-gray-700">Start:</span> {formatDate(selectedEvent.schedule?.start)} | <span className="font-semibold text-gray-700">End:</span> {formatDate(selectedEvent.schedule?.end)}
-                </p>
-              )}
+          {!loadingEvents && allEventsList.length === 0 && !pageError ? (
+            <div className="relative rounded-md py-16 text-center text-sm font-medium text-gray-500">
+            <DashedBorder width={1} className="text-gray-200" />
+              No events found{selectedOrganizer ? " for this organizer" : ""}. Reports appear once an event exists.
             </div>
-
-            {detailsError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium flex items-center justify-between gap-3">
-                <span className="break-words min-w-0">{detailsError}</span>
-                <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="font-semibold shrink-0 cursor-pointer underline">
-                  Retry
-                </button>
+          ) : (
+            <>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {loadingEvents ? (
+                    <Skeleton className="h-9 w-72 max-w-full" />
+                  ) : (
+                    <h2 className="text-[30px] leading-tight font-medium text-[#15191C] break-words min-w-0">{selectedEventTitle}</h2>
+                  )}
+                  {selectedEvent?.categoryId?.name && (
+                    <span className="border border-orange-400 text-[#FF5B22] rounded-md px-2 py-0.5 text-[10px] font-semibold bg-orange-50/50">
+                      {selectedEvent.categoryId.name}
+                    </span>
+                  )}
+                  {selectedEventId && <Link href={`/events/${selectedEventId}`} className="text-xs font-semibold text-[#E5520F] underline underline-offset-2">Open event</Link>}
+                </div>
+                {selectedEvent && (
+                  <p className="text-xs text-gray-500 font-medium">
+                    <span className="font-semibold text-gray-700">Start:</span> {formatDate(selectedEvent.schedule?.start)} | <span className="font-semibold text-gray-700">End:</span> {formatDate(selectedEvent.schedule?.end)}
+                  </p>
+                )}
               </div>
-            )}
 
-            <ReportsStatsCards
-              totalInvitees={eventReport?.totalInvitees ?? 0}
-              totalAttendees={eventReport?.uniqueAttendees ?? 0}
-              totalSessions={eventReport?.totalSessions ?? 0}
-              systemUsers={eventReport?.totalSystemUsers ?? 0}
-              loading={loadingEvents || (loadingDetails && !eventReport)}
-            />
+              {detailsError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium flex items-center justify-between gap-3">
+                  <span className="break-words min-w-0">{detailsError}</span>
+                  <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="font-semibold shrink-0 cursor-pointer underline">
+                    Retry
+                  </button>
+                </div>
+              )}
 
-            <ReportsCharts
-              loading={loadingDetails}
-              delivery={eventReport?.deliverySummary}
-              sessions={(eventReport?.sessionReports || []).map((sr) => ({
-                id: String(sr.sessionId),
-                name: sr.name,
-                invited: sr.invitedCount ?? 0,
-                attended: sr.attendeeCount ?? sr.checkInCount ?? 0,
-              }))}
-            />
+              <ReportsStatsCards
+                totalInvitees={eventReport?.totalInvitees ?? 0}
+                totalAttendees={eventReport?.uniqueAttendees ?? 0}
+                totalSessions={eventReport?.totalSessions ?? 0}
+                systemUsers={eventReport?.totalSystemUsers ?? 0}
+                loading={loadingEvents || (loadingDetails && !eventReport)}
+              />
+
+              <ReportsCharts
+                loading={loadingDetails}
+                delivery={eventReport?.deliverySummary}
+                sessions={(eventReport?.sessionReports || []).map((sr) => ({
+                  id: String(sr.sessionId),
+                  name: sr.name,
+                  invited: sr.invitedCount ?? 0,
+                  attended: sr.attendeeCount ?? sr.checkInCount ?? 0,
+                }))}
+              />
+            </>
+          )}
+
+          <ReportsLogsTable
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tableSearch={tableSearch}
+            setTableSearch={setTableSearch}
+            onDownloadCSV={downloadReportCSV}
+            checkInLogs={filteredCheckInLogs}
+            loadingCheckIns={loadingCheckIns}
+            page={checkInPage}
+            limit={checkInLimit}
+            total={checkInTotal}
+            totalPages={checkInTotalPages}
+            onPageChange={(newPage) => setCheckInPage(newPage)}
+            methodFilter={methodFilter}
+            onMethodFilterChange={(m) => setMethodFilter(m)}
+            inviteeLogs={filteredInviteeLogs}
+            accessLogs={filteredAccessLogs}
+            sessionsReport={filteredSessions}
+            sessionColumns={sessionColumns}
+            loadingDetails={loadingDetails || (activeTab === "invitees" && loadingInviteeDetails) || (activeTab === "access" && loadingAccessDetails)}
+          />
           </>
         )}
-
-        <ReportsLogsTable
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          tableSearch={tableSearch}
-          setTableSearch={setTableSearch}
-          onDownloadCSV={downloadReportCSV}
-          checkInLogs={filteredCheckInLogs}
-          loadingCheckIns={loadingCheckIns}
-          page={checkInPage}
-          limit={checkInLimit}
-          total={checkInTotal}
-          totalPages={checkInTotalPages}
-          onPageChange={(newPage) => setCheckInPage(newPage)}
-          methodFilter={methodFilter}
-          onMethodFilterChange={(m) => setMethodFilter(m)}
-          inviteeLogs={filteredInviteeLogs}
-          accessLogs={filteredAccessLogs}
-          sessionsReport={filteredSessions}
-          sessionColumns={sessionColumns}
-          loadingDetails={loadingDetails || (activeTab === "invitees" && loadingInviteeDetails) || (activeTab === "access" && loadingAccessDetails)}
-        />
       </div>
 
     </div>
+  );
+}
+
+// Placeholder for the whole report body: event title, four tiles, the two charts and the logs card
+function ReportSkeleton() {
+  return (
+    <SkeletonRegion label="Loading report" className="space-y-6">
+      <div className="space-y-2"><Skeleton className="h-9 w-72 max-w-full" /><Skeleton className="h-4 w-64 max-w-full" /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[158px] rounded-lg!" />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[388px_1fr] gap-6">
+        <Skeleton className="h-[374px] rounded-lg!" />
+        <Skeleton className="h-[374px] rounded-lg!" />
+      </div>
+      <div className="border border-[#E0E0E0] rounded-lg p-6 space-y-4">
+        <div className="flex gap-6"><Skeleton className="h-5 w-24" /><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-20" /></div>
+        <Skeleton className="h-10" />
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9" />)}
+      </div>
+    </SkeletonRegion>
   );
 }

@@ -28,6 +28,7 @@ import {
   ErrorView,
 } from "@/utils/aiTemplate";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
+import DashedBorder from "@/components/common/DashedBorder";
 
 const PROMPT_EXAMPLES: Record<TemplateKind, string[]> = {
   INVITATION: ["Elegant black and gold invitation for a corporate awards night", "Playful pastel birthday invitation with balloons", "Warm traditional wedding reception invitation in maroon and gold"],
@@ -336,7 +337,8 @@ export default function AiTemplateStudio({ editTemplateId }: { editTemplateId?: 
 
       <section aria-live="polite" aria-label="Designs" className="min-w-0 space-y-5">
         {!job && (
-          <div className="rounded-lg border border-dashed border-[#D9D9D9] bg-[#FAFAFA] py-16 px-6 text-center">
+          <div className="relative rounded-lg bg-[#FAFAFA] py-16 px-6 text-center">
+            <DashedBorder width={1} radius={8} className="text-[#D9D9D9]" />
             <p className="text-base font-medium text-gray-900">Your designs will appear here</p>
             <p className="text-sm text-[#828282] mt-1 max-w-md mx-auto">Describe the look you want and choose Generate. A design usually takes about a minute.</p>
           </div>

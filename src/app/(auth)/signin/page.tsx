@@ -31,7 +31,7 @@ import {
 import { INPUT_PLACEHOLDERS } from "@/constants/placeholders";
 import { ERROR_MESSAGES } from "@/constants/errorMessages";
 import { canAccessRoute } from "@/components/sidebar/navConfig";
-import { applyRememberChoice, readRememberedEmail } from "@/utils/rememberedLogin";
+import { applyRememberChoice, forgetRememberedEmail, readRememberedEmail } from "@/utils/rememberedLogin";
 import { createPortal } from "react-dom";
 import BrandLoader from "@/components/common/BrandLoader";
 
@@ -91,6 +91,7 @@ function SigninContent() {
 
   const handleModeChange = (newMode: PortalMode) => {
     setErrorMessage("");
+    setRememberChoice(null); // each portal has its own saved address, so its box starts from that
     const from = searchParams.get("from");
     const params = new URLSearchParams({ mode: newMode });
     if (from && isSafeReturnPath(from)) params.set("from", from);
@@ -149,7 +150,7 @@ function SigninContent() {
     setErrorMessage("");
     setIsSubmitting(true);
     try {
-      const res = await loginWithGoogle(idToken);
+      const res = await loginWithGoogle(idToken, portalRole(mode));
       if (res.success) onSuccess(res.data?.user?.role);
       else setErrorMessage(res.message || ERROR_MESSAGES.network.genericFailure);
     } finally {
@@ -195,7 +196,15 @@ function SigninContent() {
           <input
             type="checkbox"
             checked={rememberMe}
-            onChange={(e) => setRememberChoice(e.target.checked)}
+            onChange={(e) => {
+              setRememberChoice(e.target.checked);
+              if (!e.target.checked) {
+                // Forget the saved address right away, not only at the next successful sign-in; otherwise leaving the
+                // page (or a failed attempt) keeps it saved and the box comes back ticked. Keep what is on screen.
+                setTypedEmail(email);
+                forgetRememberedEmail(localStorage, mode);
+              }
+            }}
             className="w-4 h-4 rounded border-[#CFD9E0] accent-[#FF651D] cursor-pointer"
           />
           Remember me

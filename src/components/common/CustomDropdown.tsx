@@ -25,6 +25,10 @@ interface CustomDropdownProps {
   invalid?: boolean;
   emptyMessage?: string;
   ariaLabel?: string;
+  /** "plain" is the borderless toolbar picker from the Figma list pages (e.g. 217:21076): grey 12px text and a small caret */
+  variant?: "field" | "plain";
+  /** Smaller text for the compact filter drawer (Figma 217:22781) */
+  compact?: boolean;
 }
 
 export default function CustomDropdown({
@@ -38,7 +42,10 @@ export default function CustomDropdown({
   invalid = false,
   emptyMessage = "No options available",
   ariaLabel,
+  variant = "field",
+  compact = false,
 }: CustomDropdownProps) {
+  const plain = variant === "plain";
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -62,7 +69,7 @@ export default function CustomDropdown({
   }, [isOpen]);
 
   return (
-    <div ref={containerRef} className={`relative w-full text-left ${className}`}>
+    <div ref={containerRef} className={`relative text-left ${plain ? "w-auto max-w-[220px]" : "w-full"} ${className}`}>
       <button
         type="button"
         disabled={disabled}
@@ -72,8 +79,10 @@ export default function CustomDropdown({
         aria-invalid={invalid || undefined}
         aria-label={ariaLabel}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full min-h-[44px] px-3.5 py-2.5 text-sm rounded-md border transition-colors flex items-center justify-between gap-2 cursor-pointer select-none ${
-          disabled
+        className={`${plain ? "h-[47px] px-4 text-xs font-medium rounded-md border border-transparent hover:text-[#15191C] gap-3" : `w-full ${compact ? "min-h-[47px] px-4 text-xs font-medium" : "min-h-[44px] px-3.5 py-2.5 text-sm"} rounded-md border gap-2`} transition-colors flex items-center justify-between cursor-pointer select-none ${
+          plain
+            ? `bg-transparent ${isOpen ? "text-[#15191C]" : "text-[#7F7F7F]"}`
+            : disabled
             ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
             : invalid
               ? "bg-[#FAFAFA] border-rose-400 text-gray-800"
@@ -82,7 +91,7 @@ export default function CustomDropdown({
                 : "bg-[#FAFAFA] border-[#E0E0E0] hover:border-[#FF651D] text-gray-700"
         }`}
       >
-        <span className={`inline-flex items-center gap-2 min-w-0 ${selectedOption ? "text-gray-900" : "text-gray-400"}`}>
+        <span className={`inline-flex items-center gap-2 min-w-0 ${plain ? "" : selectedOption && value !== "" ? "text-gray-900" : "text-gray-400"}`}>
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
           <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         </span>
@@ -92,7 +101,7 @@ export default function CustomDropdown({
       </button>
 
       {isOpen && !disabled && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-md shadow-xl overflow-hidden z-50 animate-dropdown">
+        <div className={`absolute top-full mt-1.5 bg-white border border-gray-200 rounded-md shadow-xl overflow-hidden z-50 animate-dropdown ${plain ? "right-0 w-max min-w-[180px] max-w-[300px]" : "left-0 right-0"}`}>
           {topAction && (
             <button
               type="button"

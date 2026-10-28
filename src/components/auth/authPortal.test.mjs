@@ -57,3 +57,8 @@ test("a redirect without a page carries no return path", () => {
   assert.doesNotMatch(url, /from=/);
   assert.match(loginRedirectPath("/settings/account"), /from=%2Fsettings%2Faccount/);
 });
+
+test("with no remembered portal, redirects go to the organizer sign-in, not the admin one", async () => {
+  const { loginRedirectPath } = await import("./authPortal.ts");
+  assert.match(loginRedirectPath(), /mode=organizer/);
+});

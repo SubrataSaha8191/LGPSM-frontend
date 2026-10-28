@@ -70,10 +70,10 @@ export const authService = {
     return response;
   },
 
-  async googleLogin(idToken: string): Promise<ApiResponse<AuthResponseData>> {
+  async googleLogin(idToken: string, role?: "ADMIN" | "ORGANIZER"): Promise<ApiResponse<AuthResponseData>> {
     const response = await apiClient<AuthResponseData>("/api/auth/google", {
       method: "POST",
-      body: JSON.stringify({ token: idToken }),
+      body: JSON.stringify({ token: idToken, ...(role ? { role } : {}) }),
     });
     if (response.success && response.data) {
       const { user, accessToken, refreshToken } = response.data;

@@ -592,37 +592,35 @@ export default function AssignedSystemUsersPage() {
                       <td className="py-4 px-4 text-gray-600">{u.phone}</td>
 
                       <td data-user-action-menu className="py-4 px-4 text-right relative">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(u)}
-                            className="p-1 text-gray-500 hover:text-[#FF5B22] transition-colors cursor-pointer"
-                            title="Edit User"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setActiveActionId(isActionActive ? null : u.id)}
-                            className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                          >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
-                            </svg>
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Actions for ${u.name}`}
+                          aria-haspopup="menu"
+                          aria-expanded={isActionActive}
+                          onClick={() => setActiveActionId(isActionActive ? null : u.id)}
+                          className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
+                          </svg>
+                        </button>
 
                         {isActionActive && (
-                          <div className="absolute right-4 top-12 z-30 bg-[#1E232A] text-white text-xs font-semibold px-3 py-2 rounded-md shadow-xl border border-gray-700 flex flex-col gap-1 cursor-pointer">
+                          <div role="menu" className="absolute right-4 top-12 z-30 bg-[#1E232A] text-white text-xs font-semibold px-3 py-2 rounded-md shadow-xl border border-gray-700 flex flex-col gap-1 cursor-pointer">
                             <button
                               type="button"
+                              role="menuitem"
+                              onClick={() => { setActiveActionId(null); handleOpenEdit(u); }}
+                              className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1 cursor-pointer"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                              <span>Edit User</span>
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
                               onClick={() => handleDeleteUser(u)}
                               className="flex items-center gap-2 hover:text-[#FF5B22] transition-colors w-full text-left py-1 cursor-pointer"
                             >

@@ -15,6 +15,7 @@ import PageHeader from "@/components/common/PageHeader";
 import EventCardThumbnail from "@/components/events/EventCardThumbnail";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton, SkeletonRegion, TableSkeletonRows } from "@/components/common/Skeleton";
+import CustomDropdown from "@/components/common/CustomDropdown";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Completed" | "Invitation not send" | "Cancelled";
 
@@ -45,16 +46,7 @@ const STATUS_STYLE: Record<RowStatus, string> = {
 
 // `compact` is the organiser filter drawer style (Figma 217:22781): 12px medium text, 16px padding
 function FilterSelect({ value, onChange, ariaLabel, options, compact = false }: { value: string; onChange: (value: string) => void; ariaLabel: string; options: { value: string; label: string }[]; compact?: boolean }) {
-  return (
-    <div className="relative">
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} className={`w-full h-[47px] appearance-none pr-10 bg-white border border-[#E0E0E0] rounded-md focus:outline-none focus:border-[#FF651D] cursor-pointer ${compact ? "px-4 text-xs font-medium " + (value ? "text-[#15191C]" : "text-[#7F7F7F]") : "px-3.5 text-sm text-gray-700"}`}>
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-      <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
-  );
+  return <CustomDropdown value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} compact={compact} placeholder={options[0]?.label} />;
 }
 
 interface RawEvent {

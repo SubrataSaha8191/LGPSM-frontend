@@ -4,6 +4,7 @@ import PageHeader from "@/components/common/PageHeader";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { userService } from '@/services/userService';
+import DashedBorder from "@/components/common/DashedBorder";
 
 export default function AddEventOrganizerPage() {
   const router = useRouter();
@@ -189,8 +190,9 @@ export default function AddEventOrganizerPage() {
                     onClick={() => logoInputRef.current?.click()}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
-                    className="border border-dashed border-gray-300 hover:border-[#FF5B22] rounded-md p-6 bg-white hover:bg-gray-50 flex flex-col items-center justify-center text-center cursor-pointer transition-colors min-h-[110px] select-none"
+                    className="group relative rounded-md p-6 bg-white hover:bg-gray-50 flex flex-col items-center justify-center text-center cursor-pointer transition-colors min-h-[110px] select-none"
                   >
+                    <DashedBorder width={1} className="text-gray-300 group-hover:text-[#FF5B22]" />
                     <span className="text-[11px] text-gray-400 max-w-[200px] leading-tight">
                       Drag and drop a photo here or <span className="text-[#FF5B22] font-semibold underline">click to open file</span>
                     </span>

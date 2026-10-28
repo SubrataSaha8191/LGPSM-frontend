@@ -113,14 +113,7 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name:
 
 // Borderless picker from Figma 217:21076 ("Product Launch Event 2026 ▾", "All Session ▾"): 12px medium grey text
 function PlainSelect({ value, onChange, options, ariaLabel }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; ariaLabel: string }) {
-  return (
-    <div className="relative h-[47px] flex items-center max-w-[220px]">
-      <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} className="h-full w-full appearance-none bg-transparent pl-4 pr-9 text-xs font-medium text-[#7F7F7F] truncate focus:outline-none cursor-pointer">
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <Image src="/icons/events/caret-down.svg" alt="" width={12} height={7} className="pointer-events-none absolute right-4" />
-    </div>
-  );
+  return <CustomDropdown variant="plain" value={value} onChange={onChange} options={options} ariaLabel={ariaLabel} />;
 }
 
 export default function InviteesManagementPage() {
@@ -147,7 +140,7 @@ export default function InviteesManagementPage() {
   const [inviteePage, setInviteePage] = useState(1);
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
-  const [channel, setChannel] = useState<Channel>("EMAIL");
+  const [channel, setChannel] = useState<Channel>("BOTH");
   const [busy, setBusy] = useState<null | "send" | "resend" | "import" | "access" | "clear">(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 

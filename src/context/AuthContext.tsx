@@ -12,7 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginPayload) => Promise<ApiResponse<AuthResponseData>>;
-  loginWithGoogle: (idToken: string) => Promise<ApiResponse<AuthResponseData>>;
+  loginWithGoogle: (idToken: string, role?: "ADMIN" | "ORGANIZER") => Promise<ApiResponse<AuthResponseData>>;
   register: (payload: RegisterPayload) => Promise<ApiResponse<AuthResponseData>>;
   logout: () => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<ApiResponse>;
@@ -78,8 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res;
   };
 
-  const loginWithGoogle = async (idToken: string): Promise<ApiResponse<AuthResponseData>> => {
-    const res = await authService.googleLogin(idToken);
+  const loginWithGoogle = async (idToken: string, role?: "ADMIN" | "ORGANIZER"): Promise<ApiResponse<AuthResponseData>> => {
+    const res = await authService.googleLogin(idToken, role);
     if (res.success && res.data?.user) {
       setUser(res.data.user);
       rememberPortal(res.data.user.role);

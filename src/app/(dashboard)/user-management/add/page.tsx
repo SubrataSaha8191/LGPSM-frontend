@@ -2,13 +2,31 @@
 
 import PageHeader from "@/components/common/PageHeader";
 import ListControls, { addButtonClass } from "@/components/common/ListControls";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { Suspense, useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
 import { TableSkeleton } from "@/components/common/Skeleton";
 
+// "Add User" buttons elsewhere (User Management, an event's system-user tab) link here with ?new=1 so the form is already open,
+// instead of landing on this list and needing a second click.
 export default function AddUserPage() {
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  return (
+    <Suspense fallback={null}>
+      <AddUserContent />
+    </Suspense>
+  );
+}
+
+function AddUserContent() {
+  const router = useRouter();
+  const openedByLink = useSearchParams().get("new") === "1";
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(openedByLink);
+  // Cancelling a form that was opened from another page goes back to that page rather than stranding the person on this list
+  const cancelModal = () => {
+    setIsAddUserModalOpen(false);
+    if (openedByLink) router.back();
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     userName: "",
@@ -64,6 +82,8 @@ export default function AddUserPage() {
     setAddedUserName(formData.userName.trim());
     setIsAddUserModalOpen(false);
     setFormData({ userName: "", contactNo: "", email: "", password: "" });
+    // Opened from another page: go back to it, where the new user now shows in the list
+    if (openedByLink) router.back();
     await loadSystemUsers();
   };
 
@@ -165,7 +185,7 @@ export default function AddUserPage() {
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Add User</h3>
               <button
-                onClick={() => setIsAddUserModalOpen(false)}
+                onClick={cancelModal}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +266,7 @@ export default function AddUserPage() {
               <div className="pt-2 pb-6 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsAddUserModalOpen(false)}
+                  onClick={cancelModal}
                   className="px-5 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer"
                 >
                   Cancel

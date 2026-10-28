@@ -15,6 +15,7 @@ import PageHeader from "@/components/common/PageHeader";
 import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
 import { useAlert } from "@/context/AlertContext";
 import { TableSkeleton } from "@/components/common/Skeleton";
+import CustomDropdown from "@/components/common/CustomDropdown";
 
 export default function EventAssignUsersPage() {
   const { confirm } = useAlert();
@@ -281,19 +282,15 @@ export default function EventAssignUsersPage() {
             </div>
           </div>
           <div className="flex items-center shrink-0 w-fit">
-            <div className="relative h-[47px] flex items-center">
-              <select
-                aria-label="Which system users to show"
-                value={showAllSystemUsers ? "all" : "assigned"}
-                onChange={(e) => { setShowAllSystemUsers(e.target.value === "all"); setSelectedUserIds([]); }}
-                className="h-full appearance-none bg-transparent pl-4 pr-9 text-xs font-medium text-[#7F7F7F] focus:outline-none cursor-pointer"
-              >
-                <option value="assigned">Assigned to this event</option>
-                <option value="all">All</option>
-              </select>
-              <Image src="/icons/events/caret-down.svg" alt="" width={12} height={7} className="pointer-events-none absolute right-4" />
-            </div>
-            <Link href="/user-management/add" className="inline-flex items-center px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
+            <CustomDropdown
+              variant="plain"
+              ariaLabel="Which system users to show"
+              value={showAllSystemUsers ? "all" : "assigned"}
+              onChange={(v) => { setShowAllSystemUsers(v === "all"); setSelectedUserIds([]); }}
+              options={[{ value: "assigned", label: "Assigned to this event" }, { value: "all", label: "All" }]}
+            />
+            <Link href="/user-management/add?new=1" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
+              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
               Add User
             </Link>
           </div>
@@ -335,7 +332,7 @@ export default function EventAssignUsersPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500 text-sm">
                     {users.length === 0 ? (
-                      <span>No SYSTEM_USER accounts found. <Link href="/user-management/add" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
+                      <span>No SYSTEM_USER accounts found. <Link href="/user-management/add?new=1" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
                     ) : !showAllSystemUsers && !searchQuery.trim() ? (
                       // Figma 217:19798 empty state; "Assign User" lists every system user to pick from
                       <div className="flex flex-col items-center gap-[26px] py-16 max-w-[344px] mx-auto whitespace-normal">

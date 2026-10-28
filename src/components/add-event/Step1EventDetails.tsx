@@ -340,7 +340,9 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Contact Number and the RSVP card stack in the left column; the logo box spans both rows on the right, so it starts level
+          with the Contact Number label and ends level with the RSVP card instead of floating at its own height */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 sm:grid-rows-[auto_1fr] gap-4">
         <div>
           <label htmlFor="event-contact" className={`block ${labelClass} mb-1.5`}>Contact Number<Req /></label>
           <div className={`flex items-center bg-[#FAFAFA] border rounded-md overflow-hidden focus-within:border-[#FF651D] ${border(errors.contactNumber)}`}>
@@ -358,10 +360,7 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           </div>
           <Err msg={errors.contactNumber} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-        {rsvpAllowed ? (
+              {rsvpAllowed ? (
           <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="event-rsvp" className="flex items-center gap-2 cursor-pointer">
@@ -387,14 +386,17 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
         ) : (
           <p className="p-4 border border-[#E0E0E0] rounded-md text-sm text-[#828282]">RSVP collection is turned off by the platform administrator.</p>
         )}
-        <ImageUploadField
-          label={<span className="flex items-center justify-between gap-2">Event Logo/image<InfoTip label="About the event logo" text="Shown on the invitation card. Use a JPG, PNG or WEBP image up to 5 MB." /></span>}
-          value={draft.logoKey}
-          onChange={(logoKey) => onChange({ logoKey })}
-          purpose="EVENT_LOGO"
-          aspectClassName="aspect-[2/1]"
-          hint="Shown on the invitation card. JPG, PNG or WEBP, up to 5 MB"
-        />
+        <div className="sm:col-start-2 sm:row-start-1 sm:row-span-2">
+          <ImageUploadField
+            label={<span className="flex items-center justify-between gap-2">Event Logo/image<InfoTip label="About the event logo" text="Shown on the invitation card. Use a JPG, PNG or WEBP image up to 5 MB." /></span>}
+            value={draft.logoKey}
+            onChange={(logoKey) => onChange({ logoKey })}
+            purpose="EVENT_LOGO"
+            aspectClassName="aspect-[2/1]"
+            fill
+            hint="Shown on the invitation card. JPG, PNG or WEBP, up to 5 MB"
+          />
+        </div>
       </div>
 
       <div>

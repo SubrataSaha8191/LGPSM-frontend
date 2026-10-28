@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import Image from "next/image";
 import { ACCEPTED_IMAGE_TYPES, MediaPurpose, mediaService } from "@/services/mediaService";
 import { resolveImageUrl } from "@/utils/mediaUrl";
+import DashedBorder from "@/components/common/DashedBorder";
 
 interface ImageUploadFieldProps {
   // Stored image reference ("media:<id>", URL or site path); empty when there is no image
@@ -13,6 +14,8 @@ interface ImageUploadFieldProps {
   label?: React.ReactNode;
   hint?: string;
   aspectClassName?: string;
+  /** Stretch to the height of the row it sits in (the box grows instead of keeping its own aspect ratio) */
+  fill?: boolean;
   disabled?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
 }
@@ -26,6 +29,7 @@ export default function ImageUploadField({
   label,
   hint = "JPG, PNG or WEBP, up to 5 MB",
   aspectClassName = "aspect-[3/4]",
+  fill = false,
   disabled = false,
   onUploadingChange,
 }: ImageUploadFieldProps) {
@@ -49,7 +53,7 @@ export default function ImageUploadField({
   };
 
   return (
-    <div>
+    <div className={fill ? "flex h-full flex-col" : undefined}>
       {label && <div className="block text-sm font-medium text-gray-900 mb-1.5">{label}</div>}
       <input
         ref={inputRef}
@@ -60,7 +64,7 @@ export default function ImageUploadField({
         onChange={(e) => upload(e.target.files?.[0])}
       />
       {preview ? (
-        <div className={`relative w-full ${aspectClassName} rounded-md overflow-hidden border border-[#E0E0E0] bg-[#F4F5F8]`}>
+        <div className={`relative w-full ${fill ? "flex-1 min-h-[140px]" : aspectClassName} rounded-md overflow-hidden border border-[#E0E0E0] bg-[#F4F5F8]`}>
           <Image src={preview} alt="Uploaded image preview" fill unoptimized sizes="400px" className="object-contain" />
           <div className="absolute bottom-2 left-2 right-2 flex gap-2 justify-center">
             <button
@@ -96,10 +100,13 @@ export default function ImageUploadField({
             setDragOver(false);
             upload(e.dataTransfer.files?.[0]);
           }}
-          className={`w-full rounded-md border-2 border-dashed p-6 text-center text-sm transition-colors cursor-pointer disabled:cursor-not-allowed ${
-            dragOver ? "border-[#FF651D] bg-orange-50/50" : "border-[#D3D3D3] bg-[#FAFAFA] hover:border-[#FF651D]"
+          className={`group relative w-full rounded-md p-6 text-center text-sm transition-colors cursor-pointer disabled:cursor-not-allowed ${
+            fill ? "flex flex-1 flex-col items-center justify-center" : ""
+          } ${
+            dragOver ? "bg-orange-50/50" : "bg-[#FAFAFA]"
           }`}
         >
+          <DashedBorder className={dragOver ? "text-[#FF651D]" : "text-[#D3D3D3] group-hover:text-[#FF651D]"} />
           <span className="text-[#4B4F52]">
             {uploading ? "Uploading..." : (
               <>

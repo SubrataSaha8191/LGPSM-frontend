@@ -43,9 +43,11 @@ export function rememberedPortal(): PortalMode | null {
   return (match?.[1] as PortalMode) || null;
 }
 
-// Login URL for redirects; `from` is kept so the user returns to where they were
+// Login URL for redirects; `from` is kept so the user returns to where they were. With no remembered portal the
+// organizer sign-in is the default (the sign-in page itself defaults to it): sending someone to the Admin form by
+// accident is how a person ends up trying the wrong portal.
 export function loginRedirectPath(from?: string): string {
-  const params = new URLSearchParams({ mode: rememberedPortal() || "admin" });
+  const params = new URLSearchParams({ mode: rememberedPortal() || "organizer" });
   if (from && isSafeReturnPath(from)) params.set("from", from);
   return `/signin?${params.toString()}`;
 }

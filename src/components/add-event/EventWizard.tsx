@@ -297,7 +297,9 @@ export default function EventWizard({
       )}
 
       <div className="p-4 sm:p-6 flex-1">
-        <div className="border border-[#E0E0E0] rounded-lg flex flex-col xl:flex-row bg-white">
+        {/* overflow-clip (not hidden, which would break the sticky header and preview) trims the white header and the beige
+            preview column to the rounded border, so no square corners poke past it */}
+        <div className="border border-[#E0E0E0] rounded-lg overflow-clip flex flex-col xl:flex-row bg-white">
           <div className="w-full xl:w-[62%] flex flex-col min-w-0">
             <StepHeader currentStep={currentStep} onStepClick={handleStepChange} maxUnlockedStep={maxUnlockedStep} />
             <div ref={stepContentRef} className="flex-1">
@@ -354,7 +356,8 @@ export default function EventWizard({
               subcategoryName={categories.subcategoryName(draft.categoryId, draft.subcategoryId)}
               onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
               cardInfo={draft.cardInfo ?? null}
-              onOpenAdditionalInfo={(payload) => setInfoPreviewPayload(payload)}
+              // Additional Info exists only in the Super Admin designs (Event_Add event-1…5); the Organiser frames (217:7725–32941) show "Change Template" alone
+              onOpenAdditionalInfo={isAdmin ? (payload) => setInfoPreviewPayload(payload) : undefined}
             />
             </div>
           </div>
