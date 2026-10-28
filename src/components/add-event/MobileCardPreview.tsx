@@ -179,7 +179,11 @@ export default function MobileCardPreview({
           )}
         </div>
         <p className="mt-2 text-xs text-[#4B4F52] text-center break-words">
-          {template ? `Template: ${template.name}` : "No template chosen: the design follows the event type."}
+          {template
+            ? `Template: ${template.name}`
+            : categoryName
+              ? `No template chosen: the design follows the event type (${[categoryName, subcategoryName].filter(Boolean).join(" › ")}).`
+              : "No event type chosen yet, so this is a sample design. Choose a category, or select a template, to see the real card."}
         </p>
         {eventDateRange && (
           <p className="mt-1 text-xs font-medium text-[#25216F] text-center" aria-label="Event date range">

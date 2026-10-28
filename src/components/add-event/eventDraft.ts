@@ -60,6 +60,8 @@ export interface EventDraft {
   subcategoryId: string;
   contactNumber: string;
   venue: string;
+  /** Where the venue was pinned on the map (the "Verify" step); cleared when the address text changes */
+  venuePin?: { lat: number; lng: number } | null;
   start: string;
   end: string;
   rsvpEnabled: boolean;
@@ -112,6 +114,7 @@ export function createEmptyEventDraft(): EventDraft {
     subcategoryId: "",
     contactNumber: "",
     venue: "",
+    venuePin: null,
     start,
     end,
     rsvpEnabled: true,
@@ -249,7 +252,9 @@ function commonPayload(draft: EventDraft) {
     ...(draft.categoryId ? { categoryId: draft.categoryId } : {}),
     ...(draft.subcategoryId ? { subcategoryId: draft.subcategoryId } : {}),
     ...(draft.contactNumber.trim() ? { contactNumber: draft.contactNumber.trim() } : {}),
-    ...(draft.venue.trim() ? { location: { address: draft.venue.trim() } } : {}),
+    ...(draft.venue.trim()
+      ? { location: { address: draft.venue.trim(), ...(draft.venuePin ? { coordinates: [draft.venuePin.lng, draft.venuePin.lat] as [number, number] } : {}) } }
+      : {}),
     schedule: { start: draft.start, end: draft.end },
     rsvp: {
       enabled: draft.rsvpEnabled,
@@ -297,7 +302,7 @@ export interface ServerEvent {
   categoryId?: RefOrId;
   subcategoryId?: RefOrId;
   contactNumber?: string;
-  location?: string | { address?: string };
+  location?: string | { address?: string; coordinates?: { coordinates?: [number, number] } };
   schedule?: { start?: string; end?: string };
   rsvp?: { enabled?: boolean; acceptanceLastDate?: string; allowAllInvited?: boolean; allowNotResponded?: boolean; allowDeclined?: boolean };
   attendeeSettings?: { thresholdLimit?: number };
@@ -320,6 +325,12 @@ export interface ServerSession {
 }
 
 // Server event (+ its sessions) -> editable draft
+// GeoJSON stores [longitude, latitude]; the form works in { lat, lng }
+function pinOf(location: unknown): { lat: number; lng: number } | null {
+  const pair = typeof location === "object" && location ? (location as { coordinates?: { coordinates?: unknown } }).coordinates?.coordinates : null;
+  return Array.isArray(pair) && pair.length === 2 && pair.every((n) => typeof n === "number" && Number.isFinite(n)) ? { lng: pair[0], lat: pair[1] } : null;
+}
+
 export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): EventDraft {
   const base = createEmptyEventDraft();
   const start = event?.schedule?.start || base.start;
@@ -350,6 +361,7 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     subcategoryId: idOf(event?.subcategoryId),
     contactNumber: event?.contactNumber || "",
     venue: typeof event?.location === "string" ? event.location : event?.location?.address || "",
+    venuePin: pinOf(event?.location),
     start,
     end,
     rsvpEnabled: event?.rsvp?.enabled ?? base.rsvpEnabled,

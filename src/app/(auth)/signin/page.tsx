@@ -91,7 +91,6 @@ function SigninContent() {
 
   const handleModeChange = (newMode: PortalMode) => {
     setErrorMessage("");
-    setRememberChoice(null); // each portal has its own saved address, so its box starts from that
     const from = searchParams.get("from");
     const params = new URLSearchParams({ mode: newMode });
     if (from && isSafeReturnPath(from)) params.set("from", from);
@@ -270,10 +269,17 @@ function SigninContent() {
   );
 }
 
+// The form is keyed by the portal in the URL: switching tab, or pressing Back from one tab to the other, mounts a fresh form,
+// so an email, password or error from the other portal can never carry over (they are different sign-ins).
+function PortalSignin() {
+  const mode = parsePortalMode(useSearchParams().get("mode")).mode;
+  return <SigninContent key={mode} />;
+}
+
 export default function SigninPage() {
   return (
     <Suspense fallback={<AuthLoadingShell />}>
-      <SigninContent />
+      <PortalSignin />
     </Suspense>
   );
 }

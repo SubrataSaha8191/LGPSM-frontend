@@ -11,6 +11,7 @@ import { UserData } from "@/services/tokenStorage";
 import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import InfoTip from "@/components/common/InfoTip";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
+import VerifyLocationModal from "./modals/VerifyLocationModal";
 
 export type EventDateField = "start" | "end" | "rsvpDeadline";
 
@@ -261,6 +262,8 @@ function DateButton({ label, value, placeholder, onClick, error }: { label: stri
 
 // Controlled step: all values live in the wizard draft owned by the page
 export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, categories, canManageCategories, isAdmin, rsvpAllowed, errors, onNext, onCancel }: Step1EventDetailsProps) {
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifyHint, setVerifyHint] = useState<string | null>(null);
   return (
     <form
       onSubmit={(e) => {
@@ -401,17 +404,49 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
 
       <div>
         <label htmlFor="event-address" className={`block ${labelClass} mb-1.5`}>Event Address<Req /></label>
-        <input
-          id="event-address"
-          type="text"
-          value={draft.venue}
-          maxLength={300}
-          onChange={(e) => onChange({ venue: e.target.value })}
-          placeholder="Enter Event Address"
-          aria-invalid={!!errors.venue}
-          className={`${inputClass} ${border(errors.venue)}`}
-        />
+        <div className="relative">
+          <input
+            id="event-address"
+            type="text"
+            value={draft.venue}
+            maxLength={300}
+            // editing the text makes an earlier map pin untrustworthy, so it has to be verified again
+            onChange={(e) => { setVerifyHint(null); onChange({ venue: e.target.value, venuePin: null }); }}
+            placeholder="Enter Event Address"
+            aria-invalid={!!errors.venue}
+            className={`${inputClass} ${border(errors.venue)} pr-[120px]`}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (draft.venue.trim().length < 3) { setVerifyHint("Type the address first, then verify it on the map."); return; }
+              setVerifyHint(null);
+              setVerifyOpen(true);
+            }}
+            title={draft.venuePin ? "Location pinned on the map. Click to review it." : "Check this address on the map"}
+            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1A9242] hover:bg-[#157A37] text-white text-xs font-semibold cursor-pointer"
+          >
+            {draft.venuePin ? (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg>
+            )}
+            {draft.venuePin ? "Verified" : "Verify"}
+          </button>
+        </div>
+        {verifyHint && <p role="status" className="mt-1 text-xs font-medium text-[#B45309]">{verifyHint}</p>}
         <Err msg={errors.venue} />
+        {verifyOpen && (
+          <VerifyLocationModal
+            address={draft.venue.trim()}
+            pin={draft.venuePin ?? null}
+            onClose={() => setVerifyOpen(false)}
+            onConfirm={(pin, useAddress) => {
+              onChange({ venuePin: pin, ...(useAddress ? { venue: useAddress.slice(0, 300) } : {}) });
+              setVerifyOpen(false);
+            }}
+          />
+        )}
       </div>
 
       <div className="pt-5 border-t border-[#E5E5E5] flex items-center justify-end gap-3">

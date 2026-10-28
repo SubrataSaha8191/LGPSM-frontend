@@ -69,7 +69,7 @@ interface EventRequestBase {
   categoryId?: string;
   subcategoryId?: string;
   contactNumber?: string;
-  location?: { address?: string };
+  location?: { address?: string; coordinates?: [number, number] };
   schedule: { start: string; end: string };
   rsvp?: {
     enabled: boolean;
