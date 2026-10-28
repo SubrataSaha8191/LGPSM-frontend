@@ -13,7 +13,8 @@ export interface InviteeData {
   email?: string;
   mobile?: string;
   company?: string;
-  designation?: string;
+  /** e.g. "Employee ID: 4521" */
+  professionalIdentity?: string;
   category?: string;
   qrCode?: string;
   registrationStatus?: "pending" | "confirmed" | "checked_in" | "cancelled";
@@ -28,7 +29,7 @@ export interface CreateInviteePayload {
   mobile?: string;
   company?: string;
   companyName?: string;
-  designation?: string;
+  professionalIdentity?: string;
   category?: string;
   dietaryPreference?: string;
   rsvpStatus?: "PENDING" | "ACCEPTED" | "DECLINED";

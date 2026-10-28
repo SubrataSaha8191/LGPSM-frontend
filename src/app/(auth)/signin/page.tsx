@@ -32,6 +32,8 @@ import { INPUT_PLACEHOLDERS } from "@/constants/placeholders";
 import { ERROR_MESSAGES } from "@/constants/errorMessages";
 import { canAccessRoute } from "@/components/sidebar/navConfig";
 import { applyRememberChoice, readRememberedEmail } from "@/utils/rememberedLogin";
+import { createPortal } from "react-dom";
+import BrandLoader from "@/components/common/BrandLoader";
 
 const subscribeToStorage = (onChange: () => void) => {
   window.addEventListener("storage", onChange);
@@ -83,6 +85,8 @@ function SigninContent() {
   const [rememberChoice, setRememberChoice] = useState<boolean | null>(null);
   const rememberMe = rememberChoice ?? remembered !== "";
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set once a sign-in succeeds and never reset: the page is on its way out, so the loader covers the wait for the dashboard
+  const [entering, setEntering] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleModeChange = (newMode: PortalMode) => {
@@ -94,6 +98,9 @@ function SigninContent() {
   };
 
   const onSuccess = (role?: string) => {
+    setEntering(true);
+    // Tells the dashboard to open behind the same loader, so the hand-off from sign-in is one continuous animation
+    try { sessionStorage.setItem("lgpsm_signing_in", "1"); } catch { /* storage blocked: the loader just ends with the page change */ }
     clearExplicitLogout();
     const newAccountPending = sessionStorage.getItem("lgpsm_new_account_popup_pending") === "true";
     if (newAccountPending) {
@@ -152,6 +159,8 @@ function SigninContent() {
 
   const sharedForm = (
     <form onSubmit={handleSubmit}>
+      {/* Portalled to <body>: the auth card is animated, which would otherwise trap a fixed overlay inside it */}
+      {entering && createPortal(<div className="fixed inset-0 z-[100]"><BrandLoader label="Signing in" /></div>, document.body)}
       <div>
         <label htmlFor="signin-email" className={authLabelClass}>
           Email Address<span className="text-[#FF651D]">*</span>

@@ -1,13 +1,14 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import ChangePasswordModal from "@/components/settings/modals/ChangePasswordModal";
 import AvatarSection from "@/components/settings/AvatarSection";
 
 import { userService } from "@/services/userService";
 
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 
 export default function AccountSettingsPage() {
   const { user, updateProfile } = useAuth();
@@ -22,6 +23,8 @@ export default function AccountSettingsPage() {
   const [savedMessage, setSavedMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [avatarNotice, setAvatarNotice] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const field = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-[13px] text-[#15191C] focus:outline-none focus:border-[#FF651D]";
 
   useEffect(() => {
     if (user?.fullName) setFullName(user.fullName);
@@ -39,6 +42,7 @@ export default function AccountSettingsPage() {
       return;
     }
     setSavedMessage(true);
+    setEditing(false);
     setTimeout(() => setSavedMessage(false), 3000);
   };
 
@@ -60,35 +64,43 @@ export default function AccountSettingsPage() {
   return (
     <div className="w-full min-h-full bg-white font-sans text-gray-900 select-none">
       {/* Header */}
-      <header className="h-16 bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-20">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <svg className="w-6 h-6 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <h1 className="text-sm sm:text-base font-bold text-gray-800 truncate">Account Settings</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Account Settings" />
 
-      {/* Content */}
-      <div className="p-6 w-full mx-auto space-y-6 pb-24">
-        <h2 className="max-w-[850px] w-full mx-auto text-base font-bold text-gray-800">Edit Profile</h2>
+      {/* Figma 2171:1911 "My Profile" (default) and 2171:2034 "Edit Profile": full-width grey card, 154px photo */}
+      <div className="px-4 sm:px-6 pt-10 pb-24 w-full space-y-6">
+        <h2 className="text-xl font-medium text-black">{editing ? "Edit Profile" : "My Profile"}</h2>
 
         {savedMessage && (
-          <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-semibold transition-all">
+          <div role="status" className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-semibold">
             Account details updated successfully!
           </div>
         )}
-
         {errorMessage && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-xs font-semibold transition-all">
+          <div role="alert" className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-xs font-semibold">
             {errorMessage}
           </div>
         )}
 
-        <form onSubmit={handleSave} className="max-w-[850px] w-full mx-auto bg-white rounded-md border border-gray-200/80 p-8 shadow-xs">
-          <div className="flex flex-col md:flex-row items-start gap-8">
-            {/* Interactive Avatar Area with Dropdown & Default Profile Icon */}
+        {!editing ? (
+          <section className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-lg p-8 flex flex-col sm:flex-row items-start sm:items-center gap-10" aria-label="My profile">
+            <span className="relative size-[154px] shrink-0 rounded-full overflow-hidden bg-[#D9D9D9] flex items-center justify-center">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- local preview or stored avatar URL
+                <img src={avatarUrl} alt="Profile photo" className="w-full h-full object-cover" />
+              ) : (
+                <Image src="/images/header/avatar-user.svg" alt="" width={68} height={68} />
+              )}
+            </span>
+            <div className="min-w-0 space-y-1.5">
+              <p className="text-[32px] leading-tight font-medium text-black break-words">{displayName}</p>
+              <p className="text-xl text-black break-all">{email}</p>
+              <button type="button" onClick={() => setEditing(true)} className="mt-4 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] rounded-lg text-base font-semibold text-white cursor-pointer">
+                Edit Profile
+              </button>
+            </div>
+          </section>
+        ) : (
+          <form onSubmit={handleSave} className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-lg p-8 flex flex-col md:flex-row items-start gap-10">
             <AvatarSection
               avatarUrl={avatarUrl}
               onAvatarChange={(newUrl) => {
@@ -97,73 +109,40 @@ export default function AccountSettingsPage() {
                 setAvatarNotice(Boolean(newUrl));
               }}
             />
-
-            {/* Profile Inputs */}
-            <div className="flex-1 space-y-5 w-full">
-              <h3 className="text-xl font-bold text-gray-900 break-words">{displayName}</h3>
+            <div className="flex-1 min-w-0 w-full space-y-4">
+              <p className="text-[32px] leading-tight font-medium text-black break-words">{displayName}</p>
               {avatarNotice && (
                 <p className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                   Profile photo is shown for this session only - photo storage is not configured yet.
                 </p>
               )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Account Name */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Account Name</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-200/90 rounded-md bg-white focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5B22]"
-                    required
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                {/* Not in the frame, but renaming the account is an existing feature */}
+                <div className="md:col-span-2 md:max-w-[calc(50%-10px)]">
+                  <label htmlFor="account-name" className="block text-sm font-medium text-[#15191C] mb-2">Account Name</label>
+                  <input id="account-name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required className={field} />
                 </div>
-
-                {/* Email Address */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    readOnly
-                    title="Email changes are not supported yet"
-                    className="w-full px-3.5 py-2.5 text-xs border border-gray-200/90 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed focus:outline-none"
-                  />
+                  <label htmlFor="account-email" className="block text-sm font-medium text-[#15191C] mb-2">Email</label>
+                  <input id="account-email" type="email" value={email} readOnly title="Email changes are not supported yet" className={`${field} text-[#828282] cursor-not-allowed`} />
                 </div>
-
-                {/* Password with inline Change Password link */}
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
-                  <div className="relative max-w-md">
-                    <input
-                      type="password"
-                      value={password}
-                      readOnly
-                      className="w-full px-3.5 py-2.5 pr-28 text-xs border border-gray-200/90 rounded-md bg-white text-gray-700 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsPasswordModalOpen(true)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#FF5B22] hover:underline cursor-pointer"
-                    >
+                <div>
+                  <label htmlFor="account-password" className="block text-sm font-medium text-[#15191C] mb-2">Password</label>
+                  <div className="relative">
+                    <input id="account-password" type="password" value={password} readOnly className={`${field} pr-36`} />
+                    <button type="button" onClick={() => setIsPasswordModalOpen(true)} className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-[#FF651D] hover:underline cursor-pointer">
                       Change password
                     </button>
                   </div>
                 </div>
               </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-[#FF5B22] text-white text-xs font-semibold rounded-md hover:bg-[#e04f1d] transition-colors shadow-xs cursor-pointer"
-                >
-                  Save
-                </button>
+              <div className="flex gap-3 pt-1">
+                <button type="submit" className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] rounded-lg text-base font-semibold text-white cursor-pointer">Save</button>
+                <button type="button" onClick={() => { setEditing(false); setFullName(user?.fullName || ""); }} className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 rounded-lg text-base font-semibold text-[#15191C] cursor-pointer">Cancel</button>
               </div>
             </div>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
 
       <ChangePasswordModal

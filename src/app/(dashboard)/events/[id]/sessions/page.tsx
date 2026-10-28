@@ -18,6 +18,7 @@ import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerMod
 import EventSubNav from "@/components/EventSubNav";
 
 import CustomDropdown from "@/components/common/CustomDropdown";
+import { TableSkeletonRows } from "@/components/common/Skeleton";
 
 const ACCESS_LABELS: Record<string, string> = { NO_RESTRICTION: "No Restrictions", ONLY_ONCE: "Only Once" };
 
@@ -250,11 +251,7 @@ export default function EventSessionsPage() {
               </thead>
               <tbody className="divide-y divide-[#D3D3D3] text-[#4B4F52] border-b border-[#D3D3D3]">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-gray-500">
-                      Loading...
-                    </td>
-                  </tr>
+                  <TableSkeletonRows rows={4} cols={7} />
                 ) : loadError ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-rose-600 break-words">

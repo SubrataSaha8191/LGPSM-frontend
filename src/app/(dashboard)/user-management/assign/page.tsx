@@ -1,5 +1,7 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
+import ListControls, { addButtonClass } from "@/components/common/ListControls";
 import React, { useState, useEffect } from "react";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import Link from "next/link";
@@ -9,10 +11,10 @@ import { eventService } from "@/services/eventService";
 import { useEventSessions } from "@/hooks/useEventSessions";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import { assignmentService, AssignmentData } from "@/services/assignmentService";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import { useAlert } from "@/context/AlertContext";
 import { notifyDbUpdate } from "@/components/EventSubNav";
 import { mapWithConcurrency } from "@/utils/mapWithConcurrency";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 export interface AssignedSession {
   id: string;
@@ -419,15 +421,7 @@ export default function AssignedSystemUsersPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white select-none font-sans">
       {/* Header */}
-      <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Assigned System Users</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Assign System Users" />
 
       {/* Page Content */}
       <main className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
@@ -444,48 +438,17 @@ export default function AssignedSystemUsersPage() {
           </div>
         )}
 
-        {/* Controls Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1 max-w-2xl">
-            <h2 className="text-lg font-bold text-gray-900 shrink-0">System Users</h2>
-            <div className="relative flex-1">
-              <svg
-                className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
-              />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsAddUserModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-2xs w-fit"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <ListControls label="System Users" searchId="assign-user-search" placeholder="Search..." value={searchQuery} onChange={setSearchQuery}>
+          <button type="button" onClick={() => setIsAddUserModalOpen(true)} className={`${addButtonClass} cursor-pointer`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>Add User</span>
+            Add User
           </button>
-        </div>
+        </ListControls>
 
         {/* Custom Green/White Tick Select All Checkbox */}
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 pt-1">
+        <div className="flex items-center gap-2 text-sm text-[#828282] pt-1">
           <button
             type="button"
             onClick={toggleSelectAll}
@@ -508,18 +471,15 @@ export default function AssignedSystemUsersPage() {
 
         {/* Loading state — outside the scrollable table so it always centers on screen */}
         {isLoading && (
-          <div className="py-12 flex flex-col items-center justify-center gap-3 text-gray-500 text-sm">
-            <div className="w-6 h-6 border-2 border-[#FF5B22] border-t-transparent rounded-full animate-spin" />
-            <p>Loading assigned system users...</p>
-          </div>
+          <TableSkeleton rows={5} cols={5} label="Loading assigned system users" />
         )}
 
         {/* Table Container */}
         {!isLoading && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs whitespace-nowrap">
+          <table className="w-full text-left text-sm whitespace-nowrap">
             <thead>
-              <tr className="border-b border-gray-200 text-gray-500 font-medium text-[11px]">
+              <tr className="border-b border-gray-200 text-[#828282] font-medium text-sm">
                 <th className="py-3 px-4 w-10"></th>
                 <th className="py-3 px-4 font-medium">User Name</th>
                 <th className="py-3 px-4 font-medium">Assigned Events & Sessions</th>
@@ -528,7 +488,7 @@ export default function AssignedSystemUsersPage() {
                 <th className="py-3 px-4 text-right font-medium">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 text-gray-800">
+            <tbody className="divide-y divide-gray-200 text-[#4B4F52]">
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-400 text-sm">
@@ -543,7 +503,7 @@ export default function AssignedSystemUsersPage() {
                   const countText = getAssignedCountText(u.assignments);
 
                   return (
-                    <tr key={u.id} className="hover:bg-gray-50/80 transition-colors align-top">
+                    <tr key={u.id} className={`transition-colors align-top ${isExpanded ? "bg-[#F4F4F4]" : "hover:bg-gray-50/80"}`}>
                       <td className="py-4 px-4">
                         <button
                           type="button"
@@ -561,7 +521,7 @@ export default function AssignedSystemUsersPage() {
                       </td>
 
                       {/* User Name Only (No SYSTEM_USER badge) */}
-                      <td className="py-4 px-4 font-medium text-gray-900">
+                      <td className="py-4 px-4">
                         <div>{u.name}</div>
                       </td>
 
@@ -570,7 +530,7 @@ export default function AssignedSystemUsersPage() {
                         <button
                           type="button"
                           onClick={() => toggleExpandUser(u.id)}
-                          className="flex items-center gap-2 font-bold text-gray-800 hover:text-[#FF5B22] transition-colors cursor-pointer"
+                          className="flex items-center gap-2 font-medium text-[#15191C] hover:text-[#FF5B22] transition-colors cursor-pointer"
                         >
                           <svg
                             className={`w-3.5 h-3.5 text-gray-700 transform transition-transform duration-200 ${
@@ -700,7 +660,7 @@ export default function AssignedSystemUsersPage() {
             type="button"
             onClick={() => { setSessionScope(null); setErrorFeedback(null); setIsAssignModalOpen(true); }}
             disabled={selectedIds.length === 0}
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22] hover:text-white font-bold text-xs rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#FF5B22]"
+            className="inline-flex items-center gap-2 px-4 py-[11px] border border-[#FF651D] text-[#FF651D] hover:bg-[#FF651D] hover:text-white font-medium text-base rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#FF5B22]"
           >
             <span>Assign {selectedIds.length} users</span>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

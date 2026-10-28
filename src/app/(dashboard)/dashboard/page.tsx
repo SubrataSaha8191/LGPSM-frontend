@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
@@ -7,8 +8,8 @@ import { eventService } from "@/services/eventService";
 import { reportService } from "@/services/reportService";
 import { userService } from "@/services/userService";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import DashboardPopupModal from "@/components/dashboard/DashboardPopupModal";
+import { Skeleton, TableSkeletonRows } from "@/components/common/Skeleton";
 
 interface OrganizerSummary {
   id: string;
@@ -106,15 +107,7 @@ export default function DashboardPage() {
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
       {/* Top Header Bar */}
-      <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2h-2a2 2 0 01-2-2v-2z" />
-          </svg>
-          <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Dashboard</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Dashboard" />
 
       {/* Dashboard Main Content */}
       <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 pb-24">
@@ -146,7 +139,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{loadingMetrics ? "…" : totalEvents.toLocaleString()}</h3>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{loadingMetrics ? <Skeleton className="h-7 w-16" /> : totalEvents.toLocaleString()}</h3>
                 <p className="text-xs font-medium text-gray-500 mt-0.5">Total Events</p>
               </div>
             </div>
@@ -159,7 +152,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{loadingMetrics ? "…" : activeEvents.toLocaleString()}</h3>
+                <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{loadingMetrics ? <Skeleton className="h-7 w-16" /> : activeEvents.toLocaleString()}</h3>
                 <p className="text-xs font-medium text-gray-500 mt-0.5">Active Events</p>
               </div>
             </div>
@@ -173,7 +166,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
-                  {loadingMetrics ? "…" : (isAdmin ? organizerCount : totalInvitees).toLocaleString()}
+                  {loadingMetrics ? <Skeleton className="h-7 w-16" /> : (isAdmin ? organizerCount : totalInvitees).toLocaleString()}
                 </h3>
                 <p className="text-xs font-medium text-gray-500 mt-0.5">{isAdmin ? "Total Organizers" : "Total Invitees"}</p>
               </div>
@@ -226,9 +219,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-gray-800">
                   {loadingMetrics ? (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-500 font-medium">Loading organizers...</td>
-                    </tr>
+                    <TableSkeletonRows rows={5} cols={8} />
                   ) : topOrganizers.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-8 text-center text-gray-500 font-medium">

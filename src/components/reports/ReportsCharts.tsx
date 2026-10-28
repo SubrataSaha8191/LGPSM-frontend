@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Skeleton, SkeletonRegion, TableSkeleton } from "@/components/common/Skeleton";
 
 export interface DeliverySummary {
   SENT: number;
@@ -76,7 +77,7 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
 
         <div className="relative w-52 h-52 max-w-full mx-auto my-2 flex items-center justify-center">
           {loading ? (
-            <span className="text-xs text-gray-400 font-medium">Loading...</span>
+            <Skeleton className="size-44 rounded-full!" />
           ) : totalDelivery === 0 ? (
             <div className="text-center space-y-1">
               <svg className="w-full h-full absolute inset-0" viewBox="0 0 42 42">
@@ -145,7 +146,9 @@ export default function ReportsCharts({ delivery, sessions = [], loading = false
         </div>
 
         {loading ? (
-          <div className="h-64 flex items-center justify-center text-xs text-gray-400 font-medium">Loading...</div>
+          <SkeletonRegion label="Loading chart" className="h-64 flex items-end gap-6 px-6 pb-2 border-l border-b border-gray-200">
+            {[60, 90, 45, 75].map((h, i) => <Skeleton key={i} className="flex-1" style={{ height: `${h}%` }} />)}
+          </SkeletonRegion>
         ) : sessions.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-xs text-gray-400 font-medium border-l border-b border-gray-200">
             No sessions for this event yet

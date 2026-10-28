@@ -14,6 +14,7 @@ import SessionScopePicker from "@/components/common/SessionScopePicker";
 import PageHeader from "@/components/common/PageHeader";
 import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
 import { useAlert } from "@/context/AlertContext";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 export default function EventAssignUsersPage() {
   const { confirm } = useAlert();
@@ -328,12 +329,7 @@ export default function EventAssignUsersPage() {
             <tbody className="divide-y divide-gray-200 text-gray-800">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500 text-sm">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="w-6 h-6 border-2 border-[#FF5B22] border-t-transparent rounded-full animate-spin"></div>
-                      <p>Loading system users...</p>
-                    </div>
-                  </td>
+                  <td colSpan={6} className="p-0"><TableSkeleton rows={5} cols={5} label="Loading system users" /></td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>

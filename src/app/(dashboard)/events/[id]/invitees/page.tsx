@@ -27,6 +27,7 @@ import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { mergeInviteeImport } from "@/utils/mergeInviteeImport.mjs";
 import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 interface Invitee {
   _id: string;
@@ -597,17 +598,21 @@ export default function InviteesManagementPage() {
             )}
 
             {loading ? (
-              <p className="py-16 text-center text-sm text-[#828282]">Loading invitees...</p>
+              <TableSkeleton rows={6} cols={7} label="Loading invitees" />
             ) : invitees.length === 0 ? (
-              <div className="py-16 text-center space-y-3">
-                <p className="text-sm text-[#828282]">No invitees yet. Add manually or upload an Excel sheet.</p>
-                <button type="button" onClick={() => setShowChooser(true)} className={`${btn} bg-[#FFF3EC] text-[#E5520F] hover:bg-[#FFE3D7]`}>Add Invitees</button>
+              // Figma 217:17674: grey people mark, 16px message and a light "Add Invitees" button, centred in the page
+              <div className="py-[120px] flex flex-col items-center text-center gap-4">
+                <svg className="w-20 h-20 text-[#BDBDBD]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                </svg>
+                <p className="max-w-[300px] text-base text-[#4B4F52]">No invitees yet. Add invitees manually or upload an Excel sheet to get started.</p>
+                <button type="button" onClick={() => setShowChooser(true)} className="px-6 py-2 rounded-md bg-[#F6F6F6] hover:bg-gray-200 text-base font-medium text-[#FF651D] cursor-pointer">Add Invitees</button>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 {/* Figma 217:20587: one Status pill (delivery, or the guest's RSVP once given), Dietary, a ✓/✗ column per
                     session and a "⋯" menu */}
-                <table className="w-full text-left text-sm font-medium min-w-[760px]">
+                <table className="w-full text-left text-sm min-w-[760px]">
                   <thead className="text-[#828282] border-b border-[#D3D3D3]">
                     <tr>
                       <th className="h-[46px] px-2.5 w-10" aria-label="Selection" />

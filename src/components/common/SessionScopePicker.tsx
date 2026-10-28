@@ -2,6 +2,7 @@
 
 import React from "react";
 import { SessionOption } from "@/hooks/useEventSessions";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface SessionScopePickerProps {
   sessions: SessionOption[];
@@ -30,7 +31,7 @@ export default function SessionScopePicker({
     <div className="space-y-1.5">
       <p className="text-xs font-semibold text-gray-800">{label}</p>
       {loading ? (
-        <p className="text-xs text-gray-400">Loading sessions...</p>
+        <SkeletonRegion label="Loading sessions" className="space-y-2"><Skeleton className="h-9" /><Skeleton className="h-9" /></SkeletonRegion>
       ) : error ? (
         <p className="text-xs text-rose-600 break-words">{error}</p>
       ) : (

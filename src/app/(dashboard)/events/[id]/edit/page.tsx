@@ -20,6 +20,7 @@ import {
 import { persistSessionsAndInvitees } from "@/components/add-event/persistEventExtras";
 import { reportService } from "@/services/reportService";
 import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 export default function EditEventPage() {
   const router = useRouter();
@@ -110,15 +111,10 @@ export default function EditEventPage() {
 
   if (isFetchingEvent) {
     return (
-      <div className="w-full min-h-full flex items-center justify-center bg-[#F4F5F8]">
-        <div className="flex items-center gap-3 text-gray-600 text-xs font-semibold">
-          <svg className="animate-spin h-5 w-5 text-[#FF5B22]" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          Loading Edit Event...
-        </div>
-      </div>
+      <SkeletonRegion label="Loading event" className="w-full min-h-full bg-white px-6 pt-8 grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
+        <div className="space-y-5"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-12" /><Skeleton className="h-24" /><div className="grid grid-cols-2 gap-4"><Skeleton className="h-12" /><Skeleton className="h-12" /></div><Skeleton className="h-12" /></div>
+        <Skeleton className="h-[520px]" />
+      </SkeletonRegion>
     );
   }
 

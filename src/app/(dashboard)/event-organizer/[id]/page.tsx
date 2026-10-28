@@ -1,8 +1,9 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
+import { addButtonClass } from "@/components/common/ListControls";
 import { useParams, useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
 import { eventService } from "@/services/eventService";
@@ -10,6 +11,7 @@ import { getDynamicEventStatus } from "@/utils/eventUtils";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { formatEventId } from "@/utils/formatId";
 import { usePageTitle } from "@/context/PageTitleContext";
+import { Skeleton, SkeletonRegion, TableSkeleton } from "@/components/common/Skeleton";
 
 interface EventRow {
   id: string;
@@ -149,15 +151,7 @@ export default function OrganizerDetailsPage() {
   if (!loading && !organizer) {
     return (
       <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Event Organizer</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
+        <PageHeader title="Event Organizer" />
         <div className="flex-1 flex justify-center items-center py-24 px-6">
           <div className="max-w-md w-full border border-gray-200 rounded-md p-8 text-center space-y-4">
             <h2 className="text-lg font-bold text-gray-900">Organizer unavailable</h2>
@@ -174,18 +168,12 @@ export default function OrganizerDetailsPage() {
   if (loading || !organizer) {
     return (
       <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Event Organizer</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
-        <div className="flex-1 flex justify-center items-center py-24">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF5B22]"></div>
-        </div>
+        <PageHeader title="Event Organizer" />
+        <SkeletonRegion label="Loading organizer" className="px-6 pt-8 space-y-5">
+          <Skeleton className="h-[110px]" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[92px]" />)}</div>
+          <TableSkeleton rows={5} cols={6} label="Loading events" />
+        </SkeletonRegion>
       </div>
     );
   }
@@ -193,15 +181,7 @@ export default function OrganizerDetailsPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Event Organizer Details</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
+        <PageHeader title="Event Organizer" />
 
         {/* Page Content */}
         <main className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -222,7 +202,7 @@ export default function OrganizerDetailsPage() {
               )}
               <div className="space-y-1.5 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-xl font-bold text-gray-900 break-words min-w-0">{organizer.name}</h2>
+                  <h2 className="text-2xl font-medium text-[#15191C] break-words min-w-0">{organizer.name}</h2>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${isDeactivated
                         ? "bg-orange-100 text-orange-700"
@@ -263,15 +243,15 @@ export default function OrganizerDetailsPage() {
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium break-words">{actionError}</div>
           )}
 
-          {/* Single Stats Container Card with Dividers */}
-          <div className="bg-white border border-gray-200 rounded-md divide-y sm:divide-y-0 sm:divide-x divide-gray-200 grid grid-cols-1 sm:grid-cols-3 shadow-2xs">
+          {/* Stats tiles: separate bordered cards (Figma 592:1790) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {/* Total Events */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Total Events</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">{events.length}</span>
+                <span className="text-sm font-medium text-[#15191C] block">Total Events</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">{events.length}</span>
               </div>
-              <div className="w-11 h-11 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center shrink-0">
+              <div className="size-[52px] rounded-full bg-orange-100 text-orange-500 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -279,12 +259,12 @@ export default function OrganizerDetailsPage() {
             </div>
 
             {/* Upcoming Events */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Upcoming Events</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">{upcomingEventsCount}</span>
+                <span className="text-sm font-medium text-[#15191C] block">Upcoming Events</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">{upcomingEventsCount}</span>
               </div>
-              <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0">
+              <div className="size-[52px] rounded-full bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -292,13 +272,13 @@ export default function OrganizerDetailsPage() {
             </div>
 
             {/* Earnings */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Earnings</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">—</span>
+                <span className="text-sm font-medium text-[#15191C] block">Earnings</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">—</span>
                 <span className="text-[10px] text-gray-400 block">Billing is not configured yet</span>
               </div>
-              <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center shrink-0">
+              <div className="size-[52px] rounded-full bg-blue-100 text-blue-500 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -309,8 +289,8 @@ export default function OrganizerDetailsPage() {
           {/* Events Table Section */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 max-w-md">
-                <h3 className="text-lg font-bold text-gray-900 shrink-0">Events</h3>
+              <div className="flex items-center gap-2.5 flex-1 max-w-[340px]">
+                <h3 className="text-[17px] font-medium text-black shrink-0">Events</h3>
                 <div className="relative flex-1">
                   <svg
                     className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
@@ -325,7 +305,7 @@ export default function OrganizerDetailsPage() {
                     placeholder="Search event.."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                    className="w-full h-[47px] pl-10 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                   />
                 </div>
               </div>
@@ -338,9 +318,9 @@ export default function OrganizerDetailsPage() {
                 </button>
                 <Link
                   href="/events/add"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs"
+                  className={`${addButtonClass} cursor-pointer`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   <span>Add Event</span>
@@ -350,9 +330,9 @@ export default function OrganizerDetailsPage() {
 
             {/* Table Container */}
             <div className="bg-white border border-gray-200 rounded-md shadow-2xs overflow-x-auto">
-              <table className="w-full text-left text-xs whitespace-nowrap">
+              <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-gray-200 text-gray-400 font-medium text-[11px] bg-white">
+                  <tr className="border-b border-gray-200 text-[#828282] font-medium text-sm bg-white">
                     <th className="py-3 px-4 font-medium">Event ID</th>
                     <th className="py-3 px-4 font-medium">Event Name</th>
                     <th className="py-3 px-4 font-medium">Organizer</th>
@@ -363,7 +343,7 @@ export default function OrganizerDetailsPage() {
                     <th className="py-3 px-4 font-medium">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 text-gray-800">
+                <tbody className="divide-y divide-gray-200 text-[#4B4F52]">
                   {filteredEvents.length === 0 && (
                     <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-sm">No events found for this organizer.</td></tr>
                   )}

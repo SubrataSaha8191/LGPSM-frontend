@@ -91,7 +91,9 @@ export const NAV_ENTRIES: NavEntry[] = [
   // settings page that actually exists; the previous "Business Info" entry pointed at
   // /settings/business, which has no route or component in the codebase — not carried over
   // here (see chat report: flagged as a pending product requirement, not invented).
-  { key: "settings", label: "Settings", icon: "settings-alert", href: "/settings/account", roles: ["ORGANIZER"] },
+  // Organiser Figma "Settings" (222:34175) is the Logo Settings page; Account Settings stays reachable from the
+  // header's account menu (/settings/account).
+  { key: "settings", label: "Settings", icon: "settings-alert", href: "/settings/logo", roles: ["ORGANIZER"] },
 ];
 
 export function navForRole(role: WebRole): NavEntry[] {
@@ -105,7 +107,7 @@ export function navForRole(role: WebRole): NavEntry[] {
 // ADMIN-only route) — the existing /user-management/add and /user-management/assign sub-routes
 // come along with it since they're reached from inside that page.
 const BLOCKED: Record<WebRole, string[]> = {
-  ADMIN: ["/billing"],
+  ADMIN: ["/billing", "/settings/logo"],
   ORGANIZER: [
     "/event-organizer",
     "/earnings",

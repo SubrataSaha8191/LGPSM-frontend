@@ -1,11 +1,11 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import { EarningsRecord } from "@/types/earnings";
 import EarningsOverviewCard from "@/components/earnings/EarningsOverviewCard";
 import EarningsStatsRow from "@/components/earnings/EarningsStatsRow";
 import EarningsTable from "@/components/earnings/EarningsTable";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import { eventService } from "@/services/eventService";
 import { reportService } from "@/services/reportService";
 import { parseEventDate } from "@/utils/eventUtils";
@@ -172,15 +172,7 @@ export default function EarningsPage() {
 
   return (
     <div className="w-full min-h-full bg-white">
-      <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-          <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Earnings</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Earnings" />
 
       <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
         <EarningsOverviewCard
@@ -206,6 +198,7 @@ export default function EarningsPage() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           records={filteredRecords}
+          loading={loading}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           startDate={startDate}

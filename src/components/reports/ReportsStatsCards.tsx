@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface ReportsStatsCardsProps {
   totalInvitees?: number;
   totalAttendees?: number;
   totalSessions?: number;
   systemUsers?: number;
+  loading?: boolean;
 }
 
 const ICONS = {
@@ -38,7 +40,15 @@ export default function ReportsStatsCards({
   totalAttendees = 0,
   totalSessions = 0,
   systemUsers = 0,
+  loading = false,
 }: ReportsStatsCardsProps) {
+  if (loading) {
+    return (
+      <SkeletonRegion label="Loading report totals" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[158px] rounded-lg!" />)}
+      </SkeletonRegion>
+    );
+  }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <Tile value={totalInvitees} label="Total Invitees" icon="invitees" tone="bg-[#FFDCCF] text-[#FF651D]" />

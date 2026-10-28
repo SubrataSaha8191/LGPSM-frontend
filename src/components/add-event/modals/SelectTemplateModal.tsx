@@ -7,6 +7,7 @@ import TemplateThumb from "@/components/settings/TemplateThumb";
 import { templateService, Template } from "@/services/templateService";
 import { useCategories } from "@/hooks/useCategories";
 import { SelectedTemplate } from "../eventDraft";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface SelectTemplateModalProps {
   isOpen: boolean;
@@ -100,7 +101,9 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
 
         <div className="flex-1 overflow-y-auto px-6 py-4 min-h-[220px]">
           {loading ? (
-            <p className="text-sm text-[#828282] py-10 text-center">Loading templates...</p>
+            <SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}
+</SkeletonRegion>
           ) : loadError ? (
             <p role="alert" className="text-sm text-rose-600 py-10 text-center break-words">{loadError}</p>
           ) : visible.length === 0 ? (

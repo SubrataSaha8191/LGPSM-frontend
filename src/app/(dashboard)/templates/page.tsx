@@ -11,6 +11,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { templateService, Template } from "@/services/templateService";
 import { eventService, EventData } from "@/services/eventService";
 import { useAlert } from "@/context/AlertContext";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 export interface LivePreview {
   url: string | null;
@@ -35,7 +36,7 @@ interface TemplateCard {
 // Browse templates; organizers see published ones (backend-enforced), admins also see drafts
 export default function TemplatesPage() {
   return (
-    <Suspense fallback={<p className="py-16 text-center text-sm text-[#828282]">Loading templates...</p>}>
+    <Suspense fallback={<SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}</SkeletonRegion>}>
       <TemplatesPageContent />
     </Suspense>
   );
@@ -158,7 +159,9 @@ function TemplatesPageContent() {
         </div>
 
         {loading ? (
-          <p className="py-16 text-center text-sm text-[#828282]">Loading templates...</p>
+          <SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}
+</SkeletonRegion>
         ) : loadError ? (
           <p role="alert" className="py-16 text-center text-sm text-rose-600 break-words">{loadError}</p>
         ) : visible.length === 0 ? (

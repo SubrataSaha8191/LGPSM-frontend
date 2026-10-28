@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Skeleton } from "@/components/common/Skeleton";
 
 interface EarningsStatsRowProps {
   estimatedTotal: number;
@@ -15,7 +16,7 @@ export default function EarningsStatsRow({ estimatedTotal, organizersBilled, loa
         <div>
           <p className="text-xs font-medium text-gray-500">Total Earning (estimated)</p>
           <h3 className="text-3xl font-bold text-gray-900 tracking-tight mt-1">
-            {loading ? "…" : `$${estimatedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+            {loading ? <Skeleton className="h-9 w-28" /> : `$${estimatedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
           </h3>
         </div>
         <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
@@ -28,7 +29,7 @@ export default function EarningsStatsRow({ estimatedTotal, organizersBilled, loa
       <div className="bg-white border border-gray-200 rounded-md p-6 shadow-2xs flex items-center justify-between">
         <div>
           <p className="text-xs font-medium text-gray-500">Total Organizer Billed</p>
-          <h3 className="text-3xl font-bold text-gray-900 tracking-tight mt-1">{loading ? "…" : organizersBilled}</h3>
+          <h3 className="text-3xl font-bold text-gray-900 tracking-tight mt-1">{loading ? <Skeleton className="h-9 w-16" /> : organizersBilled}</h3>
         </div>
         <div className="w-12 h-12 rounded-full bg-orange-50 text-[#FF5B22] flex items-center justify-center shrink-0">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { invitationService, PublicInvitationData } from "@/services/invitationService";
 import { usePageTitle } from "@/context/PageTitleContext";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function PublicInvitationPage() {
   const params = useParams();
@@ -99,16 +100,7 @@ export default function PublicInvitationPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-[#FF5B22] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-slate-500 font-medium">Loading invitation details...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <BrandLoader label="Loading invitation" />;
 
   if (error && !invitationData) {
     return (

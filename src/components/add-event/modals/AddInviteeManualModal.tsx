@@ -107,7 +107,8 @@ export default function AddInviteeManualModal({
       ...(email.trim() && { email: email.trim() }),
       ...(mobile.trim() && { mobile: mobile.trim() }),
       ...(companyName.trim() && { companyName: companyName.trim() }),
-      ...(identityType && identityValue.trim() && { designation: `${identityType}: ${identityValue.trim()}` }),
+      // Stored on the guest and printable on the card via "Additional Info" (the API never accepted `designation`)
+      ...(identityType && identityValue.trim() && { professionalIdentity: `${identityType}: ${identityValue.trim()}` }),
       ...(dietaryPreference.trim() && { dietaryPreference: dietaryPreference.trim() }),
     };
 

@@ -1,14 +1,15 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useCallback, useEffect, useState } from "react";
 import NotificationCard, { NotificationCardData } from "@/components/notifications/NotificationCard";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import {
   notificationService,
   notifyNotificationsChanged,
   NotificationItem as RealNotification,
 } from "@/services/notificationService";
 import { useAlert } from "@/context/AlertContext";
+import { SkeletonRegion, CardSkeleton } from "@/components/common/Skeleton";
 
 const PAGE_SIZE = 20;
 
@@ -154,28 +155,10 @@ export default function NotificationsPage() {
   return (
     <div className="w-full min-h-full bg-white font-sans text-gray-900">
       {/* Header */}
-      <header className="min-h-20 py-3 bg-white border-b border-gray-200 px-4 sm:px-8 flex items-center justify-between gap-3 sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 flex items-center gap-2 flex-wrap">
-              Notifications
-              {unreadCount > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-[#FF5B22] text-white font-semibold">
-                  {unreadCount} unread
-                </span>
-              )}
-            </h1>
-            <p className="text-xs text-gray-500 truncate">System Activity Alerts & Updates</p>
-          </div>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Notification" />
 
       {/* Content */}
-      <main className="p-4 sm:p-6 md:p-8 max-w-5xl w-full mx-auto space-y-4 pb-24">
+      <main className="px-4 sm:px-6 pt-[35px] w-full space-y-4 pb-24">
         {notifications.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-gray-500">
@@ -216,10 +199,9 @@ export default function NotificationsPage() {
         )}
 
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center space-y-3">
-            <div className="w-6 h-6 border-2 border-[#FF5B22] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-xs text-gray-500">Loading notifications...</p>
-          </div>
+          <SkeletonRegion label="Loading notifications" className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} lines={2} />)}
+          </SkeletonRegion>
         ) : notifications.length > 0 ? (
           <div className="space-y-3">
             {notifications.map((item) => (

@@ -20,6 +20,8 @@ import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { DraftErrors, EventDraft, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
 import { DraftStatus } from "@/hooks/useFormDraft";
 import { useAlert } from "@/context/AlertContext";
+import CustomizeInfoModal from "./modals/CustomizeInfoModal";
+import type { TemplatePreviewPayload } from "@/services/templateService";
 
 type PickerTarget =
   | { kind: "event"; field: EventDateField }
@@ -80,6 +82,8 @@ export default function EventWizard({
   const [features, setFeatures] = useState<EventFeatureSettings>(ALL_EVENT_FEATURES);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  // Set while "Customize Information" is open: the payload the card preview was rendering
+  const [infoPreviewPayload, setInfoPreviewPayload] = useState<TemplatePreviewPayload | null>(null);
   const [sessionFiles, setSessionFiles] = useState<Record<string, SessionInviteeFile | undefined>>({});
   const [previewKey, setPreviewKey] = useState<string | null>(null);
 
@@ -349,11 +353,23 @@ export default function EventWizard({
               categoryName={categories.categoryName(draft.categoryId)}
               subcategoryName={categories.subcategoryName(draft.categoryId, draft.subcategoryId)}
               onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
+              cardInfo={draft.cardInfo ?? null}
+              onOpenAdditionalInfo={(payload) => setInfoPreviewPayload(payload)}
             />
             </div>
           </div>
         </div>
       </div>
+
+      <CustomizeInfoModal
+        key={infoPreviewPayload ? "info-open" : "info-closed"}
+        isOpen={!!infoPreviewPayload}
+        value={draft.cardInfo ?? null}
+        templateId={draft.template?.id ?? null}
+        previewPayload={infoPreviewPayload ?? {}}
+        onClose={() => setInfoPreviewPayload(null)}
+        onSave={(cardInfo) => { patch({ cardInfo }); setInfoPreviewPayload(null); }}
+      />
 
       <SelectTemplateModal
         key={isTemplateModalOpen ? "template-open" : "template-closed"}

@@ -9,6 +9,8 @@ import { CategoriesApi } from "@/hooks/useCategories";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
 import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
+import InfoTip from "@/components/common/InfoTip";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 export type EventDateField = "start" | "end" | "rsvpDeadline";
 
@@ -198,7 +200,7 @@ function OrganizerSelectField({
             </div>
 
             {loading ? (
-              <p className="p-3 text-xs text-gray-500 text-center">Loading list of organizers...</p>
+              <SkeletonRegion label="Loading organizers" className="p-3 space-y-2"><Skeleton className="h-6" /><Skeleton className="h-6" /><Skeleton className="h-6" /></SkeletonRegion>
             ) : filtered.length === 0 ? (
               <p className="p-3 text-xs text-gray-500 text-center">No matching organizers found</p>
             ) : (
@@ -361,16 +363,19 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
         {rsvpAllowed ? (
           <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
-            <label htmlFor="event-rsvp" className="flex items-center gap-2 cursor-pointer">
-              <input
-                id="event-rsvp"
-                type="checkbox"
-                checked={draft.rsvpEnabled}
-                onChange={(e) => onChange({ rsvpEnabled: e.target.checked })}
-                className="size-4 rounded border-gray-300 accent-[#16A34A] cursor-pointer"
-              />
-              <span className={labelClass}>Event RSVP Acceptance</span>
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="event-rsvp" className="flex items-center gap-2 cursor-pointer">
+                <input
+                  id="event-rsvp"
+                  type="checkbox"
+                  checked={draft.rsvpEnabled}
+                  onChange={(e) => onChange({ rsvpEnabled: e.target.checked })}
+                  className="size-4 rounded border-gray-300 accent-[#16A34A] cursor-pointer"
+                />
+                <span className={labelClass}>Event RSVP Acceptance</span>
+              </label>
+              <InfoTip label="About RSVP acceptance" text="Lets invitees accept or decline from their invitation. Set a last date to stop accepting responses after it." />
+            </div>
             {draft.rsvpEnabled && (
               <div>
                 <span className={`block ${labelClass} mb-1.5`}>Acceptance Last Date</span>
@@ -383,7 +388,7 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           <p className="p-4 border border-[#E0E0E0] rounded-md text-sm text-[#828282]">RSVP collection is turned off by the platform administrator.</p>
         )}
         <ImageUploadField
-          label="Event Logo/image"
+          label={<span className="flex items-center justify-between gap-2">Event Logo/image<InfoTip label="About the event logo" text="Shown on the invitation card. Use a JPG, PNG or WEBP image up to 5 MB." /></span>}
           value={draft.logoKey}
           onChange={(logoKey) => onChange({ logoKey })}
           purpose="EVENT_LOGO"

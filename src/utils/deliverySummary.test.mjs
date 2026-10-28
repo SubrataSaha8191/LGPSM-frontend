@@ -24,3 +24,17 @@ test("nothing to report is an error, everything sent is a success", () => {
   assert.equal(summarizeDelivery([], "sent", "EMAIL").type, "error");
   assert.deepEqual(summarizeDelivery([{ status: "SENT" }], "sent", "WHATSAPP"), { type: "success", message: "1 invitation(s) sent." });
 });
+
+test("guests who were already invited are reported as left alone, not as missing contacts", () => {
+  const out = summarizeDelivery(
+    [
+      { status: "SKIPPED", failureReason: "Already invited" },
+      { status: "SENT" },
+    ],
+    "sent",
+    "EMAIL"
+  );
+  assert.equal(out.type, "info");
+  assert.match(out.message, /1 invitation\(s\) sent, 1 already invited \(not sent again\)/);
+  assert.doesNotMatch(out.message, /no email or WhatsApp/);
+});

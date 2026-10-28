@@ -5,6 +5,7 @@ import { TemplateItem } from "@/types/settings";
 import TemplateGridItem from "./TemplateGridItem";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CategoriesApi } from "@/hooks/useCategories";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface TemplateFilterGridProps {
   templates: TemplateItem[];
@@ -65,7 +66,9 @@ export default function TemplateFilterGrid({ templates, categories, loading = fa
       </div>
 
       {loading ? (
-        <p className="text-sm text-[#828282]">Loading templates...</p>
+        <SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}
+</SkeletonRegion>
       ) : filtered.length === 0 ? (
         <div className="rounded-md border border-[#E0E0E0] p-8 text-center text-sm text-[#828282]">
           {templates.length === 0 ? "No templates have been added yet." : "No templates match the selected filters."}

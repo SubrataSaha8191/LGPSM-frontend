@@ -20,8 +20,6 @@ interface NotificationCardProps {
 }
 
 export default function NotificationCard({ notification, onClear, onMarkRead }: NotificationCardProps) {
-  const isRsvp = notification.type.toLowerCase().includes("rsvp") || notification.title.toLowerCase().includes("rsvp");
-  const isSystem = notification.type.toLowerCase().includes("system") || notification.type.toLowerCase().includes("notice");
   const unread = !!notification.unread;
 
   // Opening an unread notification marks it as read (like most notification centres)
@@ -29,6 +27,10 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
     if (unread && onMarkRead) onMarkRead(notification.id);
   };
 
+  const [day, time] = notification.timestamp.split(" | ");
+
+  // Figma notification card (222:34653 / 2092:1257): bordered panel, 16px title, grey 12px body, "date | time".
+  // Unread cards stay white with a dot; read ones take the design's grey fill. Mark read and clear stay available.
   return (
     <div
       role={unread && onMarkRead ? "button" : undefined}
@@ -41,70 +43,30 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
         }
       }}
       aria-label={unread ? `Unread: ${notification.title}` : undefined}
-      className={`relative overflow-hidden rounded-lg border transition-colors duration-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5B22]/40 ${
-        unread
-          ? "bg-orange-50/70 border-orange-200 hover:bg-orange-50 shadow-xs cursor-pointer"
-          : "bg-white border-gray-200/80 hover:bg-gray-50/70"
+      className={`rounded-md border border-[#E0E0E0] px-5 pt-[22px] pb-5 flex gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5B22]/40 ${
+        unread ? "bg-white cursor-pointer hover:border-[#FFB08A]" : "bg-[#F8F8F8]"
       }`}
     >
-      {/* Unread accent bar */}
-      {unread && <span aria-hidden className="absolute left-0 top-0 bottom-0 w-1 bg-[#FF5B22]" />}
-
-      <div className="flex items-start gap-3.5 flex-1 min-w-0">
-        {/* Category Icon (muted once read) */}
-        <div
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 transition-opacity ${
-            isRsvp ? "bg-emerald-50 text-emerald-600" : isSystem ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-[#FF5B22]"
-          } ${unread ? "" : "opacity-60 grayscale"}`}
-        >
-          {isRsvp ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ) : isSystem ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-          )}
-        </div>
-
-        {/* Content Body */}
-        <div className="space-y-1 flex-1 min-w-0">
-          <div className="flex items-start gap-2 flex-wrap">
-            {unread && <span aria-hidden className="mt-1.5 w-2 h-2 rounded-full bg-[#FF5B22] shrink-0" />}
-            <h3
-              className={`text-sm min-w-0 break-words flex-1 ${unread ? "font-bold text-gray-900" : "font-medium text-gray-600"}`}
-            >
-              {notification.title}
-            </h3>
-            <span
-              className={`text-[11px] font-medium shrink-0 ${unread ? "text-[#E04B16]" : "text-gray-400"}`}
-              title={notification.timestamp}
-            >
-              {notification.timeAgo || notification.timestamp}
-            </span>
-          </div>
-
-          <p className={`text-xs leading-relaxed break-words ${unread ? "text-gray-700 font-medium" : "text-gray-500"}`}>
-            {notification.message}
+      <div className="flex-1 min-w-0">
+        <h3 className="flex items-center gap-2 text-base font-medium text-[#15191C] break-words">
+          {unread && <span aria-hidden className="size-2 rounded-full bg-[#FF651D] shrink-0" />}
+          {notification.title}
+        </h3>
+        <p className="mt-3 text-xs text-[#828282] leading-[1.25] break-words">{notification.message}</p>
+        {notification.timestamp && (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-[#A0A0A0]" title={notification.timeAgo}>
+            <span>{day}</span>
+            {time && <><span aria-hidden className="w-px h-3 bg-[#A0A0A0]" /><span>{time}</span></>}
           </p>
-        </div>
+        )}
       </div>
 
-      {/* Action Buttons: Mark Read & Clear */}
-      <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-end sm:self-auto">
+      <div className="flex items-start gap-1 shrink-0">
         {unread && onMarkRead && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onMarkRead(notification.id);
-            }}
-            className="text-[11px] font-semibold text-[#E04B16] hover:bg-orange-100 px-2 py-1 rounded transition-colors cursor-pointer whitespace-nowrap"
+            onClick={(e) => { e.stopPropagation(); onMarkRead(notification.id); }}
+            className="text-[11px] font-semibold text-[#E04B16] hover:bg-orange-50 px-2 py-1 rounded cursor-pointer whitespace-nowrap"
             title="Mark as read"
           >
             Mark read
@@ -113,15 +75,12 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
         {onClear && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClear(notification.id);
-            }}
-            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); onClear(notification.id); }}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md cursor-pointer"
             title="Clear notification"
             aria-label="Clear notification"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>

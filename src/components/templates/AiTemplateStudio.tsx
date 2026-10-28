@@ -27,6 +27,7 @@ import {
   usageLabel,
   ErrorView,
 } from "@/utils/aiTemplate";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 const PROMPT_EXAMPLES: Record<TemplateKind, string[]> = {
   INVITATION: ["Elegant black and gold invitation for a corporate awards night", "Playful pastel birthday invitation with balloons", "Warm traditional wedding reception invitation in maroon and gold"],
@@ -234,7 +235,7 @@ export default function AiTemplateStudio({ editTemplateId }: { editTemplateId?: 
     const missing = /route not found|not found/i.test(optionsError);
     return <Panel tone={missing ? "info" : "error"} title="AI design is not available" message={missing ? "There was a problem with the AI design service." : optionsError} />;
   }
-  if (!options) return <p className="py-16 text-center text-sm text-[#828282]">Loading…</p>;
+  if (!options) return <SkeletonRegion label="Loading" className="space-y-4"><Skeleton className="h-10 w-1/3" /><Skeleton className="h-40" /><Skeleton className="h-12 w-40" /></SkeletonRegion>;
   if (!options.available) {
     return <Panel tone="info" title="AI design is not available right now" message="The design service is not set up on this server. You can still use the ready-made templates." action={{ href: "/templates", label: "Browse templates" }} />;
   }
@@ -268,7 +269,7 @@ export default function AiTemplateStudio({ editTemplateId }: { editTemplateId?: 
             </div>
           </>
         ) : editTemplateId && !editLoadError ? (
-          <p className="text-sm text-[#828282]">Loading the design to edit…</p>
+          <SkeletonRegion label="Loading the design to edit" className="space-y-3"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-32" /></SkeletonRegion>
         ) : editLoadError ? (
           <ErrorBanner error={{ title: "This design cannot be edited", message: editLoadError, retryable: false, kind: "validation" }} />
         ) : (

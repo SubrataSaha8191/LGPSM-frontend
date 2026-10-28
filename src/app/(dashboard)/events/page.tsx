@@ -14,6 +14,7 @@ import { formatCompactDateTime } from "@/utils/dateTime";
 import PageHeader from "@/components/common/PageHeader";
 import EventCardThumbnail from "@/components/events/EventCardThumbnail";
 import { useAuth } from "@/context/AuthContext";
+import { Skeleton, SkeletonRegion, TableSkeletonRows } from "@/components/common/Skeleton";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Completed" | "Invitation not send" | "Cancelled";
 
@@ -465,7 +466,7 @@ export default function EventListingPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center shrink-0 w-fit">
+            <div className="flex items-center gap-3 shrink-0 w-fit">
               <button
                 type="button"
                 onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}
@@ -490,7 +491,14 @@ export default function EventListingPage() {
           )}
 
           {loading ? (
-            <p className="py-10 text-center text-sm text-[#828282]">Loading events...</p>
+            <SkeletonRegion label="Loading events" className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} aria-hidden className="border border-[#E0E0E0] rounded-lg p-4 flex gap-4">
+                  <Skeleton className="w-[60px] h-[104px] shrink-0" />
+                  <div className="flex-1 space-y-3"><Skeleton className="h-3.5 w-24" /><Skeleton className="h-5 w-2/3" /><Skeleton className="h-3.5 w-full" /><Skeleton className="h-3.5 w-1/2" /></div>
+                </div>
+              ))}
+            </SkeletonRegion>
           ) : visible.length === 0 ? (
             <p className="py-12 text-center text-sm text-[#828282]">
               {rows.length === 0 ? (
@@ -534,7 +542,7 @@ export default function EventListingPage() {
               className="w-full h-[47px] pl-11 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
             />
           </div>
-          <div className="flex items-center gap-2 shrink-0 w-fit">
+          <div className="flex items-center gap-3 shrink-0 w-fit">
             <button
               type="button"
               onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}
@@ -570,7 +578,7 @@ export default function EventListingPage() {
             </thead>
             <tbody className="text-[#4B4F52]">
               {loading ? (
-                <tr><td colSpan={9} className="py-10 text-center text-[#828282]">Loading events...</td></tr>
+                <TableSkeletonRows rows={6} cols={9} />
               ) : visible.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-[#828282]">

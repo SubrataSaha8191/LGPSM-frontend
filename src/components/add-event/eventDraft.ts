@@ -40,6 +40,18 @@ export interface SelectedTemplate {
   previewKey?: string | null;
 }
 
+// "Additional Info" (Figma Event_Add event-5): guest details printed on the card's two guest lines
+export type CardInfoField = "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDENTITY";
+export interface CardInfo {
+  primary: CardInfoField | null;
+  secondary: CardInfoField | null;
+}
+export const CARD_INFO_OPTIONS: { value: CardInfoField; label: string }[] = [
+  { value: "INVITEE_NAME", label: "Invitee Name" },
+  { value: "COMPANY_NAME", label: "Company Name" },
+  { value: "PROFESSIONAL_IDENTITY", label: "Professional Identity (e.g. Employee ID)" },
+];
+
 export interface EventDraft {
   organizerIds: string[];
   title: string;
@@ -59,6 +71,8 @@ export interface EventDraft {
   dietaryEnabled: boolean;
   preferenceCategories: PreferenceCategory[];
   template: SelectedTemplate | null;
+  /** null until the organiser saves a choice; the card then keeps guest name, then company */
+  cardInfo?: CardInfo | null;
   // Uploaded event logo ("media:<id>"), shown on the card preview
   logoKey: string | null;
   sessions: DraftSession[];
@@ -109,6 +123,7 @@ export function createEmptyEventDraft(): EventDraft {
     dietaryEnabled: false,
     preferenceCategories: [{ id: newClientKey("pref"), title: "Dietary Preference", options: [""] }],
     template: null,
+    cardInfo: null,
     logoKey: null,
     sessions: [createSessionDraft("Entry Session", start, end)],
     skipInvitees: true,
@@ -246,6 +261,7 @@ function commonPayload(draft: EventDraft) {
     attendeeSettings: threshold > 0 ? { thresholdLimit: threshold } : {},
     dietaryPreference: buildDietaryPreference(draft),
     ...(draft.template ? { templateId: draft.template.id } : {}),
+    ...(draft.cardInfo ? { cardInfo: draft.cardInfo } : {}),
     // An empty key clears a previously saved logo
     media: { logoKey: draft.logoKey || "" },
   };
@@ -287,6 +303,7 @@ export interface ServerEvent {
   attendeeSettings?: { thresholdLimit?: number };
   dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] };
   templateId?: string | { _id: string; name: string; previewImageKey?: string } | null;
+  cardInfo?: { primary?: CardInfoField | null; secondary?: CardInfoField | null };
   media?: { logoKey?: string };
   updatedAt?: string;
 }
@@ -343,6 +360,9 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     allowDeclined: event?.rsvp?.allowDeclined ?? base.allowDeclined,
     dietaryEnabled: event?.dietaryPreference?.enabled ?? false,
     preferenceCategories,
+    cardInfo: event?.cardInfo && (event.cardInfo.primary !== undefined || event.cardInfo.secondary !== undefined)
+      ? { primary: event.cardInfo.primary ?? null, secondary: event.cardInfo.secondary ?? null }
+      : null,
     template,
     logoKey: event?.media?.logoKey || null,
     sessions: draftSessionsFromServer(sessions || [], start, end),

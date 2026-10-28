@@ -1,9 +1,9 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { userService } from '@/services/userService';
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 
 export default function AddEventOrganizerPage() {
   const router = useRouter();
@@ -72,25 +72,17 @@ export default function AddEventOrganizerPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Add Event Organizer</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
+        <PageHeader title="Add Event Organizer" />
 
         {/* Form Container */}
-        <main className="p-6 md:p-8 max-w-6xl w-full mx-auto space-y-6">
-          <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-md p-6 md:p-8 shadow-2xs space-y-6">
-            <h2 className="text-lg font-bold text-gray-900">Event Organizer</h2>
+        <main className="px-4 sm:px-6 pt-[30px] pb-8 w-full space-y-6">
+          <form onSubmit={handleSubmit} className="bg-white border border-[#E0E0E0] rounded-lg p-5 md:p-6 space-y-5">
+            <h2 className="text-xl font-medium text-[#15191C]">Event Organizer</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-5">
               {/* Organization Name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#15191C]">
                   Organisation Name<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -99,13 +91,13 @@ export default function AddEventOrganizerPage() {
                   placeholder="Type Organisation Name"
                   value={formData.organizationName}
                   onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                 />
               </div>
 
               {/* Email Address */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#15191C]">
                   Email Address<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -114,13 +106,13 @@ export default function AddEventOrganizerPage() {
                   placeholder="Type Email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                 />
               </div>
 
               {/* Phone Number */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#15191C]">
                   Phone Number<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -129,15 +121,15 @@ export default function AddEventOrganizerPage() {
                   placeholder="Type Phone Number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-5">
               {/* Temporary Password (the organizer signs in with this) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#15191C]">
                   Temporary Password<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -148,13 +140,13 @@ export default function AddEventOrganizerPage() {
                   placeholder="At least 6 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
                 />
               </div>
 
               {/* Organizer Logo Box */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-800">Organizer Logo</label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#15191C]">Organizer Logo</label>
                 <input
                   ref={logoInputRef}
                   type="file"
@@ -209,11 +201,11 @@ export default function AddEventOrganizerPage() {
             </div>
 
             {/* Action Button */}
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2.5 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Adding...' : 'Add Organizer'}
               </button>

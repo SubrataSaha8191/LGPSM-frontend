@@ -4,6 +4,8 @@ import React from "react";
 import { InviteeLog, AccessLog, SessionReport, ReportSessionColumn } from "@/types/reports";
 import { CheckInRecord } from "@/services/checkInService";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import { TableSkeletonRows } from "@/components/common/Skeleton";
+import { Skeleton, SkeletonRegion, TableSkeleton } from "@/components/common/Skeleton";
 
 interface ReportsLogsTableProps {
   activeTab: "checkins" | "invitees" | "access" | "sessions";
@@ -50,13 +52,16 @@ export default function ReportsLogsTable({
   sessionColumns = [],
   loadingDetails = false,
 }: ReportsLogsTableProps) {
-  const statusRow = (colSpan: number, text: string) => (
-    <tr>
-      <td colSpan={colSpan} className="py-10 text-center text-gray-400 font-medium">
-        {text}
-      </td>
-    </tr>
-  );
+  const statusRow = (colSpan: number, text: string) =>
+    /^Loading/.test(text) ? (
+      <TableSkeletonRows rows={4} cols={colSpan} />
+    ) : (
+      <tr>
+        <td colSpan={colSpan} className="py-10 text-center text-gray-400 font-medium">
+          {text}
+        </td>
+      </tr>
+    );
 
   return (
     <div className="bg-white border border-gray-200 rounded-md shadow-2xs overflow-hidden">
@@ -177,10 +182,7 @@ export default function ReportsLogsTable({
           {activeTab === "checkins" && (
             <div>
               {loadingCheckIns ? (
-                <div className="py-12 text-center text-xs text-gray-500 flex justify-center items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-[#FF5B22] border-t-transparent rounded-full animate-spin" />
-                  <span>Loading real check-in records...</span>
-                </div>
+                <TableSkeleton rows={5} cols={6} label="Loading check-in records" />
               ) : checkInLogs.length === 0 ? (
                 <div className="py-12 text-center text-xs text-gray-500">
                   No check-in records found for this event/session filter.

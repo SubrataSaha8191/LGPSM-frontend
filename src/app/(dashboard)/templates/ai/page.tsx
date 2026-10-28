@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "@/components/common/PageHeader";
 import AiTemplateStudio from "@/components/templates/AiTemplateStudio";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 // Organizers and admins design a template from a description; it becomes a normal template they can use for events.
 function AiTemplateContent() {
@@ -21,7 +22,7 @@ export default function AiTemplatePage() {
         actions={<Link href="/templates" className="hidden sm:inline-block text-sm text-gray-700 hover:text-[#FF651D] mr-2">All templates</Link>}
       />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24">
-        <Suspense fallback={<p className="py-16 text-center text-sm text-[#828282]">Loading…</p>}>
+        <Suspense fallback={<SkeletonRegion label="Loading" className="space-y-4"><Skeleton className="h-10 w-1/3" /><Skeleton className="h-40" /><Skeleton className="h-12 w-40" /></SkeletonRegion>}>
           <AiTemplateContent />
         </Suspense>
       </div>

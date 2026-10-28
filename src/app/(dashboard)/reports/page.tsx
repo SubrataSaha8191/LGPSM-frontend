@@ -16,6 +16,7 @@ import { checkInService, CheckInRecord } from "@/services/checkInService";
 import { auditLogService } from "@/services/auditLogService";
 import { reportService, EventReportData } from "@/services/reportService";
 import { formatDateTime } from "@/utils/dateTime";
+import { Skeleton } from "@/components/common/Skeleton";
 
 const ACCESS_CONTROL_LABELS: Record<string, string> = {
   NO_RESTRICTION: "No Restrictions",
@@ -354,8 +355,8 @@ export default function ReportsPage() {
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
-      {/* Shared Figma page header (217:23715 "Report") */}
-      <PageHeader title="Report" />
+      {/* Admin frame 713:5982 is titled "Reports", the Organiser frame 217:23715 "Report" */}
+      <PageHeader title={isAdmin ? "Reports" : "Report"} />
 
       <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
         <ReportsHeaderControls
@@ -382,9 +383,11 @@ export default function ReportsPage() {
           <>
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-2xl font-bold text-gray-900 tracking-tight break-words min-w-0">
-                  {loadingEvents ? "Loading..." : selectedEventTitle}
-                </h2>
+                {loadingEvents ? (
+                  <Skeleton className="h-9 w-72 max-w-full" />
+                ) : (
+                  <h2 className="text-[30px] leading-tight font-medium text-[#15191C] break-words min-w-0">{selectedEventTitle}</h2>
+                )}
                 {selectedEvent?.categoryId?.name && (
                   <span className="border border-orange-400 text-[#FF5B22] rounded-md px-2 py-0.5 text-[10px] font-semibold bg-orange-50/50">
                     {selectedEvent.categoryId.name}
@@ -413,6 +416,7 @@ export default function ReportsPage() {
               totalAttendees={eventReport?.uniqueAttendees ?? 0}
               totalSessions={eventReport?.totalSessions ?? 0}
               systemUsers={eventReport?.totalSystemUsers ?? 0}
+              loading={loadingEvents || (loadingDetails && !eventReport)}
             />
 
             <ReportsCharts

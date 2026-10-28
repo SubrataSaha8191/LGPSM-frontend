@@ -29,7 +29,7 @@ export default function StepHeader({ currentStep, onStepClick, maxUnlockedStep }
               type="button"
               onClick={() => onStepClick(step.num)}
               title={isLocked ? "Complete required details on previous steps to unlock" : undefined}
-              className={`flex items-center gap-2 pb-3 text-xs font-bold transition-all relative cursor-pointer ${
+              className={`flex items-center gap-2 pb-3 text-sm font-medium transition-all relative cursor-pointer ${
                 isActive
                   ? "text-gray-900"
                   : isCompleted
@@ -41,21 +41,14 @@ export default function StepHeader({ currentStep, onStepClick, maxUnlockedStep }
             >
               {/* Checkmark or Circle Badge */}
               <div
-                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 ${
-                  isCompleted || isActive
-                    ? "bg-emerald-600 text-white"
-                    : isLocked
-                    ? "bg-gray-200 text-gray-400"
-                    : "bg-gray-200 text-gray-500"
+                className={`size-[18px] rounded-full flex items-center justify-center shrink-0 text-white ${
+                  isCompleted || isActive ? "bg-[#1A9242]" : "bg-[#A5A5A5]"
                 }`}
               >
-                {isCompleted || isActive ? (
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  step.num
-                )}
+                {/* Figma 217:7725: every step carries a check badge, green once reached and grey before */}
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
               </div>
 
               <span>{step.label}</span>

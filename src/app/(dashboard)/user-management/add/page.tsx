@@ -1,9 +1,11 @@
 "use client";
 
+import PageHeader from "@/components/common/PageHeader";
+import ListControls, { addButtonClass } from "@/components/common/ListControls";
 import React, { useState, useEffect, useCallback } from "react";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 export default function AddUserPage() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -76,56 +78,18 @@ export default function AddUserPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Add User</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
+        <PageHeader title="Add User" />
 
         {/* Page Content */}
-        <main className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8 flex-1 flex flex-col">
-          {/* Controls Bar: Title + Search Bar on Left, + Add User Button on Right */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1 max-w-xl">
-              <h2 className="text-lg font-bold text-gray-900 shrink-0">System Users</h2>
-              <div className="relative flex-1">
-                <svg
-                  className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-2xs w-fit self-start"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <main className="px-4 sm:px-6 pt-[30px] pb-8 w-full space-y-8 flex-1 flex flex-col">
+          <ListControls label="System Users" searchId="add-user-search" placeholder="Search..." value={searchQuery} onChange={setSearchQuery}>
+            <button type="button" onClick={() => setIsAddUserModalOpen(true)} className={`${addButtonClass} cursor-pointer`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              <span>Add User</span>
+              Add User
             </button>
-          </div>
+          </ListControls>
 
           {/* Success Notification Banner */}
           {addedUserName && (
@@ -135,9 +99,7 @@ export default function AddUserPage() {
           )}
 
           {loadingUsers ? (
-            <div className="flex-1 flex items-center justify-center py-16 text-xs font-semibold text-gray-500">
-              Loading system users...
-            </div>
+            <TableSkeleton rows={5} cols={3} label="Loading system users" />
           ) : loadError ? (
             <div className="flex-1 flex flex-col items-center justify-center py-16 space-y-3">
               <p className="text-sm font-semibold text-rose-600 text-center break-words">{loadError}</p>
@@ -151,17 +113,16 @@ export default function AddUserPage() {
           ) : systemUsers.length === 0 ? (
             /* Empty State Container (Image 1) */
             <div className="flex-1 flex flex-col items-center justify-center my-auto py-16 space-y-4">
-              <div className="w-20 h-20 text-gray-300 flex items-center justify-center">
-                <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                </svg>
-              </div>
-              <p className="text-sm font-semibold text-gray-600">
+              {/* Figma 450:6449: a grey group-of-people mark, 16px message and a light "Add User" button */}
+              <svg className="w-20 h-20 text-[#BDBDBD]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+              </svg>
+              <p className="text-base text-[#4B4F52]">
                 No users added yet. Add users now.
               </p>
               <button
                 onClick={() => setIsAddUserModalOpen(true)}
-                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-[#FF5B22] font-semibold text-xs rounded-md transition-colors cursor-pointer"
+                className="px-6 py-2 bg-[#F6F6F6] hover:bg-gray-200 text-[#FF651D] font-medium text-base rounded-md transition-colors cursor-pointer"
               >
                 Add User
               </button>

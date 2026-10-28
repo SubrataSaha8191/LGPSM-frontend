@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ApiResponse } from "@/services/apiClient";
+import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface SettingsToggleListProps<K extends string> {
   title: string;
@@ -53,10 +54,12 @@ export default function SettingsToggleList<K extends string>({ title, descriptio
   };
 
   return (
-    <section className="max-w-3xl space-y-5" aria-labelledby="settings-list-title">
+    // Figma settings frames (2074:297, 2083:364): a 576px bordered card holding the title and plain label/toggle rows
+    <section className="max-w-[576px] space-y-6" aria-labelledby="settings-list-title">
+      <div className="border border-[#E0E0E0] rounded-lg p-5 pb-8 space-y-5">
       <div>
-        <h2 id="settings-list-title" className="text-lg font-medium text-gray-900">{title}</h2>
-        {description && <p className="text-sm text-[#4B4F52] mt-1">{description}</p>}
+        <h2 id="settings-list-title" className="text-lg font-medium text-[#15191C]">{title}</h2>
+        {description && <p className="text-xs text-[#828282] mt-1">{description}</p>}
       </div>
       {loadError ? (
         <div role="alert" className="p-4 border border-rose-200 bg-rose-50 rounded-md text-sm text-rose-700 flex items-center justify-between gap-3">
@@ -64,17 +67,15 @@ export default function SettingsToggleList<K extends string>({ title, descriptio
           <button type="button" onClick={fetchSettings} className="font-medium underline cursor-pointer">Retry</button>
         </div>
       ) : !values ? (
-        <p className="text-sm text-[#828282]">Loading settings...</p>
+        <SkeletonRegion label="Loading settings" className="space-y-[18px]">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-5" />)}</SkeletonRegion>
       ) : (
-        <>
-          <ul className="border border-[#E0E0E0] rounded-lg divide-y divide-[#EEEEEE]">
+          <ul className="space-y-[18px]">
             {items.map((item) => {
               const id = `setting-${item.key}`;
               return (
-                <li key={item.key} className="flex items-center justify-between gap-4 px-4 py-3.5">
-                  <label htmlFor={id} className="min-w-0 cursor-pointer">
-                    <span className="block text-sm font-medium text-gray-900">{item.label}</span>
-                    {item.help && <span className="block text-xs text-[#828282] mt-0.5">{item.help}</span>}
+                <li key={item.key} className="flex items-center justify-between gap-4">
+                  <label htmlFor={id} title={item.help} className="min-w-0 cursor-pointer text-sm text-[#4B4F52]">
+                    {item.label}
                   </label>
                   <button
                     id={id}
@@ -90,12 +91,15 @@ export default function SettingsToggleList<K extends string>({ title, descriptio
               );
             })}
           </ul>
+      )}
+      </div>
+      {values && !loadError && (
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={handleSave}
               disabled={!dirty || saving}
-              className="px-6 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="px-4 py-[9px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
@@ -110,7 +114,6 @@ export default function SettingsToggleList<K extends string>({ title, descriptio
               </span>
             )}
           </div>
-        </>
       )}
     </section>
   );

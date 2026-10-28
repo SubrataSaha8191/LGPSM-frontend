@@ -17,6 +17,10 @@ interface MobileCardPreviewProps {
   categoryName: string;
   subcategoryName: string;
   onOpenTemplateModal: () => void;
+  /** Saved "Additional Info" choice (null = not set), printed on the preview with sample labels */
+  cardInfo?: TemplatePreviewPayload["cardInfo"] | null;
+  /** Opens "Customize Information" with the payload this preview renders */
+  onOpenAdditionalInfo?: (payload: TemplatePreviewPayload) => void;
 }
 
 const ZOOM_SCALE: Record<string, number> = { "100%": 1, "75%": 0.75, "50%": 0.5 };
@@ -44,6 +48,8 @@ export default function MobileCardPreview({
   categoryName,
   subcategoryName,
   onOpenTemplateModal,
+  cardInfo,
+  onOpenAdditionalInfo,
 }: MobileCardPreviewProps) {
   const [zoomLevel, setZoomLevel] = useState("100%");
 
@@ -59,8 +65,9 @@ export default function MobileCardPreview({
       categoryName: categoryName || undefined,
       subcategoryName: subcategoryName || undefined,
       logoKey: logoKey && /^media:[0-9a-fA-F]{24}$/.test(logoKey) ? logoKey : undefined,
+      ...(cardInfo ? { cardInfo } : {}),
     }),
-    [eventTitle, eventStart, eventEnd, venue, categoryName, subcategoryName, logoKey]
+    [eventTitle, eventStart, eventEnd, venue, categoryName, subcategoryName, logoKey, cardInfo]
   );
   const [live, setLive] = useState<{ key: string; url: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -152,13 +159,25 @@ export default function MobileCardPreview({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenTemplateModal}
-          className="mt-5 px-4 py-2 bg-white hover:bg-gray-50 border border-[#E0E0E0] text-gray-900 text-sm font-medium rounded-md shadow-xs cursor-pointer"
-        >
-          {template ? "Change Template" : "Select Template"}
-        </button>
+        {/* Figma Event_Add event-1: "Change Template" and "Additional Info" side by side ("Edit Additional Info" once set) */}
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <button
+            type="button"
+            onClick={onOpenTemplateModal}
+            className="px-4 py-2 bg-white hover:bg-gray-50 border border-[#E0E0E0] text-gray-900 text-sm font-medium rounded-md shadow-xs cursor-pointer"
+          >
+            {template ? "Change Template" : "Select Template"}
+          </button>
+          {onOpenAdditionalInfo && (
+            <button
+              type="button"
+              onClick={() => onOpenAdditionalInfo(payload)}
+              className="px-4 py-2 bg-white hover:bg-gray-50 border border-[#E0E0E0] text-gray-900 text-sm font-medium rounded-md shadow-xs cursor-pointer"
+            >
+              {cardInfo ? "Edit Additional Info" : "Additional Info"}
+            </button>
+          )}
+        </div>
         <p className="mt-2 text-xs text-[#4B4F52] text-center break-words">
           {template ? `Template: ${template.name}` : "No template chosen: the design follows the event type."}
         </p>

@@ -1,11 +1,14 @@
 "use client";
 
+import Image from "next/image";
+import ListControls, { addButtonClass } from "@/components/common/ListControls";
+import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { userService } from "@/services/userService";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import { useAuth } from "@/context/AuthContext";
+import { TableSkeletonRows } from "@/components/common/Skeleton";
 
 interface OrganizerRow {
   id: string;
@@ -89,64 +92,25 @@ export default function AllOrganizersPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4 0V7m0 0h4m-4 0H9" />
-            </svg>
-            <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Event Organizers</h1>
-          </div>
-          <UserNavDropdown />
-        </header>
+        <PageHeader title="Event Organizer" />
 
         {/* Page Content */}
-        <main className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {/* Controls Bar: Title + Search Bar on Left, + Add Organizer Button on Right */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1 max-w-xl">
-              <h2 className="text-lg font-bold text-gray-900 shrink-0">Organizer</h2>
-              <div className="relative flex-1">
-                <svg
-                  className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search organizers"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
-                />
-              </div>
-            </div>
-
-            <Link
-              href="/event-organizer/add"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shrink-0 shadow-2xs w-fit self-start"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Add Organizer</span>
+        <main className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-6">
+          {/* Controls (Figma 462:10218) */}
+          <ListControls label="Organizer" searchId="organizer-search" placeholder="Search organizers" value={searchQuery} onChange={setSearchQuery}>
+            <Link href="/event-organizer/add" className={addButtonClass}>
+              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+              Add Organizer
             </Link>
-          </div>
+          </ListControls>
 
-          {/* Single Stats Container Card with Dividers */}
-          <div className="bg-white border border-gray-200 rounded-md divide-y sm:divide-y-0 sm:divide-x divide-gray-200 grid grid-cols-1 sm:grid-cols-3 shadow-2xs">
+          {/* Stats tiles: separate bordered cards (Figma 462:10218) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* 1. Active Organizer */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Active Organizer</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">
+                <span className="text-sm font-medium text-[#15191C] block">Active Organizer</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">
                   {organizers.filter((o) => o.status === "Active").length}
                 </span>
               </div>
@@ -158,10 +122,10 @@ export default function AllOrganizersPage() {
             </div>
 
             {/* 2. Inactive Organizers */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Inactive Organizers</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">
+                <span className="text-sm font-medium text-[#15191C] block">Inactive Organizers</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">
                   {organizers.filter((o) => o.status !== "Active").length}
                 </span>
               </div>
@@ -173,10 +137,10 @@ export default function AllOrganizersPage() {
             </div>
 
             {/* 3. Earnings */}
-            <div className="p-5 flex items-center justify-between">
+            <div className="bg-white border border-[#E0E0E0] rounded-lg p-5 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-gray-700 block">Earnings</span>
-                <span className="text-2xl font-bold text-gray-900 mt-1 block">$0</span>
+                <span className="text-sm font-medium text-[#15191C] block">Earnings</span>
+                <span className="text-[32px] leading-tight font-semibold text-black mt-1 block">$0</span>
               </div>
               <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +182,7 @@ export default function AllOrganizersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 text-gray-800">
                   {loading && (
-                    <tr><td colSpan={6} className="py-12 text-center text-gray-400 text-sm">Loading organizers...</td></tr>
+                    <TableSkeletonRows rows={5} cols={6} />
                   )}
                   {!loading && loadError && (
                     <tr><td colSpan={6} className="py-12 text-center text-rose-600 text-sm">{loadError}</td></tr>

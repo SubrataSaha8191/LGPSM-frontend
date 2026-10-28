@@ -2,11 +2,13 @@
 
 import React from "react";
 import { EarningsRecord } from "@/types/earnings";
+import { TableSkeletonRows } from "@/components/common/Skeleton";
 
 interface EarningsTableProps {
   activeTab: "organizer" | "event";
   setActiveTab: (tab: "organizer" | "event") => void;
   records: EarningsRecord[];
+  loading?: boolean;
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   startDate: string;
@@ -24,6 +26,7 @@ export default function EarningsTable({
   activeTab,
   setActiveTab,
   records,
+  loading = false,
   searchQuery,
   setSearchQuery,
   startDate,
@@ -179,7 +182,8 @@ export default function EarningsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 text-gray-800">
-            {records.map((r) => (
+            {loading && <TableSkeletonRows rows={5} cols={8} />}
+            {!loading && records.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
                 <td className="py-4 px-4">
                   <input

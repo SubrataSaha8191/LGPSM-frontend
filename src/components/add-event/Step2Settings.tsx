@@ -3,6 +3,7 @@
 import React from "react";
 import { DraftErrors, EventDraft, PreferenceCategory, newClientKey } from "./eventDraft";
 import { EventFeatureSettings } from "@/services/platformSettingsService";
+import InfoTip from "@/components/common/InfoTip";
 
 interface Step2SettingsProps {
   draft: EventDraft;
@@ -21,6 +22,7 @@ function OptionRow({
   onChange,
   label,
   help,
+  tip,
 }: {
   id: string;
   checked: boolean;
@@ -28,6 +30,8 @@ function OptionRow({
   onChange: (v: boolean) => void;
   label: string;
   help: string;
+  /** Optional tooltip next to the label (Figma 636:3176) */
+  tip?: string;
 }) {
   return (
     <div className={`p-3.5 border rounded-md flex items-start gap-3 ${disabled ? "bg-[#F4F5F8] border-[#E5E5E5]" : "bg-white border-[#E0E0E0]"}`}>
@@ -43,6 +47,7 @@ function OptionRow({
         <span className="font-medium">{label}</span>
         <span className="block text-xs text-[#828282] mt-0.5">{help}</span>
       </label>
+      {tip && <InfoTip label={`About: ${label}`} text={tip} align="left" className="mt-0.5" />}
     </div>
   );
 }
@@ -100,6 +105,7 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
               disabled={notRespondedImplied}
               onChange={(v) => onChange({ allowNotResponded: v })}
               label="Allow not-responded invitees"
+              tip="Disallowing this means invitees who have not responded will not be allowed to enter the event."
               help={notRespondedImplied ? "Included because all invited attendees are accepted." : "Guests who have not replied to the RSVP can still check in."}
             />
           )}

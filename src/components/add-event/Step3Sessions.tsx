@@ -6,6 +6,7 @@ import { AccessControl, DraftErrors, DraftSession, createSessionDraft } from "./
 import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet } from "@/utils/inviteeSheet";
+import InfoTip from "@/components/common/InfoTip";
 
 // Invitee sheets stay in memory only (they hold guest contact details and a File object)
 export interface SessionInviteeFile {
@@ -146,6 +147,7 @@ export default function Step3Sessions({
                   Session Name<span className="text-[#FF651D] ml-0.5">*</span>
                   {isPrimary && <span className="ml-2 text-xs font-normal text-[#828282]">Primary session</span>}
                 </label>
+                <InfoTip label="About the session name" text="Guests and system users see this name for the session, for example Entry or Lunch." className="ml-auto" />
                 {!sess.backendId && sessions.length > 1 && (
                   <button type="button" onClick={() => handleRemoveSession(sess.key)} className="text-sm font-medium text-[#E5520F] hover:underline cursor-pointer">
                     Remove
@@ -181,9 +183,15 @@ export default function Step3Sessions({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(["start", "end"] as const).map((field) => (
                 <div key={field} className="min-w-0">
-                  <span className={labelClass}>
-                    {field === "start" ? "Start Time" : "End Time"}
-                    <span className="text-[#FF651D] ml-0.5">*</span>
+                  <span className={`${labelClass} flex items-center justify-between gap-2`}>
+                    <span>
+                      {field === "start" ? "Start Time" : "End Time"}
+                      <span className="text-[#FF651D] ml-0.5">*</span>
+                    </span>
+                    <InfoTip
+                      label={`About the session ${field} time`}
+                      text={field === "start" ? "When this session opens for check-in. It must fall within the event's dates." : "When this session closes. It must be after the start time."}
+                    />
                   </span>
                   <button
                     type="button"
@@ -199,8 +207,9 @@ export default function Step3Sessions({
                 </div>
               ))}
               <div className="min-w-0">
-                <span className={labelClass} title="No Restrictions: guests may enter any number of times. Only Once: a single entry.">
-                  Access Control<span className="text-[#FF651D] ml-0.5">*</span>
+                <span className={`${labelClass} flex items-center justify-between gap-2`}>
+                  <span>Access Control<span className="text-[#FF651D] ml-0.5">*</span></span>
+                  <InfoTip label="About access control" text="If the invitees are allowed access to the Session any number of times, set No Restrictions." />
                 </span>
                 <CustomDropdown
                   value={sess.accessControl}
@@ -291,9 +300,12 @@ export default function Step3Sessions({
                 )}
                 <div className="flex flex-wrap justify-between items-center gap-2 mt-2">
                   <p className="text-xs text-[#828282]">Imported when you save. Files are not kept in the saved draft.</p>
-                  <button type="button" onClick={() => downloadInviteeTemplate()} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 underline hover:text-[#E5520F] cursor-pointer">
-                    <ExcelLogo /> Download Excel Sample
-                  </button>
+                  <span className="inline-flex items-center gap-2">
+                    <button type="button" onClick={() => downloadInviteeTemplate()} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 underline hover:text-[#E5520F] cursor-pointer">
+                      <ExcelLogo /> Download Excel Sample
+                    </button>
+                    <InfoTip label="About the Excel sample" text="Download the sample template from the link and enter your invitees in the same format. There are three main columns - Name, Email and Mobile. Name and Mobile are mandatory fields. All numbers must be with country code, for e.g. +91xxxxxxxxxx, without any space in between." />
+                  </span>
                 </div>
               </div>
             )}

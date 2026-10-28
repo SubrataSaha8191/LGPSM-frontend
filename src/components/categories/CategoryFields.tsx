@@ -37,7 +37,10 @@ export default function CategoryFields({
 }: CategoryFieldsProps) {
   const [modal, setModal] = useState<ModalState>(null);
   const subOptions = categoryId ? api.subcategoryOptionsFor(categoryId) : [];
-  const star = required ? <span className="text-[#FF651D] ml-0.5">*</span> : null;
+  const starMark = <span className="text-[#FF651D] ml-0.5">*</span>;
+  const star = required ? starMark : null;
+  // A subcategory can only be required once the chosen category has some; before that (or when it has none) the star would promise a rule that cannot apply
+  const subStar = required && (!categoryId || subOptions.length > 0) ? starMark : null;
 
   return (
     <>
@@ -61,7 +64,7 @@ export default function CategoryFields({
         <div>
           <label className={labelClassName}>
             {subcategoryLabel}
-            {star}
+            {subStar}
           </label>
           <CustomDropdown
             value={subcategoryId}
