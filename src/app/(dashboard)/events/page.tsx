@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { eventService } from "@/services/eventService";
 import { sessionService } from "@/services/sessionService";
@@ -11,6 +12,8 @@ import { getDynamicEventStatus } from "@/utils/eventUtils";
 import { formatEventId } from "@/utils/formatId";
 import { formatCompactDateTime, formatDateTime } from "@/utils/dateTime";
 import PageHeader from "@/components/common/PageHeader";
+import EventCardThumbnail from "@/components/events/EventCardThumbnail";
+import { useAuth } from "@/context/AuthContext";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Completed" | "Invitation not send" | "Cancelled";
 
@@ -26,6 +29,8 @@ interface EventRow {
   end?: string;
   status: RowStatus;
   sessionsCount?: number;
+  sessionNames: string[];
+  inviteesCount?: number;
   canEdit: boolean;
 }
 
@@ -37,10 +42,11 @@ const STATUS_STYLE: Record<RowStatus, string> = {
   Cancelled: "bg-gray-200 text-gray-700",
 };
 
-function FilterSelect({ value, onChange, ariaLabel, options }: { value: string; onChange: (value: string) => void; ariaLabel: string; options: { value: string; label: string }[] }) {
+// `compact` is the organiser filter drawer style (Figma 217:22781): 12px medium text, 16px padding
+function FilterSelect({ value, onChange, ariaLabel, options, compact = false }: { value: string; onChange: (value: string) => void; ariaLabel: string; options: { value: string; label: string }[]; compact?: boolean }) {
   return (
     <div className="relative">
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} className="w-full h-[47px] appearance-none px-3.5 pr-10 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D] cursor-pointer">
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={ariaLabel} className={`w-full h-[47px] appearance-none pr-10 bg-white border border-[#E0E0E0] rounded-md focus:outline-none focus:border-[#FF651D] cursor-pointer ${compact ? "px-4 text-xs font-medium " + (value ? "text-[#15191C]" : "text-[#7F7F7F]") : "px-3.5 text-sm text-gray-700"}`}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
       <svg className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -63,6 +69,8 @@ interface RawEvent {
   sessionCount?: number;
   sessionsCount?: number;
   sessions?: unknown[];
+  sessionNames?: string[];
+  inviteesCount?: number;
 }
 
 function toRow(e: RawEvent): EventRow {
@@ -82,7 +90,9 @@ function toRow(e: RawEvent): EventRow {
     start: e.schedule?.start,
     end: e.schedule?.end,
     status,
-    sessionsCount: e.sessionsCount ?? e.sessionCount ?? e.sessions?.length,
+    sessionsCount: e.sessionsCount ?? e.sessionCount ?? e.sessions?.length ?? e.sessionNames?.length,
+    sessionNames: e.sessionNames || [],
+    inviteesCount: e.inviteesCount,
     canEdit: !(e.invitationsSent && e.invitationsSent > 0),
   };
 }
@@ -131,15 +141,112 @@ function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow
   );
 }
 
+// Organiser card menu (Figma 217:22642): dark rounded panel with a pointer, Edit and Send Invitation. Delete stays
+// available as before; Edit only while no invitations have gone out (the event is locked after sending).
+function OrganizerCardMenu({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow) => void }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (!buttonRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (open) { setOpen(false); return; }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    // The 155px panel is centred under the dots, its pointer touching the button
+    setPosition({ top: rect.bottom + 4, left: Math.max(8, Math.min(rect.left + rect.width / 2 - 77.5, window.innerWidth - 163)) });
+    setOpen(true);
+  };
+  const item = "flex items-center gap-1.5 py-1 text-sm font-medium text-white hover:text-[#FFB08A] cursor-pointer";
+  const active = row.status !== "Cancelled";
+  return (
+    <>
+      <button ref={buttonRef} type="button" onClick={toggle} aria-label={`Actions for ${row.name}`} aria-expanded={open} className="shrink-0 -mr-2 -mt-1 px-2 py-1 rounded cursor-pointer hover:bg-gray-100">
+        <Image src="/icons/events/kebab.svg" alt="" width={4} height={16} />
+      </button>
+      {open && position && createPortal(
+        <div ref={menuRef} onClick={(e) => e.stopPropagation()} style={{ position: "fixed", ...position }} className="z-[9999] w-[155px] flex flex-col items-center">
+          <Image src="/icons/events/menu-arrow.svg" alt="" width={16} height={8} />
+          <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]">
+            {active && row.canEdit && (
+              <Link href={`/events/${row.id}/edit`} className={item}>
+                <Image src="/icons/events/edit.svg" alt="" width={16} height={16} />
+                Edit
+              </Link>
+            )}
+            {active && (
+              <Link href={`/events/${row.id}/invitees`} className={item}>
+                <Image src="/icons/events/send.svg" alt="" width={16} height={16} />
+                Send Invitation
+              </Link>
+            )}
+            {active && (
+              <button type="button" onClick={() => { setOpen(false); onDelete(row); }} className={`${item} text-rose-300`}>
+                Delete
+              </button>
+            )}
+            {!active && <span className="py-1 text-sm text-[#BDBDBD]">Event cancelled</span>}
+          </div>
+        </div>, document.body
+      )}
+    </>
+  );
+}
+
+// Organiser event card (Figma 217:22621): 56px card thumbnail, category tag, title, start/end, invite count, sessions
+function OrganizerEventCard({ row, onOpen, onDelete }: { row: EventRow; onOpen: () => void; onDelete: (row: EventRow) => void }) {
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${row.name}`}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
+      className="bg-white border border-[#E2E2E2] rounded-lg p-6 flex gap-6 items-start drop-shadow-[0_4px_2px_rgba(0,0,0,0.08)] cursor-pointer hover:border-[#FFB08A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF651D] min-w-0"
+    >
+      <EventCardThumbnail eventId={row.id} label={row.name} />
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5 items-start">
+          <span className="px-2 py-[3px] border border-[#FF651D] rounded-[3px] text-xs font-medium text-[#FF651D]">{row.category === "—" ? "Event" : `${row.category} Event`}</span>
+          <h3 className="text-base font-medium text-[#15191C] break-words">{row.name}</h3>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-[#828282]">
+            <span><span className="font-bold text-[#15191C]">Start: </span>{formatCompactDateTime(row.start, "—")}</span>
+            <span aria-hidden className="w-px h-4 bg-[#969696]" />
+            <span><span className="font-bold text-[#15191C]">End: </span>{formatCompactDateTime(row.end, "—")}</span>
+          </div>
+        </div>
+        <p className="text-xs font-medium text-[#15191C]"># of invites: {row.inviteesCount ?? "—"}</p>
+        <p className="flex gap-2 text-xs font-medium min-w-0">
+          <span className="text-[#828282] shrink-0">Sessions:</span>
+          <span className="text-[#15191C] truncate">{row.sessionNames.length ? row.sessionNames.join(", ") : "None yet"}</span>
+        </p>
+      </div>
+      <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <OrganizerCardMenu row={row} onDelete={onDelete} />
+      </div>
+    </div>
+  );
+}
+
 export default function EventListingPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isOrganizer = user?.role === "ORGANIZER";
   const categories = useCategories();
   const [rows, setRows] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
   const [draftFilters, setDraftFilters] = useState(filters);
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [applyingFilters, setApplyingFilters] = useState(false);
@@ -176,6 +283,7 @@ export default function EventListingPage() {
   const fromDate = filters.from ? new Date(`${filters.from}T00:00:00`) : null;
   const toDate = filters.to ? new Date(`${filters.to}T23:59:59.999`) : null;
   const visible = rows.filter((r) => {
+    if (filters.eventId && r.id !== filters.eventId) return false;
     if (filters.name && !r.name.toLowerCase().includes(filters.name.trim().toLowerCase())) return false;
     if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
     if (filters.organizer && !r.organizer.toLowerCase().includes(filters.organizer.trim().toLowerCase())) return false;
@@ -201,6 +309,7 @@ export default function EventListingPage() {
       const draftFrom = draftFilters.from ? new Date(`${draftFilters.from}T00:00:00`) : null;
       const draftTo = draftFilters.to ? new Date(`${draftFilters.to}T23:59:59.999`) : null;
       const candidates = rows.filter((r) => {
+        if (draftFilters.eventId && r.id !== draftFilters.eventId) return false;
         if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
         if (draftFilters.name && !r.name.toLowerCase().includes(draftFilters.name.trim().toLowerCase())) return false;
         if (draftFilters.organizer && !r.organizer.toLowerCase().includes(draftFilters.organizer.trim().toLowerCase())) return false;
@@ -241,6 +350,157 @@ export default function EventListingPage() {
     setFilters(draftFilters);
     setFilterOpen(false);
   };
+
+  const deleteDialog = deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
+          <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
+            <h3 id="delete-event-title" className="text-base font-medium text-gray-900">Delete Event</h3>
+            <p className="text-sm text-[#4B4F52] break-words">Delete “{deleting.name}”? It will be cancelled and its invitations stop working.</p>
+            {deleteError && <p role="alert" className="text-sm text-rose-600">{deleteError}</p>}
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setDeleting(null)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
+              <button type="button" onClick={confirmDelete} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer">Delete</button>
+            </div>
+          </div>
+        </div>
+      );
+
+  const clearFilters = () => {
+    const empty = { eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" };
+    setDraftFilters(empty);
+    setFilters(empty);
+    setFilterOpen(false);
+  };
+  const drawerField = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-xs font-medium text-[#15191C] focus:outline-none focus:border-[#FF651D]";
+
+  // Organiser shell (Figma 217:22527 list, 217:22656 filter): "Events" search row, filter + Add, a grid of event cards
+  if (isOrganizer) {
+    return (
+      <div className="w-full min-h-full bg-white">
+        <PageHeader title="Event Management" />
+        <div className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-9">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 lg:gap-[139px]">
+            <div className="flex flex-1 items-center gap-2.5 min-w-0">
+              <label htmlFor="event-search" className="text-[17px] font-medium text-black shrink-0">Events</label>
+              <div className="relative flex-1 min-w-0">
+                <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                <input
+                  id="event-search"
+                  type="search"
+                  placeholder="Search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
+                />
+              </div>
+            </div>
+            <div className="flex items-center shrink-0 w-fit">
+              <button
+                type="button"
+                onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}
+                aria-label={`Filter events${activeFilterCount ? ` (${activeFilterCount} active)` : ""}`}
+                className="relative h-[47px] p-4 rounded-md hover:bg-gray-100 cursor-pointer"
+              >
+                <Image src="/icons/events/filter.svg" alt="" width={20} height={20} />
+                {activeFilterCount > 0 && <span className="absolute top-1.5 right-1.5 size-4 rounded-full bg-[#FF651D] text-white text-[10px] flex items-center justify-center">{activeFilterCount}</span>}
+              </button>
+              <Link href="/events/add" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
+                <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                Add
+              </Link>
+            </div>
+          </div>
+
+          {loadError && (
+            <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-sm flex items-center justify-between gap-3">
+              <span className="break-words">{loadError}</span>
+              <button type="button" onClick={load} className="font-medium underline shrink-0 cursor-pointer">Retry</button>
+            </div>
+          )}
+
+          {loading ? (
+            <p className="py-10 text-center text-sm text-[#828282]">Loading events...</p>
+          ) : visible.length === 0 ? (
+            <p className="py-12 text-center text-sm text-[#828282]">
+              {rows.length === 0 ? (
+                <>No events yet. <Link href="/events/add" className="text-[#E5520F] font-medium underline">Create your first event</Link></>
+              ) : (
+                "No events match your search or filters."
+              )}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-[1034px]">
+              {visible.map((r) => (
+                <OrganizerEventCard key={r.id} row={r} onOpen={() => router.push(`/events/${r.id}`)} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {deleteDialog}
+
+        {filterOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
+            <div className="relative w-full max-w-[279px] bg-white h-full px-6 pt-[19.5px] pb-6 flex flex-col">
+              <div className="flex items-center justify-between">
+                <h2 id="filter-title" className="flex items-center gap-2 text-base font-medium text-[#15191C]">
+                  <Image src="/icons/events/filter-dark.svg" alt="" width={20} height={20} />
+                  Filter
+                </h2>
+                <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="cursor-pointer">
+                  <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto pt-8 flex flex-col gap-[13px]">
+                <div className="flex flex-col gap-2">
+                  <FilterSelect value={draftFilters.eventId} onChange={(v) => setDraftFilters((f) => ({ ...f, eventId: v }))} options={[{ value: "", label: "Select Event" }, ...rows.map((r) => ({ value: r.id, label: r.name }))]} ariaLabel="Select Event" compact />
+                  <FilterSelect value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Type" }, ...categories.categoryOptions]} ariaLabel="Event Type" compact />
+                  <FilterSelect
+                    value={draftFilters.status}
+                    onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
+                    options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((st) => ({ value: st, label: st }))]}
+                    ariaLabel="Event Status"
+                    compact
+                  />
+                </div>
+                <fieldset className="flex flex-col gap-[13px]">
+                  <legend className="text-base font-medium text-[#15191C] mb-[13px]">Date range</legend>
+                  <div className="flex flex-col gap-2">
+                    {/* Shows the Figma "From" / "To" placeholder until focused, then the native date picker */}
+                    {(["from", "to"] as const).map((key) => (
+                      <div key={key} className="relative">
+                      <input
+                        type={draftFilters[key] ? "date" : "text"}
+                        onFocus={(e) => { e.currentTarget.type = "date"; }}
+                        onBlur={(e) => { if (!e.currentTarget.value) e.currentTarget.type = "text"; }}
+                        placeholder={key === "from" ? "From" : "To"}
+                        value={draftFilters[key]}
+                        onChange={(e) => setDraftFilters((f) => ({ ...f, [key]: e.target.value }))}
+                        aria-label={key === "from" ? "From" : "To"}
+                        className={`${drawerField} placeholder:text-[#7F7F7F]`}
+                      />
+                      {!draftFilters[key] && <Image src="/icons/events/calendar.svg" alt="" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+                {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={clearFilters} className="flex-1 py-1.5 px-6 bg-white border border-[#DDD] rounded text-[13px] font-semibold text-black hover:bg-gray-50 cursor-pointer">
+                  Cancel
+                </button>
+                <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-1.5 px-6 bg-[#FF651D] hover:bg-[#E5520F] rounded text-[13px] font-semibold text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                  {applyingFilters ? "Loading…" : "Apply"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-full bg-white">
@@ -328,19 +588,7 @@ export default function EventListingPage() {
         </div>
       </div>
 
-      {deleting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
-          <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
-            <h3 id="delete-event-title" className="text-base font-medium text-gray-900">Delete Event</h3>
-            <p className="text-sm text-[#4B4F52] break-words">Delete “{deleting.name}”? It will be cancelled and its invitations stop working.</p>
-            {deleteError && <p role="alert" className="text-sm text-rose-600">{deleteError}</p>}
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleting(null)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
-              <button type="button" onClick={confirmDelete} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {deleteDialog}
 
       {filterOpen && (
         <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-title">
@@ -371,7 +619,7 @@ export default function EventListingPage() {
               {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
             </div>
             <div className="flex gap-3 pt-4 border-t border-[#E5E5E5]">
-              <button type="button" onClick={() => { const empty = { name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
+              <button type="button" onClick={() => { const empty = { eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
                 Clear
               </button>
               <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] rounded-md text-sm font-medium text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">

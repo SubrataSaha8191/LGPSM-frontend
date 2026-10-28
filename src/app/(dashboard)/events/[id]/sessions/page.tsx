@@ -1,19 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { reportService } from "@/services/reportService";
 import { inviteeService } from "@/services/inviteeService";
 import { sessionService } from "@/services/sessionService";
 import { eventService } from "@/services/eventService";
-import { addHours, formatDateTime, isAfter, nextWholeHourIso } from "@/utils/dateTime";
+import { assignmentService } from "@/services/assignmentService";
+import PageHeader from "@/components/common/PageHeader";
+import { addHours, formatCompactDateTime, formatDateTime, formatTime, isAfter, nextWholeHourIso } from "@/utils/dateTime";
+
+const sameDay = (a?: string, b?: string) => !!a && !!b && new Date(a).toDateString() === new Date(b).toDateString();
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerModal";
 import EventSubNav from "@/components/EventSubNav";
 
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import CustomDropdown from "@/components/common/CustomDropdown";
 
 const ACCESS_LABELS: Record<string, string> = { NO_RESTRICTION: "No Restrictions", ONLY_ONCE: "Only Once" };
@@ -26,6 +29,7 @@ export default function EventSessionsPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [assignedUsers, setAssignedUsers] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -38,10 +42,19 @@ export default function EventSessionsPage() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [res, reportRes] = await Promise.all([
+      const [res, reportRes, assignRes] = await Promise.all([
         sessionService.getSessions(eventId),
         reportService.getEventReport(eventId),
+        assignmentService.getEventAssignments(eventId),
       ]);
+      // "System Users" column (Figma 217:22014): staff assigned to each session
+      const assignments = assignRes.success && Array.isArray(assignRes.data) ? assignRes.data : [];
+      setAssignedUsers(assignments.length);
+      const staffBySession = new Map<string, number>();
+      assignments.forEach((a) => a.sessionIds.forEach((sid) => {
+        const key = String(typeof sid === "object" ? sid._id : sid);
+        staffBySession.set(key, (staffBySession.get(key) ?? 0) + 1);
+      }));
       // Invited counts per session come from the event report (sessionAccess-aware)
       const invitedBySession = new Map<string, number>(
         (reportRes.success && reportRes.data ? reportRes.data.sessionReports : []).map((r) => [String(r.sessionId), r.invitedCount ?? 0])
@@ -56,10 +69,11 @@ export default function EventSessionsPage() {
             _id: id,
             id: id,
             name: s.name || `Session ${idx + 1}`,
-            startTime: formatDateTime(startVal, "N/A"),
-            endTime: formatDateTime(endVal),
+            // Figma 217:22014: "5/1/2026  10:30 AM to 03:00 PM" — the end date only when the session runs into another day
+            startTime: formatCompactDateTime(startVal, "N/A"),
+            endTime: endVal ? (sameDay(startVal, endVal) ? formatTime(endVal) : formatCompactDateTime(endVal)) : "",
             accessControl: ACCESS_LABELS[s.accessControl] || "No Restrictions",
-            speaker: s.speaker || "-",
+            systemUsers: assignRes.success ? staffBySession.get(String(id)) ?? 0 : null,
             invitesCount: invitedBySession.get(String(id)) ?? 0,
             validateAgainstOtherSessions: s.validateAgainstOtherSessions || false,
           };
@@ -181,86 +195,59 @@ export default function EventSessionsPage() {
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
-      {/* Top Navigation Bar */}
-      <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Event Sessions</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      <PageHeader title="Event Sessions" />
 
       {/* Page Content - Directly on page background without card container */}
-      <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
+      <div className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-8 bg-white">
           {/* Sub-Navigation Tabs Bar */}
           <EventSubNav
             eventId={eventId}
             activeTab="sessions"
-            sessionsCount={sessions.length}
+            sessionsCount={isLoading ? undefined : sessions.length}
+            assignmentsCount={isLoading ? undefined : assignedUsers}
           />
 
-          {/* Controls Bar: Title, Search, Back, + Add Session */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-6 flex-1 max-w-xl">
-              <h2 className="text-xl font-bold text-gray-900 shrink-0">Sessions</h2>
-
-              {/* Search Bar */}
-              <div className="relative flex-1">
-                <svg className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+          {/* Controls (Figma 217:22091): "Sessions" label + search, Add Session */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 lg:gap-[139px]">
+            <div className="flex flex-1 items-center gap-2.5 min-w-0">
+              <label htmlFor="session-search" className="text-[17px] font-medium text-black shrink-0">Sessions</label>
+              <div className="relative flex-1 min-w-0">
+                <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
                 <input
-                  type="text"
-                  placeholder="Search invitees"
+                  id="session-search"
+                  type="search"
+                  placeholder="Search sessions"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22]"
+                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
                 />
               </div>
             </div>
-
-            <div className="flex items-center gap-3 shrink-0 w-fit self-start">
-              {/* Back to Dashboard */}
-              <Link
-                href={`/events/${eventId}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22]/5 text-xs font-semibold rounded-md transition-colors cursor-pointer"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                <span>Back to Dashboard</span>
-              </Link>
-
-              {/* + Add Session Button */}
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Add Session</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer shrink-0 w-fit"
+            >
+              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+              Add Session
+            </button>
           </div>
 
           {/* Sessions Data Table matching Image 2 */}
-          <div className="overflow-x-auto pt-2">
-            <table className="w-full text-left text-xs whitespace-nowrap">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm font-medium whitespace-nowrap">
               <thead>
-                <tr className="border-b border-gray-200 text-gray-500 font-medium text-[11px]">
-                  <th className="py-3 px-3 w-12 font-medium">#</th>
-                  <th className="py-3 px-4 font-medium">Session Title</th>
-                  <th className="py-3 px-4 font-medium">Date & Time</th>
-                  <th className="py-3 px-4 font-medium">Total Invitees</th>
-                  <th className="py-3 px-4 font-medium">System Users</th>
-                  <th className="py-3 px-4 font-medium">Access Control</th>
-                  <th className="py-3 px-4 font-medium text-right">Action</th>
+                <tr className="border-b border-[#D3D3D3] text-[#828282]">
+                  <th className="h-[46px] p-2.5 w-[43px] font-medium">#</th>
+                  <th className="h-[46px] p-2.5 w-[270px] font-medium">Session Title</th>
+                  <th className="h-[46px] p-2.5 w-[348px] font-medium">Date & Time</th>
+                  <th className="h-[46px] p-2.5 w-[143px] font-medium">Total Invitees</th>
+                  <th className="h-[46px] p-2.5 w-[145px] font-medium">System Users</th>
+                  <th className="h-[46px] p-2.5 font-medium">Access Control</th>
+                  <th className="h-[46px] p-2.5 font-medium text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 text-gray-800">
+              <tbody className="divide-y divide-[#D3D3D3] text-[#4B4F52] border-b border-[#D3D3D3]">
                 {isLoading ? (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-gray-500">
@@ -282,21 +269,21 @@ export default function EventSessionsPage() {
                 ) : (
                   filteredSessions.map((sess, index) => (
                     <tr key={sess._id || index} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="py-4 px-3 font-medium text-gray-400">{String(index + 1).padStart(2, "0")}</td>
-                      <td className="py-4 px-4 font-medium text-gray-900">{sess.name}</td>
-                      <td className="py-4 px-4 text-gray-600 font-normal">
+                      <td className="h-[46px] p-2.5">{String(index + 1).padStart(2, "0")}</td>
+                      <td className="h-[46px] p-2.5">{sess.name}</td>
+                      <td className="h-[46px] p-2.5">
                         {sess.startTime} {sess.endTime ? `to ${sess.endTime}` : ''}
                       </td>
-                      <td className="py-4 px-4 font-normal text-gray-800">
+                      <td className="h-[46px] p-2.5">
                         {sess.invitesCount ?? sess.totalInvitees ?? sess.maxAttendees ?? 0}
                       </td>
-                      <td className="py-4 px-4 font-normal text-gray-800">{sess.speaker || "-"}</td>
-                      <td className="py-4 px-4 font-normal text-gray-700">{sess.accessControl || "No Restriction"}</td>
-                      <td className="py-4 px-4 text-right">
+                      <td className="h-[46px] p-2.5">{sess.systemUsers === null || sess.systemUsers === undefined ? "—" : String(sess.systemUsers).padStart(2, "0")}</td>
+                      <td className="h-[46px] p-2.5">{sess.accessControl || "No Restriction"}</td>
+                      <td className="h-[46px] p-2.5 text-right">
                         <button
                           type="button"
                           onClick={() => handleDeleteSession(sess._id || sess.id)}
-                          className="text-rose-500 hover:text-rose-700 font-semibold cursor-pointer text-xs"
+                          className="text-rose-500 hover:text-rose-700 font-semibold cursor-pointer text-sm"
                           title="Delete Session"
                         >
                           Delete

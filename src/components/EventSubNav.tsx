@@ -43,11 +43,34 @@ export default function EventSubNav({
   const [pendingTab, setPendingTab] = useState<TabId | null>(null);
   const shownTab = pendingTab ?? activeTab;
 
+  // Pages pass their own totals, but usually render before their data has loaded (e.g. sessions.length is 0 at
+  // first). Follow the totals whenever they change instead of keeping the value seen on mount.
+  const [seenProps, setSeenProps] = useState({ propSessionsCount, propInviteesCount, propAssignmentsCount });
+  if (
+    seenProps.propSessionsCount !== propSessionsCount ||
+    seenProps.propInviteesCount !== propInviteesCount ||
+    seenProps.propAssignmentsCount !== propAssignmentsCount
+  ) {
+    setSeenProps({ propSessionsCount, propInviteesCount, propAssignmentsCount });
+    if (propSessionsCount !== undefined) setSessionsCount(propSessionsCount);
+    if (propInviteesCount !== undefined) setInviteesCount(propInviteesCount);
+    if (propAssignmentsCount !== undefined) setAssignmentsCount(propAssignmentsCount);
+  }
+
   // Fallback counts live in a ref so parent re-renders do not trigger another round of requests
   const fallbackCounts = useRef({ propSessionsCount, propInviteesCount, propAssignmentsCount });
   useEffect(() => {
     fallbackCounts.current = { propSessionsCount, propInviteesCount, propAssignmentsCount };
-  }, [propSessionsCount, propInviteesCount, propAssignmentsCount]);
+    // Keep the shared cache in step so the next tab opened starts from the page's latest totals
+    const previous = countsCache.get(eventId);
+    if (previous) {
+      countsCache.set(eventId, {
+        sessions: propSessionsCount ?? previous.sessions,
+        invitees: propInviteesCount ?? previous.invitees,
+        assignments: propAssignmentsCount ?? previous.assignments,
+      });
+    }
+  }, [eventId, propSessionsCount, propInviteesCount, propAssignmentsCount]);
 
   const fetchUnifiedCounts = useCallback(async (force = false) => {
     const { propSessionsCount, propInviteesCount, propAssignmentsCount } = fallbackCounts.current;

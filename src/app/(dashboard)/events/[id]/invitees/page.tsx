@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
+import { createPortal } from "react-dom";
+import { useAuth } from "@/context/AuthContext";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import InviteesPreviewModal from "@/components/add-event/modals/InviteesPreviewModal";
 import EditInviteeModal from "@/components/add-event/modals/EditInviteeModal";
@@ -8,6 +11,7 @@ import DeleteInviteeModal from "@/components/add-event/modals/DeleteInviteeModal
 import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChooserModal";
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
+import SendWarningModal from "@/components/invitees/SendWarningModal";
 import PageHeader from "@/components/common/PageHeader";
 import ButtonIcon from "@/components/common/ButtonIcons";
 import CustomDropdown from "@/components/common/CustomDropdown";
@@ -51,6 +55,72 @@ function allowedIn(inv: Invitee, session: SessionData): boolean {
   return !!entry && entry.allowed !== false;
 }
 
+// Status column (Figma 217:20587): delivery state, or the guest's answer once they have replied
+function InviteeStatusPill({ invitationStatus, rsvpStatus }: { invitationStatus: Invitee["invitationStatus"]; rsvpStatus: Invitee["rsvpStatus"] }) {
+  if (invitationStatus === "FAILED") return pill("bg-[#FFE3D7] text-[#FF651D]", "Sending Failed");
+  if (invitationStatus === "PENDING") return pill("bg-[#EDEDED] text-[#6E6E6E]", "Not Yet Sent");
+  if (rsvpStatus === "ACCEPTED") return pill("bg-[#CCD2FF] text-[#2C2EB5]", "Accepted");
+  if (rsvpStatus === "DECLINED") return pill("bg-[#FFE9C0] text-[#9E8C00]", "Declined");
+  return pill("bg-[#C0FFD5] text-[#1A9242]", "Successfully Sent");
+}
+
+// "⋯" row menu (Figma 217:20587: dark panel with a pointer). Edit and Resend as designed; card preview and remove kept.
+function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name: string; onPreview: () => void; onEdit: () => void; onResend?: () => void; onRemove: () => void }) {
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!position) return;
+    const close = (e: MouseEvent) => {
+      if (!buttonRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setPosition(null);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [position]);
+  const toggle = () => {
+    if (position) { setPosition(null); return; }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const height = 8 + 24 + (onResend ? 4 : 3) * 28;
+    const below = rect.bottom + height + 8 <= window.innerHeight;
+    setPosition({ top: below ? rect.bottom + 4 : Math.max(8, rect.top - height - 4), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 52, window.innerWidth - 120)) });
+  };
+  const run = (action: () => void) => () => { setPosition(null); action(); };
+  const base = "flex items-center gap-1.5 py-1 text-sm font-medium cursor-pointer text-left";
+  const item = `${base} text-white hover:text-[#FFB08A]`;
+  return (
+    <>
+      <button ref={buttonRef} type="button" onClick={toggle} aria-label={`Actions for ${name}`} aria-expanded={!!position} className="px-2 py-1 rounded hover:bg-gray-100 cursor-pointer">
+        <span aria-hidden className="text-[10px] text-[#3B3B3B] tracking-[1px]">●●●</span>
+      </button>
+      {position && createPortal(
+        <div ref={menuRef} style={{ position: "fixed", ...position }} className="z-[9999] w-[104px] flex flex-col items-center">
+          <Image src="/icons/events/menu-arrow.svg" alt="" width={16} height={8} />
+          <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]">
+            <button type="button" onClick={run(onEdit)} className={item}><Image src="/icons/events/edit.svg" alt="" width={16} height={16} />Edit</button>
+            {onResend && <button type="button" onClick={run(onResend)} className={item}><Image src="/icons/events/send.svg" alt="" width={16} height={16} />Resend</button>}
+            <button type="button" onClick={run(onPreview)} className={item}>Card</button>
+            <button type="button" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}>Remove</button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+// Borderless picker from Figma 217:21076 ("Product Launch Event 2026 ▾", "All Session ▾"): 12px medium grey text
+function PlainSelect({ value, onChange, options, ariaLabel }: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; ariaLabel: string }) {
+  return (
+    <div className="relative h-[47px] flex items-center max-w-[220px]">
+      <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} className="h-full w-full appearance-none bg-transparent pl-4 pr-9 text-xs font-medium text-[#7F7F7F] truncate focus:outline-none cursor-pointer">
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <Image src="/icons/events/caret-down.svg" alt="" width={12} height={7} className="pointer-events-none absolute right-4" />
+    </div>
+  );
+}
+
 export default function InviteesManagementPage() {
   const params = useParams();
   const router = useRouter();
@@ -60,6 +130,7 @@ export default function InviteesManagementPage() {
   const sidebarFlow = routeId === "select";
   const eventId = sidebarFlow ? searchParams.get("event") || "" : routeId;
   const { showAlert, confirm } = useAlert();
+  const { user } = useAuth();
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
   const [event, setEvent] = useState<{ title?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
@@ -85,18 +156,19 @@ export default function InviteesManagementPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showChooser, setShowChooser] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
+  const [confirmFirstSend, setConfirmFirstSend] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const sendInFlight = useRef(false);
   const resendInFlight = useRef(false);
   const importInFlight = useRef(false);
 
+  // Figma 217:21076 has an event picker beside the search in both the sidebar flow and an event's own tab
   useEffect(() => {
-    if (!sidebarFlow) return;
     eventService.getEvents().then((res) => {
       const list = Array.isArray(res.data) ? res.data : [];
       setEventsOptions(list.filter((e) => e.status !== "CANCELLED").map((e) => ({ value: e._id || e.id || "", label: e.title || "Untitled event" })));
     });
-  }, [sidebarFlow]);
+  }, []);
 
   const load = useCallback(async () => {
     if (!eventId) return;
@@ -219,13 +291,19 @@ export default function InviteesManagementPage() {
     }
   };
 
-  const handleResend = async () => {
-    if (resendTargets.length === 0 || resendInFlight.current) return;
+  // The first send locks the event, so it goes through the Figma warning (2001:2443); later sends go straight out
+  const requestSend = () => {
+    if (lifecycleStarted) handleSend();
+    else setConfirmFirstSend(true);
+  };
+
+  const handleResend = async (targets: InvitationData[] = resendTargets) => {
+    if (targets.length === 0 || resendInFlight.current) return;
     setBusy("resend");
     resendInFlight.current = true;
     setFeedback(null);
     try {
-      const res = await invitationService.resendInvitations(eventId, { invitationIds: resendTargets.map((h) => h._id), channel });
+      const res = await invitationService.resendInvitations(eventId, { invitationIds: targets.map((h) => h._id), channel });
       const results = (res.data?.results || (res as { results?: { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[] }).results || []) as { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[];
       setFeedback(res.success || results.length ? summarize(results, "resent") : { type: "error", message: res.message || "Invitations could not be resent." });
       if (res.success || results.length) setSelectedIds([]);
@@ -358,18 +436,16 @@ export default function InviteesManagementPage() {
   };
 
   const btn = "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  // Figma send button: outlined orange, 16px semibold, washed out until something can be sent
+  const primaryOutline = "inline-flex items-center gap-2 px-6 py-[11px] border border-[#FF651D] text-[#FF651D] bg-white hover:bg-orange-50 text-base font-semibold rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
   const showCompany = isCorporate;
   const showDietary = lifecycleStarted && !!event?.dietaryPreference?.enabled;
 
   return (
     <div className="w-full min-h-full bg-white">
-      <PageHeader title={sidebarFlow ? "Add Invitees" : event?.title || "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
+      <PageHeader title={user?.role === "ORGANIZER" ? "Invitees Management" : sidebarFlow ? "Add Invitees" : event?.title || "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={invitees.length} />}
-
-        {!sidebarFlow && eventId && event?.title && (
-          <p className="text-sm text-gray-600">Managing invitees and delivery for <span className="font-semibold text-gray-900">{event.title}</span></p>
-        )}
 
         {sidebarFlow && (
           <div className="max-w-md">
@@ -408,29 +484,65 @@ export default function InviteesManagementPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-              <div className="flex-1 min-w-0">
-                <label htmlFor="invitee-search" className="block text-sm font-medium text-gray-900 mb-1.5">Search</label>
-                <input
-                  id="invitee-search"
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email, mobile or company"
-                  className="w-full px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3 lg:w-[380px]">
-                <div>
-                  <span className="block text-sm font-medium text-gray-900 mb-1.5">Session</span>
-                  <CustomDropdown value={sessionFilter} onChange={setSessionFilter} options={[{ value: "", label: "All Sessions" }, ...sessions.map((s) => ({ value: s._id!, label: s.name }))]} ariaLabel="Filter by session" />
+            {/* Controls (Figma 217:21076 / 217:20587): Invitees + search, event, session, Add Invitees, then Send — or Resend
+                once everyone has been invited */}
+            <div className="flex flex-col xl:flex-row xl:items-center gap-3">
+              <div className="flex flex-1 items-center gap-2.5 min-w-0">
+                <label htmlFor="invitee-search" className="text-[17px] font-medium text-black shrink-0">Invitees</label>
+                <div className="relative flex-1 min-w-0">
+                  <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                  <input
+                    id="invitee-search"
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search invitees"
+                    className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
+                  />
                 </div>
-                <div>
-                  <span className="block text-sm font-medium text-gray-900 mb-1.5">Send via</span>
-                  <CustomDropdown
-                    value={channel}
-                    onChange={(v) => setChannel(v as Channel)}
-                    ariaLabel="Delivery channel"
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {!sidebarFlow && eventsOptions.length > 0 && (
+                  <PlainSelect
+                    ariaLabel="Event"
+                    value={eventId}
+                    onChange={(v) => router.push(`/events/${v}/invitees`)}
+                    options={eventsOptions.some((o) => o.value === eventId) ? eventsOptions : [{ value: eventId, label: event?.title || "This event" }, ...eventsOptions]}
+                  />
+                )}
+                <PlainSelect ariaLabel="Filter by session" value={sessionFilter} onChange={setSessionFilter} options={[{ value: "", label: "All Session" }, ...sessions.map((s) => ({ value: s._id!, label: s.name }))]} />
+                <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer disabled:opacity-50">
+                  <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                  Add Invitees
+                </button>
+                {notInvited.length > 0 || !lifecycleStarted ? (
+                  <button type="button" onClick={requestSend} disabled={busy !== null || notInvited.length === 0} className={`${primaryOutline}`}>
+                    <ButtonIcon name={busy === "send" ? "spinner" : "send"} />
+                    {busy === "send" ? "Sending..." : selected.some((i) => i.invitationStatus === "PENDING") ? `Send Invitation (${selected.filter((i) => i.invitationStatus === "PENDING").length})` : "Send Invitation"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleResend()}
+                    disabled={busy !== null || resendTargets.length === 0}
+                    title={resendTargets.length ? undefined : "Select guests to resend to"}
+                    className={`${primaryOutline}`}
+                  >
+                    <ButtonIcon name={busy === "resend" ? "spinner" : "resend"} />
+                    {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Working tools the frames do not show are kept in a secondary row */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <input ref={fileInput} type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
+              <div className="w-[230px]">
+                <CustomDropdown
+                  value={channel}
+                  onChange={(v) => setChannel(v as Channel)}
+                  ariaLabel="Delivery channel"
                     options={[
                       {
                         value: "EMAIL", label: "Email",
@@ -451,17 +563,8 @@ export default function InviteesManagementPage() {
                       },
                       { value: "BOTH", label: "All (Email + WhatsApp)" },
                     ]}
-                  />
-                </div>
+                />
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <input ref={fileInput} type="file" accept=".xlsx,.xls" className="sr-only" onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
-              <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className={`${btn} bg-[#FF651D] hover:bg-[#E5520F] text-white`}>
-                <ButtonIcon name="plus" />
-                Add Invitees
-              </button>
               <button type="button" onClick={() => downloadInviteeTemplate()} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
                 <ButtonIcon name="download" />
                 Download Excel Sample
@@ -470,32 +573,43 @@ export default function InviteesManagementPage() {
                 <ButtonIcon name="eye" />
                 Preview List
               </button>
-              <span className="flex-1" />
-              <button type="button" onClick={handleSend} disabled={busy !== null || notInvited.length === 0} className={`${btn} border border-[#FF651D] text-[#E5520F] hover:bg-orange-50`}>
-                <ButtonIcon name={busy === "send" ? "spinner" : "send"} />
-                {busy === "send" ? "Sending..." : selected.some((i) => i.invitationStatus === "PENDING") ? `Send Invitation (${selected.filter((i) => i.invitationStatus === "PENDING").length})` : `Send Invitation${notInvited.length ? ` (${notInvited.length})` : ""}`}
-              </button>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={busy !== null || resendTargets.length === 0}
-                title={lifecycleStarted ? (resendTargets.length ? undefined : "Select guests who were already invited") : "Available after invitations have been sent"}
-                className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}
-              >
-                <ButtonIcon name={busy === "resend" ? "spinner" : "resend"} />
-                {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
-              </button>
+              {(notInvited.length > 0 || !lifecycleStarted) && (
+                <button
+                  type="button"
+                  onClick={() => handleResend()}
+                  disabled={busy !== null || resendTargets.length === 0}
+                  title={lifecycleStarted ? (resendTargets.length ? undefined : "Select guests who were already invited") : "Available after invitations have been sent"}
+                  className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}
+                >
+                  <ButtonIcon name={busy === "resend" ? "spinner" : "resend"} />
+                  {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
+                </button>
+              )}
               <button type="button" onClick={() => setShowHistory(true)} disabled={visibleHistory.length === 0} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
                 <ButtonIcon name="history" />
                 History
               </button>
             </div>
 
-            <p className="text-sm text-[#4B4F52]">
+            {invitees.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#4B4F52]">
+                <label className="inline-flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all visible invitees"
+                    checked={allVisibleSelected}
+                    onChange={(e) => setSelectedIds(e.target.checked ? [...new Set([...selectedIds, ...visible.map((i) => i._id)])] : selectedIds.filter((id) => !visible.some((v) => v._id === id)))}
+                    className="size-4 accent-[#FF651D] cursor-pointer"
+                  />
+                  Select All
+                </label>
+                <span>
               {invitees.length} invitee{invitees.length === 1 ? "" : "s"}
               {lifecycleStarted && <> · {invitees.length - notInvited.length} invited · {notInvited.length} not yet invited</>}
               {selectedIds.length > 0 && <> · {selectedIds.length} selected</>}
-            </p>
+            </span>
+              </div>
+            )}
 
             {filterSession && selectedIds.length > 0 && ownListSessions.some((s) => s._id === filterSession._id) && (
               <button type="button" onClick={handleGrantAccess} disabled={busy !== null} className={`${btn} bg-[#262A2D] text-white hover:bg-black`}>
@@ -511,35 +625,30 @@ export default function InviteesManagementPage() {
                 <button type="button" onClick={() => setShowChooser(true)} className={`${btn} bg-[#FFF3EC] text-[#E5520F] hover:bg-[#FFE3D7]`}>Add Invitees</button>
               </div>
             ) : (
-              <div className="overflow-x-auto border border-[#E0E0E0] rounded-md">
-                <table className="w-full text-left text-sm min-w-[640px]">
+              <div className="overflow-x-auto">
+                {/* Figma 217:20587: one Status pill (delivery, or the guest's RSVP once given), Dietary, a ✓/✗ column per
+                    session and a "⋯" menu */}
+                <table className="w-full text-left text-sm font-medium min-w-[760px]">
                   <thead className="text-[#828282] border-b border-[#D3D3D3]">
                     <tr>
-                      <th className="py-3 px-3 w-10">
-                        <input
-                          type="checkbox"
-                          aria-label="Select all visible invitees"
-                          checked={allVisibleSelected}
-                          onChange={(e) => setSelectedIds(e.target.checked ? [...new Set([...selectedIds, ...visible.map((i) => i._id)])] : selectedIds.filter((id) => !visible.some((v) => v._id === id)))}
-                          className="size-4 accent-[#FF651D] cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-3 px-3 font-medium">Name</th>
-                      <th className="py-3 px-3 font-medium">Email</th>
-                      <th className="py-3 px-3 font-medium">Mobile Number</th>
-                      {showCompany && <th className="py-3 px-3 font-medium">Company Name</th>}
-                      {lifecycleStarted && <th className="py-3 px-3 font-medium">Delivery</th>}
-                      {lifecycleStarted && <th className="py-3 px-3 font-medium">RSVP</th>}
-                      {showDietary && <th className="py-3 px-3 font-medium">Dietary</th>}
-                      <th className="py-3 px-3 font-medium text-right">Action</th>
+                      <th className="h-[46px] px-2.5 w-10" aria-label="Selection" />
+                      <th className="h-[46px] px-2.5 font-medium">Name</th>
+                      <th className="h-[46px] px-2.5 font-medium">Email</th>
+                      <th className="h-[46px] px-2.5 font-medium">Phone Number</th>
+                      {showCompany && <th className="h-[46px] px-2.5 font-medium">Company Name</th>}
+                      <th className="h-[46px] px-2.5 font-medium">Status</th>
+                      {showDietary && <th className="h-[46px] px-2.5 font-medium">Dietary Preference</th>}
+                      {sessions.map((sess) => <th key={sess._id} className="h-[46px] px-2.5 font-medium whitespace-nowrap">{sess.name.replace(/\s+session$/i, "")}</th>)}
+                      <th className="h-[46px] px-2.5 font-medium text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#EEEEEE] text-[#4B4F52]">
+                  <tbody className="divide-y divide-[#D3D3D3] text-[#15191C] border-b border-[#D3D3D3]">
                     {visible.map((i) => {
                       const failure = historyByInvitee.get(i._id)?.failureReason;
+                      const sentRecord = historyByInvitee.get(i._id);
                       return (
                         <tr key={i._id} className="hover:bg-gray-50/70">
-                          <td className="py-3 px-3">
+                          <td className="py-3 px-2.5">
                             <input
                               type="checkbox"
                               aria-label={`Select ${i.name}`}
@@ -548,41 +657,42 @@ export default function InviteesManagementPage() {
                               className="size-4 accent-[#FF651D] cursor-pointer"
                             />
                           </td>
-                          <td className="py-3 px-3 text-gray-900 font-medium break-words max-w-[220px]">{i.name}</td>
-                          <td className="py-3 px-3 break-all max-w-[240px]">{i.email || "—"}</td>
-                          <td className="py-3 px-3 whitespace-nowrap">{formatPhoneNumber(i.mobile) || "—"}</td>
-                          {showCompany && <td className="py-3 px-3 break-words">{i.companyName || i.company || "—"}</td>}
-                          {lifecycleStarted && (
-                            <td className="py-3 px-3">
-                              {i.invitationStatus === "SENT" ? pill("bg-[#C0FFD5] text-[#1A9242]", "Sent") : i.invitationStatus === "FAILED" ? (
-                                <span className="flex flex-col gap-0.5">{pill("bg-rose-100 text-rose-700", "Failed")}{failure && <span className="text-xs text-rose-600 break-words max-w-[200px]">{failure}</span>}</span>
-                              ) : pill("bg-gray-100 text-gray-700", "Not sent")}
+                          <td className="py-3 px-2.5 break-words max-w-[200px]">{i.name}</td>
+                          <td className="py-3 px-2.5 break-all max-w-[240px]">{i.email || "—"}</td>
+                          <td className="py-3 px-2.5 whitespace-nowrap">{formatPhoneNumber(i.mobile) || "—"}</td>
+                          {showCompany && <td className="py-3 px-2.5 break-words">{i.companyName || i.company || "—"}</td>}
+                          <td className="py-3 px-2.5">
+                            <span className="flex flex-col gap-0.5 items-start">
+                              <InviteeStatusPill invitationStatus={i.invitationStatus} rsvpStatus={i.rsvpStatus} />
+                              {i.invitationStatus === "FAILED" && failure && <span className="text-xs text-rose-600 break-words max-w-[200px]">{failure}</span>}
+                            </span>
+                          </td>
+                          {showDietary && (
+                            <td className="py-3 px-2.5 text-center">
+                              {i.dietaryPreference ? <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-[#D3D3D3] rounded-full text-xs"><span className="size-1 rounded-full bg-[#15191C]" />{i.dietaryPreference}</span> : "--"}
                             </td>
                           )}
-                          {lifecycleStarted && (
-                            <td className="py-3 px-3">
-                              {i.rsvpStatus === "ACCEPTED" ? pill("bg-[#C0FFD5] text-[#1A9242]", "Accepted") : i.rsvpStatus === "DECLINED" ? pill("bg-rose-100 text-rose-700", "Declined") : "—"}
+                          {sessions.map((sess) => (
+                            <td key={sess._id} className="py-3 px-2.5">
+                              {allowedIn(i, sess)
+                                ? <span role="img" aria-label={`Has access to ${sess.name}`} className="text-[#1A9242] font-bold">✓</span>
+                                : <span role="img" aria-label={`No access to ${sess.name}`} className="text-[#FF651D] font-bold">✕</span>}
                             </td>
-                          )}
-                          {showDietary && <td className="py-3 px-3">{i.dietaryPreference || "—"}</td>}
-                          <td className="py-3 px-3">
-                            <div className="flex items-center justify-end gap-1">
-                              <button type="button" onClick={() => setCardFor(i)} aria-label={`Preview card for ${i.name}`} title="Preview card" className="p-1.5 rounded text-[#E5520F] hover:bg-orange-50 cursor-pointer">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                              </button>
-                              <button type="button" onClick={() => setEditing({ id: i._id, name: i.name, email: i.email || "", phone: i.mobile || "" })} aria-label={`Edit ${i.name}`} title="Edit" className="p-1.5 rounded text-gray-600 hover:bg-gray-100 cursor-pointer">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                              </button>
-                              <button type="button" onClick={() => setDeletingId(i._id)} aria-label={`Remove ${i.name}`} title="Remove" className="p-1.5 rounded text-rose-600 hover:bg-rose-50 cursor-pointer">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                              </button>
-                            </div>
+                          ))}
+                          <td className="py-3 px-2.5 text-right">
+                            <InviteeRowMenu
+                              name={i.name}
+                              onPreview={() => setCardFor(i)}
+                              onEdit={() => setEditing({ id: i._id, name: i.name, email: i.email || "", phone: i.mobile || "" })}
+                              onResend={sentRecord?._id && i.invitationStatus !== "PENDING" ? () => handleResend([sentRecord]) : undefined}
+                              onRemove={() => setDeletingId(i._id)}
+                            />
                           </td>
                         </tr>
                       );
                     })}
                     {visible.length === 0 && (
-                      <tr><td colSpan={9} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
+                      <tr><td colSpan={8 + sessions.length} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -619,6 +729,14 @@ export default function InviteesManagementPage() {
           rows={invitees.map((i, idx) => ({ id: String(idx + 1), name: i.name, email: i.email || "", phone: i.mobile || "", company: i.companyName || i.company || "" }))}
           showCompany={showCompany}
           onClose={() => setShowListPreview(false)}
+        />
+      )}
+      {confirmFirstSend && (
+        <SendWarningModal
+          eventId={eventId}
+          eventTitle={event?.title || "this event"}
+          onCancel={() => setConfirmFirstSend(false)}
+          onConfirm={() => { setConfirmFirstSend(false); handleSend(); }}
         />
       )}
       {cardFor && <CardPreviewModal eventId={eventId} inviteeId={cardFor._id} inviteeName={cardFor.name} onClose={() => setCardFor(null)} />}

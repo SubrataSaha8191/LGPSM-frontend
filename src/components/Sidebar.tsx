@@ -11,10 +11,20 @@ import { NavEntry, WebRole, navForRole } from "./sidebar/navConfig";
 import NavIcon from "./sidebar/NavIcon";
 
 
-function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeItem: string; onNavigate: () => void }) {
+// Figma differs per role: the Super Admin sidebar (423:13942) has flush items, 40px sub-rows and an
+// orange group label when a child is active, and its sub-menu is a separate block 22px below the
+// group row; the Organiser sidebar (217:22528) pads items 16px, uses 60px sub-rows directly under the
+// group row and keeps the group label grey. Both space items 22px apart; chevrons always point down.
+const ROLE_STYLE: Record<WebRole, { itemPad: string; childRow: string; childList: string; highlightGroup: boolean }> = {
+  ADMIN: { itemPad: "", childRow: "h-10", childList: "mt-[22px]", highlightGroup: true },
+  ORGANIZER: { itemPad: "px-4", childRow: "h-[60px]", childList: "", highlightGroup: false },
+};
+
+function NavGroup({ entry, role, activeItem, onNavigate }: { entry: NavEntry; role: WebRole; activeItem: string; onNavigate: () => void }) {
   const children = entry.children || [];
   const groupActive = children.some((c) => c.key === activeItem);
   const [open, setOpen] = useState(groupActive);
+  const style = ROLE_STYLE[role];
 
   const prevGroupActiveRef = useRef(groupActive);
   useEffect(() => {
@@ -24,56 +34,22 @@ function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeIt
     prevGroupActiveRef.current = groupActive;
   }, [groupActive]);
 
-  const expanded = Boolean(entry.alwaysExpanded || open);
-
-  // "Configurations" (Admin Figma) renders as a static, permanently-open section label — no
-  // chevron, no collapse control — since every reviewed Figma screen shows it pre-expanded.
-  if (entry.alwaysExpanded) {
-    return (
-      <div>
-        <div className="w-full flex items-center gap-2 py-2 text-base font-medium text-[#DEE2E5]">
-          <NavIcon name={entry.icon} />
-          <span className="flex-1 text-left">{entry.label}</span>
-        </div>
-        <ul className="pl-6">
-          {children.map((c) => {
-            const active = c.key === activeItem;
-            return (
-              <li key={c.key}>
-                <Link
-                  href={c.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center h-10 pl-2.5 border-l-[1.5px] text-sm font-medium transition-colors ${
-                    active ? "border-[#FF651D] text-[#FF651D]" : "border-[#3A4045] text-white hover:text-[#FFB08A]"
-                  }`}
-                >
-                  {c.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
-
   return (
     <div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-expanded={expanded}
-        className={`w-full flex items-center gap-2 py-2 text-base font-medium cursor-pointer transition-colors ${
-          groupActive ? "text-[#FF651D]" : "text-[#DEE2E5] hover:text-white"
+        aria-expanded={open}
+        className={`w-full flex items-center gap-2 py-2 ${style.itemPad} text-base font-medium cursor-pointer transition-colors ${
+          groupActive && style.highlightGroup ? "text-[#FF651D]" : "text-[#DEE2E5] hover:text-white"
         }`}
       >
         <NavIcon name={entry.icon} />
         <span className="flex-1 text-left">{entry.label}</span>
-        <NavIcon name="chevron" className={`size-6 transition-transform ${expanded ? "" : "-rotate-90"}`} />
+        <NavIcon name="chevron" />
       </button>
-      {expanded && (
-        <ul className="pl-6">
+      {open && (
+        <ul className={`px-6 ${style.childList}`}>
           {children.map((c) => {
             const active = c.key === activeItem;
             return (
@@ -82,8 +58,8 @@ function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeIt
                   href={c.href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center h-10 pl-2.5 border-l-[1.5px] text-sm font-medium transition-colors ${
-                    active ? "border-[#FF651D] text-[#FF651D]" : "border-[#3A4045] text-white hover:text-[#FFB08A]"
+                  className={`flex items-center ${style.childRow} pl-2.5 border-l-[1.5px] text-sm font-medium transition-colors ${
+                    active ? "border-[#FF651D] text-[#FF651D]" : "border-[#2C3135] text-white hover:text-[#FFB08A]"
                   }`}
                 >
                   {c.label}
@@ -98,18 +74,19 @@ function NavGroup({ entry, activeItem, onNavigate }: { entry: NavEntry; activeIt
 }
 
 function NavList({ role, activeItem, onNavigate }: { role: WebRole; activeItem: string; onNavigate: () => void }) {
+  const { itemPad } = ROLE_STYLE[role];
   return (
-    <nav aria-label="Main" className="flex flex-col gap-1.5">
+    <nav aria-label="Main" className="flex flex-col gap-[22px]">
       {navForRole(role).map((entry) =>
         entry.children ? (
-          <NavGroup key={entry.key} entry={entry} activeItem={activeItem} onNavigate={onNavigate} />
+          <NavGroup key={entry.key} entry={entry} role={role} activeItem={activeItem} onNavigate={onNavigate} />
         ) : (
           <Link
             key={entry.key}
             href={entry.href!}
             onClick={onNavigate}
             aria-current={activeItem === entry.key ? "page" : undefined}
-            className={`flex items-center gap-2 py-2 text-base font-medium transition-colors ${
+            className={`flex items-center gap-2 py-2 ${itemPad} text-base font-medium transition-colors ${
               activeItem === entry.key ? "text-[#FF651D]" : "text-[#DEE2E5] hover:text-white"
             }`}
           >
@@ -137,13 +114,12 @@ function AddEventButton({ active, onNavigate }: { active: boolean; onNavigate: (
   );
 }
 
+// Figma logo slot: 202 x 34, left-aligned (same artwork as the auth pages' SVG)
 function Logo() {
   return (
-    <div className="flex items-center justify-center">
-      <Link href="/dashboard" className="inline-block">
-        <Image src="/images/navbar/Nav_logo.webp" alt="LGPSM" width={202} height={67} priority className="h-[38px] w-auto object-contain" />
-      </Link>
-    </div>
+    <Link href="/dashboard" className="inline-block shrink-0">
+      <Image src="/images/branding/lgpsm-logo.svg" alt="LGPSM" width={202} height={34} priority className="h-[34px] w-[202px] max-w-full object-contain object-left" />
+    </Link>
   );
 }
 
@@ -156,7 +132,7 @@ export default function Sidebar() {
   const close = () => setIsMobileOpen(false);
 
   const navigation = (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[22px]">
       <AddEventButton active={activeItem === "add-event"} onNavigate={close} />
       <NavList role={role} activeItem={activeItem} onNavigate={close} />
     </div>

@@ -19,7 +19,6 @@ export interface NavEntry {
   children?: NavLeaf[];
   // "Configurations" renders permanently expanded with no collapse control, per the
   // Admin Figma flow-wise prototype — every screen in it shows the group pre-opened.
-  alwaysExpanded?: boolean;
 }
 
 const BOTH: WebRole[] = ["ADMIN", "ORGANIZER"];
@@ -43,15 +42,14 @@ export const NAV_ENTRIES: NavEntry[] = [
     ],
   },
   { key: "templates", label: "Templates", icon: "templates", href: "/templates", roles: ["ADMIN"] },
-  // ORGANIZER shell — Admin Figma flow-wise prototype: "Configurations" is a permanently-expanded
-  // section containing exactly Event Management / Invitees Management / Templates. Reuses the
-  // existing event/invitee/template routes untouched; only the nav grouping is new.
+  // ORGANIZER shell — Organiser Figma: "Configurations" is a collapsible group (chevron; collapsed on
+  // pages outside it, e.g. Notification 222:34577) containing exactly Event Management / Invitees
+  // Management / Templates. Reuses the existing event/invitee/template routes untouched.
   {
     key: "configurations",
     label: "Configurations",
-    icon: "event",
+    icon: "settings",
     roles: ["ORGANIZER"],
-    alwaysExpanded: true,
     children: [
       { key: "event-management", label: "Event Management", href: "/events", roles: ["ORGANIZER"] },
       { key: "invitees-management", label: "Invitees Management", href: "/events/select/invitees?from=sidebar", roles: ["ORGANIZER"] },
@@ -73,7 +71,7 @@ export const NAV_ENTRIES: NavEntry[] = [
     ],
   },
   { key: "earnings", label: "Earnings", icon: "wallet", href: "/earnings", roles: ["ADMIN"] },
-  { key: "billing", label: "Billing", icon: "wallet", href: "/billing", roles: ["ORGANIZER"] },
+  { key: "billing", label: "Billing", icon: "list-alt", href: "/billing", roles: ["ORGANIZER"] },
   { key: "reports", label: "Reports", icon: "chart", href: "/reports", roles: BOTH },
   // ADMIN shell — Super Admin Figma: Settings stays an expandable group.
   {
@@ -93,7 +91,7 @@ export const NAV_ENTRIES: NavEntry[] = [
   // settings page that actually exists; the previous "Business Info" entry pointed at
   // /settings/business, which has no route or component in the codebase — not carried over
   // here (see chat report: flagged as a pending product requirement, not invented).
-  { key: "settings", label: "Settings", icon: "settings", href: "/settings/account", roles: ["ORGANIZER"] },
+  { key: "settings", label: "Settings", icon: "settings-alert", href: "/settings/account", roles: ["ORGANIZER"] },
 ];
 
 export function navForRole(role: WebRole): NavEntry[] {

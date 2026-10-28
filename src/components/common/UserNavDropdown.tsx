@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { flagExplicitLogout, loginRedirectPath } from "@/components/auth/authPortal";
 import { useAuth } from "@/context/AuthContext";
@@ -49,13 +50,12 @@ export default function UserNavDropdown() {
             aria-label="Account menu"
             className="flex items-center gap-2 cursor-pointer select-none focus:outline-none"
           >
-            <div className="w-8 h-8 rounded-full bg-gray-400 text-white flex items-center justify-center font-semibold text-xs overflow-hidden shrink-0">
+            {/* Figma header (222:34645): 32px #D9D9D9 avatar with a 17px glyph, 16px medium name, 24px chevron */}
+            <div className="w-8 h-8 rounded-full bg-[#D9D9D9] flex items-center justify-center overflow-hidden shrink-0">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
               ) : (
-                <svg className="w-4 h-4 text-white fill-current" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
+                <Image src="/images/header/avatar-user.svg" alt="" width={17} height={17} />
               )}
             </div>
 
@@ -63,14 +63,13 @@ export default function UserNavDropdown() {
               {displayName}
             </span>
 
-            <svg
-              className={`w-3.5 h-3.5 text-gray-500 transform transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <Image
+              src="/images/header/chevron-down.svg"
+              alt=""
+              width={24}
+              height={24}
+              className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            />
           </button>
 
           {/* Dropdown Menu */}

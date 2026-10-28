@@ -10,11 +10,13 @@ interface EventCardPreviewProps {
   refreshKey?: string;
   /** Shown in the image's alt text */
   label: string;
+  /** Height of the preview box; the card is fitted inside it */
+  heightClassName?: string;
 }
 
 // The event's own invitation card, rendered by the server exactly as guests receive it (its template, or the design that
 // suits its type), so the event pages never show a stand-in picture.
-export default function EventCardPreview({ eventId, refreshKey, label }: EventCardPreviewProps) {
+export default function EventCardPreview({ eventId, refreshKey, label, heightClassName = "h-52 sm:h-60" }: EventCardPreviewProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -48,7 +50,7 @@ export default function EventCardPreview({ eventId, refreshKey, label }: EventCa
   );
 
   return (
-    <div className="relative w-full h-52 sm:h-60 bg-[#F4F5F8]">
+    <div className={`relative w-full ${heightClassName} bg-[#F4F5F8]`}>
       {url ? (
         <InvitationCardImage src={url} alt={`${label} invitation card`} />
       ) : failed ? (

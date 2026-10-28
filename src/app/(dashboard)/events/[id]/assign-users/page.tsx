@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -230,19 +231,22 @@ export default function EventAssignUsersPage() {
   });
 
   const isAllSelected = selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0;
+  // Figma 217:19768 shows only the empty state (no select-all row or table headers) when nobody is assigned yet
+  const showEmptyAssigned = !isLoading && users.length > 0 && filteredUsers.length === 0 && !showAllSystemUsers && !searchQuery.trim();
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
-      <PageHeader title="Event" icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
+      <PageHeader title={user?.role === "ORGANIZER" ? "Event Management" : "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
 
       {/* Page Content */}
-      <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 relative pb-24 bg-white">
+      <div className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-6 relative bg-white">
         {/* Sub-Navigation Tabs Bar */}
         <EventSubNav
           eventId={eventId}
           activeTab="assign-users"
-          assignmentsCount={users.filter(u => u.assignments.length > 0).length}
-          sessionsCount={sessions.length}
+          // Users assigned to this event (not to any event), once the list has loaded
+          assignmentsCount={isLoading ? undefined : users.filter((u) => u.assignments.some((a) => a.eventId === eventId)).length}
+          sessionsCount={isLoading ? undefined : sessions.length}
         />
 
         {/* Error Notification Banner */}
@@ -258,60 +262,44 @@ export default function EventAssignUsersPage() {
           </div>
         )}
 
-        {/* Controls Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-6 flex-1 max-w-xl">
-            <div className="min-w-0 shrink-0">
-              <h2 className="text-xl font-bold text-gray-900">System Users</h2>
-              {eventTitle && <p className="text-xs text-gray-500 mt-0.5">Assigned to {eventTitle}</p>}
-            </div>
-
-            <div className="relative flex-1">
-              <svg
-                className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+        {/* Controls (Figma 217:19779): "System Users" + search, assigned/all filter, Add User. Assigning starts from
+            the selected rows (bottom "Assign N users"), so the separate top "Assign Users" button is gone (organiser feedback). */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          <div className="flex flex-1 items-center gap-2.5 min-w-0">
+            <label htmlFor="system-user-search" className="text-[17px] font-medium text-black shrink-0">System Users</label>
+            <div className="relative flex-1 min-w-0">
+              <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
               <input
-                type="text"
-                placeholder="Search..."
+                id="system-user-search"
+                type="search"
+                placeholder="Search system user"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22]"
+                className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
               />
             </div>
-            <button type="button" onClick={() => { setShowAllSystemUsers((show) => !show); setSelectedUserIds([]); }} className="shrink-0 text-xs font-medium text-[#E5520F] hover:underline cursor-pointer">
-              {showAllSystemUsers ? "Show assigned only" : "Show all system users"}
-            </button>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0 w-fit self-start">
-            <Link href="/user-management/add" className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#FF5B22] text-[#FF5B22] hover:bg-[#FF5B22]/5 text-xs font-semibold rounded-md transition-colors">
-              <span aria-hidden>＋</span><span>Add User</span>
+          <div className="flex items-center shrink-0 w-fit">
+            <div className="relative h-[47px] flex items-center">
+              <select
+                aria-label="Which system users to show"
+                value={showAllSystemUsers ? "all" : "assigned"}
+                onChange={(e) => { setShowAllSystemUsers(e.target.value === "all"); setSelectedUserIds([]); }}
+                className="h-full appearance-none bg-transparent pl-4 pr-9 text-xs font-medium text-[#7F7F7F] focus:outline-none cursor-pointer"
+              >
+                <option value="assigned">Assigned to this event</option>
+                <option value="all">All</option>
+              </select>
+              <Image src="/icons/events/caret-down.svg" alt="" width={12} height={7} className="pointer-events-none absolute right-4" />
+            </div>
+            <Link href="/user-management/add" className="inline-flex items-center px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
+              Add User
             </Link>
-            <button
-              type="button"
-              onClick={openAssignModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Assign Users</span>
-            </button>
           </div>
         </div>
 
         {/* Select All Row */}
-        <div className="flex items-center gap-2.5 text-xs text-gray-700 font-medium pt-2 pb-2">
+        <div className={`${showEmptyAssigned ? "hidden" : "flex"} items-center gap-2.5 text-sm text-[#4B4F52] font-medium pt-2 pb-2`}>
           <input
             type="checkbox"
             id="selectAll"
@@ -319,16 +307,16 @@ export default function EventAssignUsersPage() {
             onChange={handleSelectAll}
             className="rounded border-gray-300 text-[#FF5B22] focus:ring-[#FF5B22] cursor-pointer"
           />
-          <label htmlFor="selectAll" className="cursor-pointer font-semibold text-gray-600">
+          <label htmlFor="selectAll" className="cursor-pointer">
             Select All ({selectedUserIds.length} selected)
           </label>
         </div>
 
         {/* Users Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500 font-medium text-[11px]">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className={showEmptyAssigned ? "hidden" : undefined}>
+              <tr className="border-b border-[#D3D3D3] text-[#828282] font-medium text-sm">
                 <th className="py-3 px-4 w-10"></th>
                 <th className="py-3 px-4 font-medium">User Name</th>
                 <th className="py-3 px-4 font-medium">Assigned Event Sessions</th>
@@ -353,7 +341,14 @@ export default function EventAssignUsersPage() {
                     {users.length === 0 ? (
                       <span>No SYSTEM_USER accounts found. <Link href="/user-management/add" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
                     ) : !showAllSystemUsers && !searchQuery.trim() ? (
-                      <span>No system users are assigned to this event yet. <button type="button" onClick={() => setShowAllSystemUsers(true)} className="font-semibold text-[#E5520F] underline cursor-pointer">Show all system users</button> to assign one.</span>
+                      // Figma 217:19798 empty state; "Assign User" lists every system user to pick from
+                      <div className="flex flex-col items-center gap-[26px] py-16 max-w-[344px] mx-auto whitespace-normal">
+                        <Image src="/icons/events/users-empty.svg" alt="" width={80} height={67} />
+                        <p className="text-lg font-medium text-black/50">No system users assigned yet. Assign system users to your event now.</p>
+                        <button type="button" onClick={() => setShowAllSystemUsers(true)} className="px-6 py-[11px] bg-[#F3F3F3] hover:bg-[#EAEAEA] rounded-lg text-base font-semibold text-[#FF651D] cursor-pointer">
+                          Assign User
+                        </button>
+                      </div>
                     ) : (
                       "No system users match your search."
                     )}

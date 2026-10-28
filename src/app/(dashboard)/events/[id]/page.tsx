@@ -125,6 +125,8 @@ export default function EventDetailsPage() {
   const params = useParams();
   const eventId = (params?.id as string) || "";
   const { user } = useAuth();
+  // Organiser frames title this section "Event Management" (217:26901); the Super Admin frames say "Event"
+  const pageTitle = user?.role === "ORGANIZER" ? "Event Management" : "Event";
   const { cacheEventTitle } = usePageTitleContext();
 
   const [loading, setLoading] = useState(true);
@@ -192,7 +194,7 @@ export default function EventDetailsPage() {
   if (loading) {
     return (
       <div className="w-full min-h-full bg-white">
-        <PageHeader title="Event" icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
+        <PageHeader title={pageTitle} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
         <p className="py-24 text-center text-sm text-[#828282]">Loading event...</p>
       </div>
     );
@@ -201,7 +203,7 @@ export default function EventDetailsPage() {
   if (!event) {
     return (
       <div className="w-full min-h-full bg-white">
-        <PageHeader title="Event" icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
+        <PageHeader title={pageTitle} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
         <div role="alert" className="max-w-md mx-auto mt-16 border border-[#E0E0E0] rounded-lg p-8 text-center space-y-4">
           <h2 className="text-lg font-medium text-gray-900">Event unavailable</h2>
           <p className="text-sm text-[#4B4F52] break-words">{loadError}</p>
@@ -238,7 +240,7 @@ export default function EventDetailsPage() {
 
   return (
     <div className="w-full min-h-full bg-white">
-      <PageHeader title="Event" icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
+      <PageHeader title={pageTitle} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-[1240px] w-full mx-auto space-y-6 pb-24">
         {notice && (
           <div role="status" className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800 flex justify-between gap-3">
@@ -286,7 +288,9 @@ export default function EventDetailsPage() {
 
         <EventSubNav eventId={eventId} activeTab="overview" sessionsCount={sessions.length} inviteesCount={totalInvitees} assignmentsCount={assignmentsCount} />
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_290px] gap-5 items-start">
+        {/* Card Preview stretches to the widgets' height and crops the card (organiser feedback: align with the widgets;
+            the enlarge icon opens the full card) */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_290px] gap-5 items-start xl:items-stretch">
           <div className="space-y-5 min-w-0">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <MetricCard value={totalInvitees} label="Total Invitees" href={`/events/${eventId}/invitees`} tone="peach" icon={
@@ -349,7 +353,7 @@ export default function EventDetailsPage() {
             </div>
           </div>
 
-          <section className={`${card} p-4`} aria-labelledby="card-preview-heading">
+          <section className={`${card} p-4 flex flex-col`} aria-labelledby="card-preview-heading">
             <div className="flex items-center justify-between mb-3">
               <h3 id="card-preview-heading" className="text-base font-medium text-gray-900">Card Preview</h3>
               <button type="button" onClick={() => setCardExpanded(true)} aria-label="Expand card preview" className="p-1 -m-1 text-gray-900 hover:text-[#FF651D] cursor-pointer">
@@ -358,8 +362,9 @@ export default function EventDetailsPage() {
                 </svg>
               </button>
             </div>
-            <div className="rounded-md overflow-hidden border border-[#EEEEEE]">
+            <div className="rounded-md overflow-hidden border border-[#EEEEEE] xl:flex-1 xl:min-h-0 xl:flex">
               <EventCardPreview
+                heightClassName="h-52 sm:h-60 xl:h-auto xl:flex-1 xl:min-h-[160px]"
                 eventId={eventId}
                 refreshKey={`${(event as { updatedAt?: string }).updatedAt || ""}|${typeof event.templateId === "object" ? event.templateId?.name || "" : String(event.templateId || "")}`}
                 label={event.title}
