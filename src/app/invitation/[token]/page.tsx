@@ -14,6 +14,7 @@ export default function PublicInvitationPage() {
   const [invitationData, setInvitationData] = useState<PublicInvitationData | null>(null);
 
   const eventTitle = invitationData?.event?.title;
+  const rsvpEnabled = invitationData?.event?.rsvp?.enabled !== false;
   usePageTitle(eventTitle ? `Invitation: ${eventTitle}` : "Event Invitation");
 
   const [selectedRsvp, setSelectedRsvp] = useState<"ACCEPTED" | "DECLINED">("ACCEPTED");
@@ -160,7 +161,10 @@ export default function PublicInvitationPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 font-medium mb-0.5">RSVP Status</p>
-              {invitee.rsvpStatus === "ACCEPTED" ? (
+              {!rsvpEnabled ? (
+                // RSVP not set up for this event: the same "--" placeholder used for an empty dietary preference
+                <span className="text-xs font-semibold text-slate-400" aria-label="RSVP not requested">--</span>
+              ) : invitee.rsvpStatus === "ACCEPTED" ? (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                   ACCEPTED
                 </span>
@@ -215,7 +219,8 @@ export default function PublicInvitationPage() {
 
           <hr className="border-slate-100" />
 
-          {/* RSVP Form */}
+          {/* RSVP Form — only when the organiser asked guests to respond (the API refuses answers otherwise) */}
+          {rsvpEnabled && (
           <form onSubmit={handleSubmitRsvp} className="space-y-4">
             <h3 className="text-sm font-bold text-slate-800">Respond to Invitation</h3>
 
@@ -290,6 +295,7 @@ export default function PublicInvitationPage() {
               )}
             </button>
           </form>
+          )}
         </div>
       </div>
     </div>

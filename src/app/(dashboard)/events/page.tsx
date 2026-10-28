@@ -10,7 +10,7 @@ import { sessionService } from "@/services/sessionService";
 import { useCategories } from "@/hooks/useCategories";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import { formatEventId } from "@/utils/formatId";
-import { formatCompactDateTime, formatDateTime } from "@/utils/dateTime";
+import { formatCompactDateTime } from "@/utils/dateTime";
 import PageHeader from "@/components/common/PageHeader";
 import EventCardThumbnail from "@/components/events/EventCardThumbnail";
 import { useAuth } from "@/context/AuthContext";
@@ -373,6 +373,77 @@ export default function EventListingPage() {
   };
   const drawerField = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-xs font-medium text-[#15191C] focus:outline-none focus:border-[#FF651D]";
 
+  // Filter drawer (Organiser 217:22772, Super Admin 422:12324): same panel, each role's own fields
+  const filterDrawer = filterOpen && (
+          <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
+            <div className="relative w-full max-w-[279px] bg-white h-full px-6 pt-[19.5px] pb-6 flex flex-col">
+              <div className="flex items-center justify-between">
+                <h2 id="filter-title" className="flex items-center gap-2 text-base font-medium text-[#15191C]">
+                  <Image src="/icons/events/filter-dark.svg" alt="" width={20} height={20} />
+                  Filter
+                </h2>
+                <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="cursor-pointer">
+                  <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto pt-8 flex flex-col gap-[13px]">
+                <div className="flex flex-col gap-2">
+                  {isOrganizer ? (
+                    <FilterSelect value={draftFilters.eventId} onChange={(v) => setDraftFilters((f) => ({ ...f, eventId: v }))} options={[{ value: "", label: "Select Event" }, ...rows.map((r) => ({ value: r.id, label: r.name }))]} ariaLabel="Select Event" compact />
+                  ) : (
+                    <>
+                      <input aria-label="Event Name" type="text" value={draftFilters.name} onChange={(e) => setDraftFilters((f) => ({ ...f, name: e.target.value }))} placeholder="Event Name" className={`${drawerField} placeholder:text-[#7F7F7F]`} />
+                      <input aria-label="Event Organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Event Organizer" className={`${drawerField} placeholder:text-[#7F7F7F]`} />
+                    </>
+                  )}
+                  <FilterSelect value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: isOrganizer ? "Event Type" : "Event Category" }, ...categories.categoryOptions]} ariaLabel={isOrganizer ? "Event Type" : "Event Category"} compact />
+                  {!isOrganizer && (
+                    <FilterSelect value={draftFilters.sessions} onChange={(v) => setDraftFilters((f) => ({ ...f, sessions: v }))} options={[{ value: "", label: "No. of Sessions" }, { value: "0", label: "0 sessions" }, { value: "1", label: "1 session" }, { value: "2-5", label: "2–5 sessions" }, { value: "6+", label: "6+ sessions" }]} ariaLabel="No. of Sessions" compact />
+                  )}
+                  <FilterSelect
+                    value={draftFilters.status}
+                    onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
+                    options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((st) => ({ value: st, label: st }))]}
+                    ariaLabel="Event Status"
+                    compact
+                  />
+                </div>
+                <fieldset className="flex flex-col gap-[13px]">
+                  <legend className="text-base font-medium text-[#15191C] mb-[13px]">Date range</legend>
+                  <div className="flex flex-col gap-2">
+                    {/* Shows the Figma "From" / "To" placeholder until focused, then the native date picker */}
+                    {(["from", "to"] as const).map((key) => (
+                      <div key={key} className="relative">
+                      <input
+                        type={draftFilters[key] ? "date" : "text"}
+                        onFocus={(e) => { e.currentTarget.type = "date"; }}
+                        onBlur={(e) => { if (!e.currentTarget.value) e.currentTarget.type = "text"; }}
+                        placeholder={key === "from" ? "From" : "To"}
+                        value={draftFilters[key]}
+                        onChange={(e) => setDraftFilters((f) => ({ ...f, [key]: e.target.value }))}
+                        aria-label={key === "from" ? "From" : "To"}
+                        className={`${drawerField} placeholder:text-[#7F7F7F]`}
+                      />
+                      {!draftFilters[key] && <Image src="/icons/events/calendar.svg" alt="" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+                {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={clearFilters} className="flex-1 py-1.5 px-6 bg-white border border-[#DDD] rounded text-[13px] font-semibold text-black hover:bg-gray-50 cursor-pointer">
+                  Cancel
+                </button>
+                <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-1.5 px-6 bg-[#FF651D] hover:bg-[#E5520F] rounded text-[13px] font-semibold text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">
+                  {applyingFilters ? "Loading…" : "Apply"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
   // Organiser shell (Figma 217:22527 list, 217:22656 filter): "Events" search row, filter + Add, a grid of event cards
   if (isOrganizer) {
     return (
@@ -439,65 +510,7 @@ export default function EventListingPage() {
 
         {deleteDialog}
 
-        {filterOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-title">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
-            <div className="relative w-full max-w-[279px] bg-white h-full px-6 pt-[19.5px] pb-6 flex flex-col">
-              <div className="flex items-center justify-between">
-                <h2 id="filter-title" className="flex items-center gap-2 text-base font-medium text-[#15191C]">
-                  <Image src="/icons/events/filter-dark.svg" alt="" width={20} height={20} />
-                  Filter
-                </h2>
-                <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="cursor-pointer">
-                  <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto pt-8 flex flex-col gap-[13px]">
-                <div className="flex flex-col gap-2">
-                  <FilterSelect value={draftFilters.eventId} onChange={(v) => setDraftFilters((f) => ({ ...f, eventId: v }))} options={[{ value: "", label: "Select Event" }, ...rows.map((r) => ({ value: r.id, label: r.name }))]} ariaLabel="Select Event" compact />
-                  <FilterSelect value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Type" }, ...categories.categoryOptions]} ariaLabel="Event Type" compact />
-                  <FilterSelect
-                    value={draftFilters.status}
-                    onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
-                    options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((st) => ({ value: st, label: st }))]}
-                    ariaLabel="Event Status"
-                    compact
-                  />
-                </div>
-                <fieldset className="flex flex-col gap-[13px]">
-                  <legend className="text-base font-medium text-[#15191C] mb-[13px]">Date range</legend>
-                  <div className="flex flex-col gap-2">
-                    {/* Shows the Figma "From" / "To" placeholder until focused, then the native date picker */}
-                    {(["from", "to"] as const).map((key) => (
-                      <div key={key} className="relative">
-                      <input
-                        type={draftFilters[key] ? "date" : "text"}
-                        onFocus={(e) => { e.currentTarget.type = "date"; }}
-                        onBlur={(e) => { if (!e.currentTarget.value) e.currentTarget.type = "text"; }}
-                        placeholder={key === "from" ? "From" : "To"}
-                        value={draftFilters[key]}
-                        onChange={(e) => setDraftFilters((f) => ({ ...f, [key]: e.target.value }))}
-                        aria-label={key === "from" ? "From" : "To"}
-                        className={`${drawerField} placeholder:text-[#7F7F7F]`}
-                      />
-                      {!draftFilters[key] && <Image src="/icons/events/calendar.svg" alt="" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
-                      </div>
-                    ))}
-                  </div>
-                </fieldset>
-                {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={clearFilters} className="flex-1 py-1.5 px-6 bg-white border border-[#DDD] rounded text-[13px] font-semibold text-black hover:bg-gray-50 cursor-pointer">
-                  Cancel
-                </button>
-                <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-1.5 px-6 bg-[#FF651D] hover:bg-[#E5520F] rounded text-[13px] font-semibold text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">
-                  {applyingFilters ? "Loading…" : "Apply"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {filterDrawer}
       </div>
     );
   }
@@ -572,12 +585,12 @@ export default function EventListingPage() {
                 visible.map((r) => (
                   <tr key={r.id} onClick={() => router.push(`/events/${r.id}`)} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/events/${r.id}`); }} tabIndex={0} role="link" aria-label={`Open ${r.name}`} className="border-b border-[#D3D3D3] hover:bg-gray-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF651D] cursor-pointer">
                     <td className="h-[46px] px-2.5 font-medium whitespace-nowrap"><Link href={`/events/${r.id}`} className="hover:text-[#FF651D]">{r.displayId}</Link></td>
-                    <td className="px-2.5 max-w-[220px]"><Link href={`/events/${r.id}`} className="text-gray-900 hover:text-[#FF651D] line-clamp-2 break-words">{r.name}</Link></td>
+                    <td className="px-2.5 max-w-[240px]"><Link href={`/events/${r.id}`} title={r.name} className="block text-gray-900 hover:text-[#FF651D] truncate">{r.name}</Link></td>
                     <td className="px-2.5 max-w-[180px] truncate" title={r.organizer}>{r.organizer}</td>
                     <td className="px-2.5 whitespace-nowrap">{formatCompactDateTime(r.createdAt, "—")}</td>
                     <td className="px-2.5 whitespace-nowrap">{r.category}</td>
-                    <td className="px-2.5 whitespace-nowrap">{formatDateTime(r.start, "—")}</td>
-                    <td className="px-2.5 whitespace-nowrap">{formatDateTime(r.end, "—")}</td>
+                    <td className="px-2.5 whitespace-nowrap">{formatCompactDateTime(r.start, "—")}</td>
+                    <td className="px-2.5 whitespace-nowrap">{formatCompactDateTime(r.end, "—")}</td>
                     <td className="px-2.5"><span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLE[r.status]}`}>{r.status}</span></td>
                     <td className="px-2.5 text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}><RowActions row={r} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} /></td>
                   </tr>
@@ -590,45 +603,7 @@ export default function EventListingPage() {
 
       {deleteDialog}
 
-      {filterOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filter-title">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
-          <div className="relative w-full max-w-sm bg-white h-full shadow-2xl p-6 flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E5]">
-              <h2 id="filter-title" className="text-base font-medium text-gray-900">Filter</h2>
-              <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-4 pt-5">
-              <input aria-label="Event Name" type="text" value={draftFilters.name} onChange={(e) => setDraftFilters((f) => ({ ...f, name: e.target.value }))} placeholder="Event Name" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
-              <input aria-label="Event Organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Event Organizer" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm focus:outline-none focus:border-[#FF651D]" />
-              <FilterSelect value={draftFilters.category} onChange={(v) => setDraftFilters((f) => ({ ...f, category: v }))} options={[{ value: "", label: "Event Category" }, ...categories.categoryOptions]} ariaLabel="Event Category" />
-              <FilterSelect value={draftFilters.sessions} onChange={(v) => setDraftFilters((f) => ({ ...f, sessions: v }))} options={[{ value: "", label: "No. of Sessions" }, { value: "0", label: "0 sessions" }, { value: "1", label: "1 session" }, { value: "2-5", label: "2–5 sessions" }, { value: "6+", label: "6+ sessions" }]} ariaLabel="No. of Sessions" />
-              <FilterSelect
-                value={draftFilters.status}
-                onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
-                options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((s) => ({ value: s, label: s }))]}
-                ariaLabel="Event Status"
-              />
-              <fieldset>
-                <legend className="text-sm font-medium text-gray-900 mb-2">Date range</legend>
-                <div className="space-y-2">
-                  <input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value }))} aria-label="From" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D]" />
-                  <input type="date" value={draftFilters.to} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} aria-label="To" className="w-full h-[47px] px-3.5 bg-white border border-[#E0E0E0] rounded-md text-sm text-gray-700 focus:outline-none focus:border-[#FF651D]" />
-                </div>
-              </fieldset>
-              {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-[#E5E5E5]">
-              <button type="button" onClick={() => { const empty = { eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" }; setDraftFilters(empty); setFilters(empty); setFilterOpen(false); }} className="flex-1 py-2.5 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">
-                Clear
-              </button>
-              <button type="button" disabled={applyingFilters} onClick={applyFilters} className="flex-1 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] rounded-md text-sm font-medium text-white cursor-pointer disabled:opacity-60 disabled:cursor-wait">
-                {applyingFilters ? "Loading sessions…" : "Apply"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {filterDrawer}
     </div>
   );
 }

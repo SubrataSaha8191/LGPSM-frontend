@@ -195,7 +195,8 @@ export default function EventSessionsPage() {
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
-      <PageHeader title="Event Sessions" />
+      {/* Organiser frame 217:22014 says "Event Sessions"; the Super Admin frame 2114:5996 keeps "Event" */}
+      <PageHeader title={user?.role === "ADMIN" ? "Event" : "Event Sessions"} />
 
       {/* Page Content - Directly on page background without card container */}
       <div className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-8 bg-white">

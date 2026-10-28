@@ -48,6 +48,8 @@ export interface ImportExcelResult {
   removed?: number;
   rejected: number;
   duplicateCount: number;
+  /** Rows that matched an existing guest whose differing details were kept */
+  notices?: { row: number; message: string }[];
   errors?: { row: number; error: string }[];
 }
 

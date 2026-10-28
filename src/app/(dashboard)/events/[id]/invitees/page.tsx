@@ -26,6 +26,7 @@ import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { mergeInviteeImport } from "@/utils/mergeInviteeImport.mjs";
+import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
 
 interface Invitee {
   _id: string;
@@ -131,6 +132,7 @@ export default function InviteesManagementPage() {
   const eventId = sidebarFlow ? searchParams.get("event") || "" : routeId;
   const { showAlert, confirm } = useAlert();
   const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
   const [event, setEvent] = useState<{ title?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
@@ -199,6 +201,8 @@ export default function InviteesManagementPage() {
     load();
   }, [load]);
 
+  // Super Admin frame 2114:6535 shows RSVP as its own column; "--" when the event does not ask guests to respond
+  const rsvpEnabled = (event as { rsvp?: { enabled?: boolean } } | null)?.rsvp?.enabled !== false;
   const categoryName = event && typeof event.categoryId === "object" ? event.categoryId?.name || "" : "";
   const isCorporate = /corporate/i.test(categoryName);
   // The invitation lifecycle has started once any guest was sent (or attempted) an invitation
@@ -236,34 +240,7 @@ export default function InviteesManagementPage() {
     if (inviteePage > inviteePageCount) setInviteePage(inviteePageCount);
   }, [inviteePage, inviteePageCount]);
 
-  const summarize = (results: { status: string; failureReason?: string; emailStatus?: string; whatsappStatus?: string }[], verb: string): Feedback => {
-    const sent = results.filter((r) => r.status === "SENT").length;
-    const failed = results.filter((r) => r.status === "FAILED");
-    if (results.length === 0) return { type: "error", message: `Nothing was ${verb}.` };
-    if (channel === "BOTH") {
-      const channelCounts = (key: "emailStatus" | "whatsappStatus") => ({
-        sent: results.filter((r) => r[key] === "SENT").length,
-        failed: results.filter((r) => r[key] === "FAILED").length,
-      });
-      const email = channelCounts("emailStatus");
-      const whatsapp = channelCounts("whatsappStatus");
-      const skippedEmail = Math.max(0, results.length - email.sent - email.failed);
-      const skippedWhatsApp = Math.max(0, results.length - whatsapp.sent - whatsapp.failed);
-      const details = [
-        `Email: ${email.sent} sent, ${email.failed} failed, ${skippedEmail} skipped`,
-        `WhatsApp: ${whatsapp.sent} sent, ${whatsapp.failed} failed, ${skippedWhatsApp} skipped`,
-        ...[...new Set(failed.map((f) => f.failureReason).filter((reason): reason is string => !!reason))],
-      ];
-      return {
-        type: failed.length ? (sent ? "info" : "error") : "success",
-        message: `${sent} invitee(s) received at least one delivery; ${failed.length} received no successful delivery.`,
-        details,
-      };
-    }
-    if (failed.length === 0) return { type: "success", message: `${sent} invitation(s) ${verb}.` };
-    const reasons = [...new Set(failed.map((f) => f.failureReason || "Unknown error"))];
-    return { type: "error", message: `${sent} ${verb}, ${failed.length} failed.`, details: reasons };
-  };
+  const summarize = (results: DeliveryOutcome[], verb: string): Feedback => summarizeDelivery(results, verb, channel);
 
   const handleSend = async () => {
     if (sendInFlight.current) return;
@@ -392,7 +369,8 @@ export default function InviteesManagementPage() {
     setFeedback({
       type: d.rejected ? "error" : "success",
       message: `Invitee list imported: ${parts.join(", ")}.`,
-      details: (d.errors || []).slice(0, 8).map((e) => `Row ${e.row}: ${e.error}`),
+      // Row-level summary: rejected rows first, then rows whose existing guest details were kept
+      details: [...(d.errors || []).map((e) => `Row ${e.row}: ${e.error}`), ...(d.notices || []).map((n) => `Row ${n.row}: ${n.message}`)].slice(0, 10),
     });
     await load();
     notifyDbUpdate();
@@ -443,7 +421,7 @@ export default function InviteesManagementPage() {
 
   return (
     <div className="w-full min-h-full bg-white">
-      <PageHeader title={user?.role === "ORGANIZER" ? "Invitees Management" : sidebarFlow ? "Add Invitees" : event?.title || "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
+      <PageHeader title={user?.role === "ORGANIZER" ? "Invitees Management" : sidebarFlow ? "Add Invitees" : "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={invitees.length} />}
 
@@ -502,7 +480,8 @@ export default function InviteesManagementPage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {!sidebarFlow && eventsOptions.length > 0 && (
+                {/* The Super Admin frame (2114:6535) has no event picker on an event's own tab */}
+                {!sidebarFlow && !isAdmin && eventsOptions.length > 0 && (
                   <PlainSelect
                     ariaLabel="Event"
                     value={eventId}
@@ -637,6 +616,7 @@ export default function InviteesManagementPage() {
                       <th className="h-[46px] px-2.5 font-medium">Phone Number</th>
                       {showCompany && <th className="h-[46px] px-2.5 font-medium">Company Name</th>}
                       <th className="h-[46px] px-2.5 font-medium">Status</th>
+                      {isAdmin && <th className="h-[46px] px-2.5 font-medium whitespace-nowrap">RSVP Status</th>}
                       {showDietary && <th className="h-[46px] px-2.5 font-medium">Dietary Preference</th>}
                       {sessions.map((sess) => <th key={sess._id} className="h-[46px] px-2.5 font-medium whitespace-nowrap">{sess.name.replace(/\s+session$/i, "")}</th>)}
                       <th className="h-[46px] px-2.5 font-medium text-right">Action</th>
@@ -663,10 +643,19 @@ export default function InviteesManagementPage() {
                           {showCompany && <td className="py-3 px-2.5 break-words">{i.companyName || i.company || "—"}</td>}
                           <td className="py-3 px-2.5">
                             <span className="flex flex-col gap-0.5 items-start">
-                              <InviteeStatusPill invitationStatus={i.invitationStatus} rsvpStatus={i.rsvpStatus} />
-                              {i.invitationStatus === "FAILED" && failure && <span className="text-xs text-rose-600 break-words max-w-[200px]">{failure}</span>}
+                              <InviteeStatusPill invitationStatus={i.invitationStatus} rsvpStatus={isAdmin ? "PENDING" : i.rsvpStatus} />
+                              {/* One line keeps the row height steady; the full reason is on hover */}
+                              {i.invitationStatus === "FAILED" && failure && <span title={failure} className="text-xs text-rose-600 truncate max-w-[200px]">{failure}</span>}
                             </span>
                           </td>
+                          {isAdmin && (
+                            <td className="py-3 px-2.5">
+                              {!rsvpEnabled ? <span className="text-[#828282]" aria-label="RSVP not requested">--</span>
+                                : i.rsvpStatus === "ACCEPTED" ? pill("bg-[#CCD2FF] text-[#2C2EB5]", "Accepted")
+                                : i.rsvpStatus === "DECLINED" ? pill("bg-[#FFE9C0] text-[#9E8C00]", "Declined")
+                                : pill("bg-[#FFF3C4] text-[#B38A00]", "Pending")}
+                            </td>
+                          )}
                           {showDietary && (
                             <td className="py-3 px-2.5 text-center">
                               {i.dietaryPreference ? <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-[#D3D3D3] rounded-full text-xs"><span className="size-1 rounded-full bg-[#15191C]" />{i.dietaryPreference}</span> : "--"}
@@ -692,7 +681,7 @@ export default function InviteesManagementPage() {
                       );
                     })}
                     {visible.length === 0 && (
-                      <tr><td colSpan={8 + sessions.length} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
+                      <tr><td colSpan={9 + sessions.length} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
                     )}
                   </tbody>
                 </table>

@@ -334,6 +334,7 @@ export default function ReportsLogsTable({
                           Declined
                         </span>
                       )}
+                      {log.rsvpStatus === "Not requested" && <span className="text-[#828282]" aria-label="RSVP not requested">--</span>}
                     </td>
                     <td className="py-4 px-4">
                       {log.checkInStatus === "Checked-in" && (

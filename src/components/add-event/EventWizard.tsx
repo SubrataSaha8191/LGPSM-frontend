@@ -335,7 +335,10 @@ export default function EventWizard({
               )}
             </div>
           </div>
-          <div className="w-full xl:w-[38%] shrink-0 border-t xl:border-t-0 xl:border-l border-[#E0E0E0] xl:sticky xl:top-20 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto">
+          {/* The column runs the full height of the form; only its contents stick, 16px below the 68px sticky page
+              header, so the preview stays in view however long the current step is (admin feedback: sticky preview) */}
+          <div className="w-full xl:w-[38%] shrink-0 border-t xl:border-t-0 xl:border-l border-[#E0E0E0] bg-[#F7F3F0]">
+            <div className="xl:sticky xl:top-[84px] xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto">
             <MobileCardPreview
               template={draft.template}
               eventTitle={draft.title}
@@ -347,6 +350,7 @@ export default function EventWizard({
               subcategoryName={categories.subcategoryName(draft.categoryId, draft.subcategoryId)}
               onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
             />
+            </div>
           </div>
         </div>
       </div>

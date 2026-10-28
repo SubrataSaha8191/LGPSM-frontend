@@ -3,7 +3,8 @@ export interface InviteeLog {
   name: string;
   mobile: string;
   invitationStatus: "Sent" | "Pending" | "Failed";
-  rsvpStatus: "Accepted" | "Pending" | "Declined";
+  /** "Not requested" when the event does not use RSVP (shown as the "--" placeholder) */
+  rsvpStatus: "Accepted" | "Pending" | "Declined" | "Not requested";
   checkInStatus: "Checked-in" | "Not Checked-in" | "Partially Checked-in";
   lastCheckInTime: string;
   // sessionId -> whether the invitee checked in to that session

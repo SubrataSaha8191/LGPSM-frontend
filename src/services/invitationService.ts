@@ -64,6 +64,8 @@ export interface PublicInvitationData {
       start?: string;
       end?: string;
     };
+    /** Whether guests can answer; older API responses omit it (treated as on) */
+    rsvp?: { enabled: boolean; closesAt: string | null };
   };
   invitee: {
     name: string;

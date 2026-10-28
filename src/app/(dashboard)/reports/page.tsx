@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import PageHeader from "@/components/common/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import { InviteeLog, AccessLog, SessionReport, ReportSessionColumn } from "@/types/reports";
 import ReportsHeaderControls from "@/components/reports/ReportsHeaderControls";
 import ReportsStatsCards from "@/components/reports/ReportsStatsCards";
 import ReportsCharts from "@/components/reports/ReportsCharts";
-import UserNavDropdown from "@/components/common/UserNavDropdown";
 import ReportsLogsTable from "@/components/reports/ReportsLogsTable";
 import { eventService } from "@/services/eventService";
 import { userService } from "@/services/userService";
@@ -238,6 +238,8 @@ export default function ReportsPage() {
 
       const invitees: any[] = inviteesRes.success && Array.isArray(inviteesRes.data) ? inviteesRes.data : [];
       const sessionCount = eventReport?.sessionReports?.length || 0;
+      // Events that do not ask guests to respond show "--" instead of a Pending RSVP
+      const rsvpEnabled = (allEventsList.find((e) => (e._id || e.id) === selectedEventId) as { rsvp?: { enabled?: boolean } } | undefined)?.rsvp?.enabled !== false;
       setInviteeLogs(invitees.map((inv) => {
         const id = String(inv._id || inv.id);
         const records = byInvitee.get(id) || [];
@@ -252,7 +254,7 @@ export default function ReportsPage() {
           name: inv.name || "",
           mobile: inv.mobile || "—",
           invitationStatus: invitationStatus === "SENT" ? "Sent" : invitationStatus === "FAILED" ? "Failed" : "Pending",
-          rsvpStatus: rsvp === "ACCEPTED" ? "Accepted" : rsvp === "DECLINED" ? "Declined" : "Pending",
+          rsvpStatus: !rsvpEnabled ? "Not requested" : rsvp === "ACCEPTED" ? "Accepted" : rsvp === "DECLINED" ? "Declined" : "Pending",
           checkInStatus: records.length === 0 ? "Not Checked-in" : sessionCount > 0 && attendedSessions > 0 && attendedSessions < sessionCount ? "Partially Checked-in" : "Checked-in",
           lastCheckInTime: latest ? new Date(latest).toLocaleString() : "—",
           sessionCheckIns,
@@ -352,15 +354,8 @@ export default function ReportsPage() {
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
-      <header className="h-20 bg-white border-b border-gray-200 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <svg className="w-7 h-7 text-[#FF5B22] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          <h1 className="text-sm sm:text-xl font-bold text-gray-900 truncate">Reports</h1>
-        </div>
-        <UserNavDropdown />
-      </header>
+      {/* Shared Figma page header (217:23715 "Report") */}
+      <PageHeader title="Report" />
 
       <div className="p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 bg-white pb-24">
         <ReportsHeaderControls

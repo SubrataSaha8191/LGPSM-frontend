@@ -277,12 +277,22 @@ export default function EventDetailsPage() {
                 Clear Event Data
               </button>
             )}
-            {!invitationLifecycleStarted && <Link href={`/events/${eventId}/edit`} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
+            {/* After sending, Figma 426:2 keeps Edit visible but faded: the event is locked (the API refuses edits too) */}
+            {!invitationLifecycleStarted ? (
+              <Link href={`/events/${eventId}/edit`} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               Edit
-            </Link>}
+              </Link>
+            ) : (
+              <button type="button" disabled title="This event can’t be edited after invitations have been sent" className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] text-white text-sm font-medium rounded-md opacity-50 cursor-not-allowed">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -373,10 +383,18 @@ export default function EventDetailsPage() {
             <p className="mt-2 text-xs text-[#828282] truncate">
               {typeof event.templateId === "object" && event.templateId?.name ? `Template: ${event.templateId.name}` : "Design chosen from the event type"}
             </p>
+            {/* Faded once invitations have gone out (Figma 426:2); resends happen per guest on the Invitees tab */}
+            {invitationLifecycleStarted ? (
+              <span aria-disabled="true" title="Invitations have been sent. Resend to guests from the Invitees tab." className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#FF651D] text-white text-sm font-medium rounded-md opacity-50 cursor-not-allowed">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+              Send Invitation
+            </span>
+            ) : (
             <Link href={`/events/${eventId}/invitees`} className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               Send Invitation
             </Link>
+            )}
           </section>
         </div>
 
