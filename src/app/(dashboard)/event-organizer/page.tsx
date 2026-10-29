@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import ListControls, { addButtonClass } from "@/components/common/ListControls";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
@@ -10,6 +9,7 @@ import { userService } from "@/services/userService";
 import { useAuth } from "@/context/AuthContext";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
 import RowMenu from "@/components/common/RowMenu";
+import Icon from "@/components/icons/Icon";
 
 interface OrganizerRow {
   id: string;
@@ -99,7 +99,7 @@ export default function AllOrganizersPage() {
           {/* Controls (Figma 462:10218) */}
           <ListControls label="Organizer" searchId="organizer-search" placeholder="Search organizers" value={searchQuery} onChange={setSearchQuery}>
             <Link href="/event-organizer/add" className={addButtonClass}>
-              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+              <Icon name="events/add-white" width={24} height={24} />
               Add Organizer
             </Link>
           </ListControls>

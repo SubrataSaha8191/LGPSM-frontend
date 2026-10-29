@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +16,7 @@ import { useAlert } from "@/context/AlertContext";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
+import Icon from "@/components/icons/Icon";
 
 export default function EventAssignUsersPage() {
   const { confirm } = useAlert();
@@ -296,7 +296,7 @@ export default function EventAssignUsersPage() {
           <div className="flex flex-1 items-center gap-2.5 min-w-0">
             <label htmlFor="system-user-search" className="text-[17px] font-medium text-black shrink-0">System Users</label>
             <div className="relative flex-1 min-w-0">
-              <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+              <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
               <input
                 id="system-user-search"
                 type="search"
@@ -316,7 +316,7 @@ export default function EventAssignUsersPage() {
               options={[{ value: "assigned", label: "Assigned to this event" }, { value: "all", label: "All" }]}
             />
             <Link href="/user-management/add?new=1" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
-              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+              <Icon name="events/add-white" width={24} height={24} />
               Add User
             </Link>
           </div>
@@ -362,7 +362,7 @@ export default function EventAssignUsersPage() {
                     ) : !showAllSystemUsers && !searchQuery.trim() ? (
                       // Figma 217:19798 empty state; "Assign User" lists every system user to pick from
                       <div className="flex flex-col items-center gap-[26px] py-16 max-w-[344px] mx-auto whitespace-normal">
-                        <Image src="/icons/events/users-empty.svg" alt="" width={80} height={67} />
+                        <Icon name="events/users-empty" width={80} height={67} />
                         <p className="text-lg font-medium text-black/50">No system users assigned yet. Assign system users to your event now.</p>
                         <button type="button" onClick={() => setShowAllSystemUsers(true)} className="px-6 py-[11px] bg-[#F3F3F3] hover:bg-[#EAEAEA] rounded-lg text-base font-semibold text-[#FF651D] cursor-pointer">
                           Assign User

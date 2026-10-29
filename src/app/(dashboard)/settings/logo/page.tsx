@@ -6,6 +6,7 @@ import PageHeader from "@/components/common/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import { mediaService } from "@/services/mediaService";
 import { resolveImageUrl } from "@/utils/mediaUrl";
+import Icon from "@/components/icons/Icon";
 
 // The design allows JPG and PNG only (Figma 222:34175: "Only JPG & PNG allowed")
 const ACCEPTED = "image/png,image/jpeg";
@@ -78,7 +79,7 @@ export default function LogoSettingsPage() {
 
         <section className="border border-[#D2D2D2] rounded-lg px-5 pt-5 pb-[25px] flex flex-col gap-3.5" aria-label="Organiser logo">
           <p className="flex items-start gap-1 px-2 text-xs font-medium text-[#B1B1B1]">
-            <Image src="/icons/events/alert-grey.svg" alt="" width={16} height={14} className="mt-px shrink-0" />
+            <Icon name="events/alert-grey" width={16} height={14} className="mt-px shrink-0" />
             <span>
               This logo will show up in the footer of your QR Invitation card as organizer logo.{" "}
               <button type="button" onClick={() => setPreviewOpen(true)} disabled={!shownUrl} className="text-[#FF651D] underline cursor-pointer disabled:cursor-not-allowed disabled:opacity-60">

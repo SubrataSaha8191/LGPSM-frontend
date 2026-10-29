@@ -11,7 +11,10 @@ import { UserData } from "@/services/tokenStorage";
 import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import InfoTip from "@/components/common/InfoTip";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
-import VerifyLocationModal from "./modals/VerifyLocationModal";
+import dynamic from "next/dynamic";
+
+// The map library is only needed once someone presses Verify, so it is not part of the Add Event page load
+const VerifyLocationModal = dynamic(() => import("./modals/VerifyLocationModal"), { ssr: false });
 
 export type EventDateField = "start" | "end" | "rsvpDeadline";
 

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import ListControls, { addButtonClass } from "@/components/common/ListControls";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
@@ -17,6 +16,7 @@ import { useAlert } from "@/context/AlertContext";
 import { mapWithConcurrency } from "@/utils/mapWithConcurrency";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
+import Icon from "@/components/icons/Icon";
 
 export default function AllUsersPage() {
   const { confirm } = useAlert();
@@ -320,7 +320,7 @@ export default function AllUsersPage() {
         {/* Controls (Figma 450:6796 / 217:23029) */}
         <ListControls label="System Users" searchId="system-user-search" placeholder="Search..." value={searchQuery} onChange={setSearchQuery}>
           <Link href="/user-management/add?new=1" className={addButtonClass}>
-            <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+            <Icon name="events/add-white" width={24} height={24} />
             Add User
           </Link>
         </ListControls>

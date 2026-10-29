@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preconnect } from "react-dom";
 import { Inter, Space_Grotesk, Caveat } from "next/font/google";
 import "@/styles/globals.scss";
 import { AuthProvider } from "@/context/AuthContext";
@@ -12,16 +13,18 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+// Both are variable fonts: leaving `weight` out serves one file covering every weight, instead of one file per weight.
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
 });
 
+// Only the handwritten accent on the pricing section uses this, so it is not preloaded on every page; the browser fetches it
+// when that text is first drawn.
 const caveat = Caveat({
   variable: "--font-caveat",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  preload: false,
 });
 
 const DEFAULT_TITLE = "LGPSM · Digital Invitations & Event Management";
@@ -65,11 +68,22 @@ export const metadata: Metadata = {
   },
 };
 
+// Every signed-in page talks to the API straight away; opening the connection (DNS, TLS) while the page is still loading
+// takes that wait off the first request.
+const API_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://lgpsm-backend.onrender.com").origin;
+  } catch {
+    return null;
+  }
+})();
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  if (API_ORIGIN) preconnect(API_ORIGIN, { crossOrigin: "anonymous" });
   return (
     <html
       lang="en"

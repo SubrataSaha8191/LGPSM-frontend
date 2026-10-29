@@ -23,9 +23,9 @@ const REPORT_ONLY_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://accounts.google.com",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com",
-  `img-src 'self' data: blob: ${apiOrigin} https://*.googleusercontent.com`,
+  `img-src 'self' data: blob: ${apiOrigin} https://*.googleusercontent.com https://tile.openstreetmap.org`,
   "font-src 'self' data:",
-  `connect-src 'self' ${apiOrigin} https://accounts.google.com`,
+  `connect-src 'self' ${apiOrigin} https://accounts.google.com https://nominatim.openstreetmap.org`,
   "frame-src https://accounts.google.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -33,6 +33,8 @@ const REPORT_ONLY_CSP = [
 
 const nextConfig: NextConfig = {
   images: {
+    // AVIF is noticeably smaller than WebP for photos; the browser picks what it supports
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
@@ -57,6 +59,12 @@ const nextConfig: NextConfig = {
       {
         source: `/${PRIVATE_SECTIONS}/:path*`,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      },
+      // The files in public/ keep the same names when they change, so they cannot be cached forever; a week, then reuse
+      // while the fresh copy is fetched in the background. Without this, browsers re-check each one on every visit.
+      {
+        source: "/(images|icons|fonts)/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
       },
     ];
   },

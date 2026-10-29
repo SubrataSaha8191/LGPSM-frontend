@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { eventService } from "@/services/eventService";
 import { sessionService } from "@/services/sessionService";
@@ -16,6 +15,7 @@ import EventCardThumbnail from "@/components/events/EventCardThumbnail";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton, SkeletonRegion, TableSkeletonRows } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import Icon from "@/components/icons/Icon";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Completed" | "Invitation not send" | "Cancelled";
 
@@ -163,26 +163,27 @@ function OrganizerCardMenu({ row, onDelete }: { row: EventRow; onDelete: (row: E
   return (
     <>
       <button ref={buttonRef} type="button" onClick={toggle} aria-label={`Actions for ${row.name}`} aria-expanded={open} className="shrink-0 -mr-2 -mt-1 px-2 py-1 rounded cursor-pointer hover:bg-gray-100">
-        <Image src="/icons/events/kebab.svg" alt="" width={4} height={16} />
+        <Icon name="events/kebab" width={4} height={16} />
       </button>
       {open && position && createPortal(
         <div ref={menuRef} onClick={(e) => e.stopPropagation()} style={{ position: "fixed", ...position }} className="z-[9999] w-[155px] flex flex-col items-center">
-          <Image src="/icons/events/menu-arrow.svg" alt="" width={16} height={8} />
+          <Icon name="events/menu-arrow" width={16} height={8} />
           <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]">
             {active && row.canEdit && (
               <Link href={`/events/${row.id}/edit`} className={item}>
-                <Image src="/icons/events/edit.svg" alt="" width={16} height={16} />
+                <Icon name="events/edit" width={16} height={16} />
                 Edit
               </Link>
             )}
             {active && (
               <Link href={`/events/${row.id}/invitees`} className={item}>
-                <Image src="/icons/events/send.svg" alt="" width={16} height={16} />
+                <Icon name="events/send" width={16} height={16} />
                 Send Invitation
               </Link>
             )}
             {active && (
               <button type="button" onClick={() => { setOpen(false); onDelete(row); }} className={`${item} text-rose-300`}>
+                <Icon name="events/trash" width={16} height={16} />
                 Delete
               </button>
             )}
@@ -373,11 +374,11 @@ export default function EventListingPage() {
             <div className="relative w-full max-w-[279px] bg-white h-full px-6 pt-[19.5px] pb-6 flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 id="filter-title" className="flex items-center gap-2 text-base font-medium text-[#15191C]">
-                  <Image src="/icons/events/filter-dark.svg" alt="" width={20} height={20} />
+                  <Icon name="events/filter-dark" width={20} height={20} />
                   Filter
                 </h2>
                 <button type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters" className="cursor-pointer">
-                  <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
+                  <Icon name="events/close" width={16} height={16} />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto pt-8 flex flex-col gap-[13px]">
@@ -418,7 +419,7 @@ export default function EventListingPage() {
                         aria-label={key === "from" ? "From" : "To"}
                         className={`${drawerField} placeholder:text-[#7F7F7F]`}
                       />
-                      {!draftFilters[key] && <Image src="/icons/events/calendar.svg" alt="" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
+                      {!draftFilters[key] && <Icon name="events/calendar" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
                       </div>
                     ))}
                   </div>
@@ -447,7 +448,7 @@ export default function EventListingPage() {
             <div className="flex flex-1 items-center gap-2.5 min-w-0">
               <label htmlFor="event-search" className="text-[17px] font-medium text-black shrink-0">Events</label>
               <div className="relative flex-1 min-w-0">
-                <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
                 <input
                   id="event-search"
                   type="search"
@@ -465,11 +466,11 @@ export default function EventListingPage() {
                 aria-label={`Filter events${activeFilterCount ? ` (${activeFilterCount} active)` : ""}`}
                 className="relative h-[47px] p-4 rounded-md hover:bg-gray-100 cursor-pointer"
               >
-                <Image src="/icons/events/filter.svg" alt="" width={20} height={20} />
+                <Icon name="events/filter" width={20} height={20} />
                 {activeFilterCount > 0 && <span className="absolute top-1.5 right-1.5 size-4 rounded-full bg-[#FF651D] text-white text-[10px] flex items-center justify-center">{activeFilterCount}</span>}
               </button>
               <Link href="/events/add" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
-                <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                <Icon name="events/add-white" width={24} height={24} />
                 Add
               </Link>
             </div>

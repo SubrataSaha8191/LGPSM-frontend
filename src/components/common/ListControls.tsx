@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import Icon from "@/components/icons/Icon";
 
 interface ListControlsProps {
   label: string;
@@ -19,7 +19,7 @@ export default function ListControls({ label, searchId, placeholder, value, onCh
       <div className="flex flex-1 items-center gap-2.5 min-w-0">
         <label htmlFor={searchId} className="text-[17px] font-medium text-black shrink-0">{label}</label>
         <div className="relative flex-1 min-w-0">
-          <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+          <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
           <input
             id={searchId}
             type="search"

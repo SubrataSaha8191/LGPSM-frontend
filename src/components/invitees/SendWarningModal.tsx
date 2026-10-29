@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import Icon from "@/components/icons/Icon";
 
 interface SendWarningModalProps {
   eventId: string;
@@ -30,11 +30,11 @@ export default function SendWarningModal({ eventId, eventTitle, onCancel, onConf
         <div className="flex items-end gap-5 px-6 py-5 border-b border-[#E0E0E0]">
           <p className="flex-1 min-w-0 text-base font-medium text-[#15191C] break-words">Send Invitations for {eventTitle}</p>
           <button type="button" onClick={onCancel} aria-label="Close" className="shrink-0 cursor-pointer">
-            <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
+            <Icon name="events/close" width={16} height={16} />
           </button>
         </div>
         <div className="flex flex-col items-center gap-6 px-6 py-[60px] text-center">
-          <Image src="/icons/events/warning.svg" alt="" width={34} height={32} />
+          <Icon name="events/warning" width={34} height={32} />
           <div className="flex flex-col gap-2 max-w-[442px] font-medium">
             <h2 id="send-warning-title" className="text-[26px] text-[#15191C]">Warning</h2>
             <p className="text-base text-[#15191C]/80">

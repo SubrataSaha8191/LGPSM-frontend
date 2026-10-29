@@ -47,7 +47,7 @@ export default function EventCardThumbnail({ eventId, label }: EventCardThumbnai
     if (!visible) return;
     let cancelled = false;
     let objectUrl: string | null = null;
-    withSlot(() => invitationService.previewCard(eventId))
+    withSlot(() => invitationService.previewCard(eventId, undefined, { width: 168 }))
       .then(({ blob }) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);

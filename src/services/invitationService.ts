@@ -192,11 +192,15 @@ export const invitationService = {
    * Same card plus whether its QR is the guest's issued check-in pass ("ISSUED") or a
    * placeholder for a guest who has not been sent an invitation yet ("SAMPLE").
    */
-  async previewCard(eventId: string, inviteeId?: string): Promise<{ blob: Blob; qr: "ISSUED" | "SAMPLE" }> {
+  async previewCard(eventId: string, inviteeId?: string, options: { width?: number } = {}): Promise<{ blob: Blob; qr: "ISSUED" | "SAMPLE" }> {
     const token = tokenStorage.getAccessToken();
-    const url = inviteeId
-      ? `${API_BASE_URL}/api/v1/events/${eventId}/invitations/preview?inviteeId=${inviteeId}`
-      : `${API_BASE_URL}/api/v1/events/${eventId}/invitations/preview`;
+    // `width` asks for a small WebP copy for on-screen use (a few KB-100 instead of the ~1.4 MB full-size PNG). Leave it out
+    // when the full card is needed, e.g. a guest's real pass.
+    const params = new URLSearchParams();
+    if (inviteeId) params.set("inviteeId", inviteeId);
+    if (options.width) { params.set("width", String(options.width)); params.set("format", "webp"); }
+    const query = params.toString();
+    const url = `${API_BASE_URL}/api/v1/events/${eventId}/invitations/preview${query ? `?${query}` : ""}`;
     const res = await fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

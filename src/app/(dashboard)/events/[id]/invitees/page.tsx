@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -28,6 +27,7 @@ import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inv
 import { mergeInviteeImport } from "@/utils/mergeInviteeImport.mjs";
 import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
 import { TableSkeleton } from "@/components/common/Skeleton";
+import Icon from "@/components/icons/Icon";
 
 interface Invitee {
   _id: string;
@@ -97,10 +97,10 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name:
       </button>
       {position && createPortal(
         <div ref={menuRef} style={{ position: "fixed", ...position }} className="z-[9999] w-[104px] flex flex-col items-center">
-          <Image src="/icons/events/menu-arrow.svg" alt="" width={16} height={8} />
+          <Icon name="events/menu-arrow" width={16} height={8} />
           <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]">
-            <button type="button" onClick={run(onEdit)} className={item}><Image src="/icons/events/edit.svg" alt="" width={16} height={16} />Edit</button>
-            {onResend && <button type="button" onClick={run(onResend)} className={item}><Image src="/icons/events/send.svg" alt="" width={16} height={16} />Resend</button>}
+            <button type="button" onClick={run(onEdit)} className={item}><Icon name="events/edit" width={16} height={16} />Edit</button>
+            {onResend && <button type="button" onClick={run(onResend)} className={item}><Icon name="events/send" width={16} height={16} />Resend</button>}
             <button type="button" onClick={run(onPreview)} className={item}>Card</button>
             <button type="button" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}>Remove</button>
           </div>
@@ -440,7 +440,7 @@ export default function InviteesManagementPage() {
               <div className="flex flex-1 items-center gap-2.5 min-w-0">
                 <label htmlFor="invitee-search-empty" className="text-[17px] font-medium text-black shrink-0">Invitees</label>
                 <div className="relative flex-1 min-w-0">
-                  <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                  <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
                   <input id="invitee-search-empty" type="search" value="" readOnly disabled placeholder="Search invitees" className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium placeholder:text-[#828282] cursor-not-allowed" />
                 </div>
               </div>
@@ -454,7 +454,7 @@ export default function InviteesManagementPage() {
                 />
                 <PlainSelect ariaLabel="Select session" value="" placeholder="Select Session" onChange={() => {}} options={[]} disabled />
                 <button type="button" onClick={() => showAlert("Select an event first, then add its invitees.", "info")} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer">
-                  <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                  <Icon name="events/add-white" width={24} height={24} />
                   Add Invitees
                 </button>
                 <button type="button" disabled className={primaryOutline}>
@@ -484,7 +484,7 @@ export default function InviteesManagementPage() {
               <div className="flex flex-1 items-center gap-2.5 min-w-0">
                 <label htmlFor="invitee-search" className="text-[17px] font-medium text-black shrink-0">Invitees</label>
                 <div className="relative flex-1 min-w-0">
-                  <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                  <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
                   <input
                     id="invitee-search"
                     type="search"
@@ -515,7 +515,7 @@ export default function InviteesManagementPage() {
                 )}
                 <PlainSelect ariaLabel="Filter by session" value={sessionFilter} onChange={setSessionFilter} options={[{ value: "", label: "All Session" }, ...sessions.map((s) => ({ value: s._id!, label: s.name }))]} />
                 <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer disabled:opacity-50">
-                  <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+                  <Icon name="events/add-white" width={24} height={24} />
                   Add Invitees
                 </button>
                 {notInvited.length > 0 || !lifecycleStarted ? (

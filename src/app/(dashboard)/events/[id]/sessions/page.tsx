@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { reportService } from "@/services/reportService";
@@ -20,6 +19,7 @@ import EventSubNav from "@/components/EventSubNav";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
 import InfoTip from "@/components/common/InfoTip";
+import Icon from "@/components/icons/Icon";
 
 const ACCESS_LABELS: Record<string, string> = { NO_RESTRICTION: "No Restrictions", ONLY_ONCE: "Only Once" };
 
@@ -215,7 +215,7 @@ export default function EventSessionsPage() {
             <div className="flex flex-1 items-center gap-2.5 min-w-0">
               <label htmlFor="session-search" className="text-[17px] font-medium text-black shrink-0">Sessions</label>
               <div className="relative flex-1 min-w-0">
-                <Image src="/icons/events/search.svg" alt="" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
+                <Icon name="events/search" width={18} height={18} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-60" />
                 <input
                   id="session-search"
                   type="search"
@@ -231,7 +231,7 @@ export default function EventSessionsPage() {
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-2 px-4 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer shrink-0 w-fit"
             >
-              <Image src="/icons/events/add-white.svg" alt="" width={24} height={24} />
+              <Icon name="events/add-white" width={24} height={24} />
               Add Session
             </button>
           </div>

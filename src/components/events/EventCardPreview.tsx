@@ -25,7 +25,7 @@ export default function EventCardPreview({ eventId, refreshKey, label, heightCla
   useEffect(() => {
     let cancelled = false;
     invitationService
-      .previewCard(eventId)
+      .previewCard(eventId, undefined, { width: 700 })
       .then(({ blob }) => {
         if (cancelled) return;
         const next = URL.createObjectURL(blob);

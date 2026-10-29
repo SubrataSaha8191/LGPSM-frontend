@@ -79,7 +79,8 @@ export const templateService = {
   async previewCard(templateId: string | null, payload: TemplatePreviewPayload, signal?: AbortSignal): Promise<Blob> {
     const token = tokenStorage.getAccessToken();
     // With no template chosen the card still gets the design that suits the event type, as it will when sent
-    const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId ? `${templateId}/` : ""}preview`, {
+    // A preview only has to look right on screen, so ask for a smaller WebP copy instead of the full-size PNG
+    const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId ? `${templateId}/` : ""}preview?width=800&format=webp`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(payload),

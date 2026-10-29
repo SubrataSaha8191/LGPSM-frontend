@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { templateService, TemplatePreviewPayload } from "@/services/templateService";
 import { CARD_INFO_OPTIONS, CardInfo, CardInfoField } from "../eventDraft";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import Icon from "@/components/icons/Icon";
 
 interface CustomizeInfoModalProps {
   isOpen: boolean;
@@ -79,7 +79,7 @@ export default function CustomizeInfoModal({ isOpen, value, templateId, previewP
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#E0E0E0]">
           <h2 id="customize-info-title" className="text-base font-medium text-[#15191C]">Customize Information</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="cursor-pointer">
-            <Image src="/icons/events/close.svg" alt="" width={16} height={16} />
+            <Icon name="events/close" width={16} height={16} />
           </button>
         </div>
         <div className="flex flex-col md:flex-row gap-8 p-6 md:p-8">
