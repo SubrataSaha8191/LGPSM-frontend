@@ -60,11 +60,19 @@ export interface PublicInvitationData {
     description?: string;
     format?: string;
     status?: string;
+    contactNumber?: string;
+    organizerName?: string;
     location?: string | { address?: string };
     schedule?: {
       start?: string;
       end?: string;
     };
+    timeZone?: string;
+    sessions?: Array<{
+      name: string;
+      start?: string;
+      end?: string;
+    }>;
     /** Whether guests can answer; older API responses omit it (treated as on) */
     rsvp?: { enabled: boolean; closesAt: string | null };
     dietaryPreference?: {

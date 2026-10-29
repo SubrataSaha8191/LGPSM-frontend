@@ -166,7 +166,9 @@ export default function PublicInvitationPage() {
   }
 
   const { event, invitee } = invitationData!;
-  const locationText = typeof event.location === "string" ? event.location : event.location?.address || "";
+  const locationText = event.format === "VIRTUAL"
+    ? "Online event"
+    : typeof event.location === "string" ? event.location : event.location?.address || "";
   const dietaryPrompts = getDietaryPrompts(event.dietaryPreference);
   const closesAt = event.rsvp?.closesAt ? new Date(event.rsvp.closesAt) : null;
   const rsvpClosed = !!closesAt && !Number.isNaN(closesAt.getTime()) && closesAt.getTime() < Date.now();
@@ -176,21 +178,21 @@ export default function PublicInvitationPage() {
   const endDate = event.schedule?.end ? new Date(event.schedule.end) : null;
   const formatDateTime = (d: Date | null) =>
     d && !isNaN(d.getTime())
-      ? d.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })
+      ? d.toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: event.timeZone })
       : "TBD";
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
       <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
         {/* Header Hero Banner */}
-        <div className="bg-gradient-to-r from-[#FF5B22] to-[#ff7b4d] p-6 text-white text-center relative">
+        <div className="bg-gradient-to-r from-[#FF5B22] to-[#ff7b4d] px-7 py-6 text-white text-center relative">
           <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
             Event Invitation
           </span>
-          <h1 className="mx-auto max-w-full min-w-0 text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
+          <h1 className="mx-auto max-w-[24rem] min-w-0 px-2 text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
           {event.format && (
             <p className="text-xs text-white/90 font-medium mt-1 uppercase tracking-wide">
-              Format: {event.format}
+              {event.format === "VIRTUAL" ? "Online event" : "In person"}
             </p>
           )}
         </div>
@@ -243,15 +245,33 @@ export default function PublicInvitationPage() {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
+              {event.organizerName && (
+                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-700">Hosted by</p>
+                    <p className="text-slate-500 break-words">{event.organizerName}</p>
+                  </div>
+                </div>
+              )}
+
               {locationText && (
                 <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
                   <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-semibold text-slate-700">Location</p>
-                    <p className="text-slate-500 break-words">{locationText}</p>
+                    {event.format === "VIRTUAL" ? (
+                      <p className="text-slate-500 break-words">{locationText}</p>
+                    ) : (
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`} target="_blank" rel="noreferrer" className="text-slate-500 break-words underline decoration-slate-300 underline-offset-2 hover:text-[#FF5B22]">
+                        {locationText}
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
@@ -261,16 +281,46 @@ export default function PublicInvitationPage() {
                   <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-semibold text-slate-700">Date & Time</p>
-                    <p className="text-slate-500">
+                    <p className="text-slate-500 break-words">
                       {formatDateTime(startDate)}
                       {endDate && !isNaN(endDate.getTime()) ? ` – ${formatDateTime(endDate)}` : ""}
                     </p>
+                    {event.timeZone && <p className="mt-0.5 text-[10px] text-slate-400">Times shown in {event.timeZone}</p>}
+                  </div>
+                </div>
+              )}
+
+              {event.contactNumber && (
+                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.95.68l1.2 3.6a1 1 0 01-.5 1.2l-2.1 1.05a11.04 11.04 0 005.12 5.12l1.05-2.1a1 1 0 011.2-.5l3.6 1.2a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.16 21 3 14.84 3 7V5z" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-700">Event contact</p>
+                    <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="text-slate-500 break-words hover:text-[#FF5B22]">{event.contactNumber}</a>
                   </div>
                 </div>
               )}
             </div>
+
+            {!!event.sessions?.length && (
+              <section aria-labelledby="invitation-sessions-title" className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <h3 id="invitation-sessions-title" className="text-xs font-semibold text-slate-700">Your event sessions</h3>
+                <ul className="mt-2 divide-y divide-slate-200">
+                  {event.sessions.map((session, index) => (
+                    <li key={`${session.name}-${session.start || index}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0 text-xs">
+                      <span className="font-medium text-slate-700 break-words">{session.name}</span>
+                      <span className="text-slate-500">
+                        {session.start ? formatDateTime(new Date(session.start)) : "Time TBD"}
+                        {session.end ? ` – ${formatDateTime(new Date(session.end))}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
 
           <hr className="border-slate-100" />
