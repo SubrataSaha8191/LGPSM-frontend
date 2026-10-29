@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import StepHeader from "./StepHeader";
 import Step1EventDetails, { EventDateField } from "./Step1EventDetails";
@@ -13,7 +13,7 @@ import InviteesPreviewModal from "./modals/InviteesPreviewModal";
 import PageHeader from "@/components/common/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import { useCategories } from "@/hooks/useCategories";
-import { ALL_EVENT_FEATURES, EventFeatureSettings, platformSettingsService } from "@/services/platformSettingsService";
+import { EventFeatureSettings, platformSettingsService } from "@/services/platformSettingsService";
 import { templateService } from "@/services/templateService";
 import { suggestTemplate, SuggestableTemplate } from "@/utils/templateSuggestion";
 import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
@@ -79,7 +79,9 @@ export default function EventWizard({
   // Bumped each time a forward move is blocked by validation, so the page can bring the problem into view
   const [blockedCount, setBlockedCount] = useState(0);
   const isFirstStepRender = useRef(true);
-  const [features, setFeatures] = useState<EventFeatureSettings>(ALL_EVENT_FEATURES);
+  const [features, setFeatures] = useState<EventFeatureSettings | null>(null);
+  const [featuresError, setFeaturesError] = useState<string | null>(null);
+  const [featuresLoading, setFeaturesLoading] = useState(true);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   // Set while "Customize Information" is open: the payload the card preview was rendering
@@ -88,11 +90,23 @@ export default function EventWizard({
   const [previewKey, setPreviewKey] = useState<string | null>(null);
 
   // Options the admin switched off are hidden from the form (the backend also enforces them)
-  useEffect(() => {
-    platformSettingsService.getEventFeatures().then((res) => {
-      if (res.success && res.data) setFeatures(res.data);
-    });
+  const loadFeatures = useCallback(async () => {
+    setFeaturesLoading(true);
+    setFeaturesError(null);
+    try {
+      const res = await platformSettingsService.getEventFeatures();
+      if (!res.success || !res.data) throw new Error(res.message || "Could not load event settings.");
+      setFeatures(res.data);
+    } catch (error) {
+      setFeaturesError(error instanceof Error ? error.message : "Could not load event settings.");
+    } finally {
+      setFeaturesLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadFeatures();
+  }, [loadFeatures]);
 
   useEffect(() => {
     if (stepContentRef.current) {
@@ -303,7 +317,14 @@ export default function EventWizard({
           <div className="w-full xl:w-[62%] flex flex-col min-w-0">
             <StepHeader currentStep={currentStep} onStepClick={handleStepChange} maxUnlockedStep={maxUnlockedStep} />
             <div ref={stepContentRef} className="flex-1">
-              {currentStep === 1 && (
+              {featuresLoading ? (
+                <div className="p-8 text-center text-sm text-[#667085]" role="status">Loading saved event settings…</div>
+              ) : featuresError || !features ? (
+                <div className="p-8 text-center space-y-3" role="alert">
+                  <p className="text-sm text-rose-700">{featuresError || "Event settings are unavailable."} The event form needs the saved platform settings before you can continue.</p>
+                  <button type="button" onClick={() => void loadFeatures()} className="px-4 py-2 border border-[#FF651D] rounded-md text-sm font-medium text-[#E5520F]">Retry</button>
+                </div>
+              ) : currentStep === 1 ? (
                 <Step1EventDetails
                   draft={draft}
                   onChange={patch}
@@ -316,11 +337,9 @@ export default function EventWizard({
                   onNext={() => handleStepChange(2)}
                   onCancel={onCancel}
                 />
-              )}
-              {currentStep === 2 && (
+              ) : currentStep === 2 ? (
                 <Step2Settings draft={draft} onChange={patch} errors={visibleErrors} features={features} onNext={() => handleStepChange(3)} onBack={() => setCurrentStep(1)} />
-              )}
-              {currentStep === 3 && (
+              ) : (
                 <Step3Sessions
                   sessions={draft.sessions}
                   onSessionsChange={(sessions) => patch({ sessions })}

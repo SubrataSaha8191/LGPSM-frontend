@@ -202,6 +202,10 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
   if (draft.thresholdLimit.trim() && !(Number(draft.thresholdLimit) > 0)) {
     errors.thresholdLimit = "Attendee limit must be a positive number.";
   }
+  if (draft.dietaryEnabled) {
+    const hasMissingOptions = draft.preferenceCategories.some((category) => !category.options.some((option) => option.trim()));
+    if (hasMissingOptions) errors.dietaryPreference = "Add at least one dietary option for each question before continuing.";
+  }
 
   const start = parseIso(draft.start);
   const end = parseIso(draft.end);
@@ -226,7 +230,7 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
 
 export function stepOfError(key: string): 1 | 2 | 3 {
   if (key.startsWith("session:")) return 3;
-  if (key === "thresholdLimit") return 2;
+  if (key === "thresholdLimit" || key === "dietaryPreference") return 2;
   return 1;
 }
 

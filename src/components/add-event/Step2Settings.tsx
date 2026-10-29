@@ -122,7 +122,7 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
       )}
 
       {features.askFoodPreference && (
-        <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-4">
+        <div className={`p-4 border rounded-md bg-white space-y-4 ${errors.dietaryPreference ? "border-rose-400" : "border-[#E0E0E0]"}`}>
           <label htmlFor="opt-food" className="flex items-center gap-3 cursor-pointer">
             <input
               id="opt-food"
@@ -199,6 +199,7 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
               </button>
             </div>
           )}
+          {errors.dietaryPreference && <p className="text-xs font-medium text-rose-600" role="alert">{errors.dietaryPreference}</p>}
         </div>
       )}
 
