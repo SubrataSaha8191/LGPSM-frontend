@@ -329,7 +329,7 @@ export default function PublicInvitationPage() {
               </button>
             </div>
 
-            {selectedRsvp === "ACCEPTED" && dietaryPrompts.length > 0 && (
+            {dietaryPrompts.length > 0 && (
               <fieldset className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
                 <legend className="px-1 text-xs font-semibold text-slate-700">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
                 {dietaryPrompts.map((prompt, index) => (
@@ -345,6 +345,12 @@ export default function PublicInvitationPage() {
                   </div>
                 ))}
               </fieldset>
+            )}
+
+            {event.dietaryPreference?.enabled && dietaryPrompts.length === 0 && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                Dietary preference is enabled, but the organizer has not configured any options yet.
+              </p>
             )}
 
             <button
