@@ -391,6 +391,8 @@ export default function PublicInvitationPage() {
                       options={prompt.options.map((value) => ({ value, label: value }))}
                       placeholder="Choose an option (optional)"
                       ariaLabel={prompt.title}
+                      portal
+                      portalPlacement="top"
                     />
                   </div>
                 ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useId } from "react";
+import { createPortal } from "react-dom";
 
 export interface CustomDropdownOption {
   value: string;
@@ -29,6 +30,9 @@ interface CustomDropdownProps {
   variant?: "field" | "plain";
   /** Smaller text for the compact filter drawer (Figma 217:22781) */
   compact?: boolean;
+  /** Render the menu in the document layer so cards with overflow clipping cannot cut it off. */
+  portal?: boolean;
+  portalPlacement?: "auto" | "top" | "bottom";
 }
 
 export default function CustomDropdown({
@@ -44,10 +48,15 @@ export default function CustomDropdown({
   ariaLabel,
   variant = "field",
   compact = false,
+  portal = false,
+  portalPlacement = "auto",
 }: CustomDropdownProps) {
   const plain = variant === "plain";
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [portalPosition, setPortalPosition] = useState<React.CSSProperties | null>(null);
   const listId = useId();
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -55,7 +64,8 @@ export default function CustomDropdown({
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
+      const target = e.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) setIsOpen(false);
     };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsOpen(false);
@@ -68,9 +78,39 @@ export default function CustomDropdown({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || !portal) return;
+    const updatePosition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const desiredHeight = Math.min(224, Math.max(48, options.length * 42 + (topAction ? 48 : 0) + 8));
+      const below = Math.max(0, window.innerHeight - rect.bottom - 8);
+      const above = Math.max(0, rect.top - 8);
+      const openAbove = portalPlacement === "top" || (portalPlacement === "auto" && below < Math.min(desiredHeight, 120) && above > below);
+      const maxHeight = Math.max(48, Math.min(desiredHeight, openAbove ? above : below));
+      setPortalPosition({
+        position: "fixed",
+        left: rect.left,
+        width: rect.width,
+        top: openAbove ? undefined : rect.bottom + 6,
+        bottom: openAbove ? window.innerHeight - rect.top + 6 : undefined,
+        maxHeight,
+        zIndex: 10000,
+      });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen, options.length, portal, portalPlacement, topAction]);
+
   return (
     <div ref={containerRef} className={`relative text-left ${plain ? "w-auto max-w-[220px]" : "w-full"} ${className}`}>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
@@ -100,8 +140,9 @@ export default function CustomDropdown({
         </svg>
       </button>
 
-      {isOpen && !disabled && (
-        <div className={`absolute top-full mt-1.5 bg-white border border-gray-200 rounded-md shadow-xl overflow-hidden z-50 animate-dropdown ${plain ? "right-0 w-max min-w-[180px] max-w-[300px]" : "left-0 right-0"}`}>
+      {isOpen && !disabled && (() => {
+        const menu = (
+        <div ref={menuRef} style={portal ? portalPosition || { position: "fixed", visibility: "hidden", zIndex: 10000 } : undefined} className={`${portal ? "fixed" : "absolute top-full mt-1.5 z-50"} bg-white border border-gray-200 rounded-md shadow-xl overflow-hidden animate-dropdown ${plain ? "right-0 w-max min-w-[180px] max-w-[300px]" : portal ? "" : "left-0 right-0"}`}>
           {topAction && (
             <button
               type="button"
@@ -117,7 +158,7 @@ export default function CustomDropdown({
               <span>{topAction.label}</span>
             </button>
           )}
-          <div id={listId} role="listbox" className="max-h-56 overflow-y-auto py-1">
+          <div id={listId} role="listbox" className={`${portal ? "h-full" : "max-h-56"} overflow-y-auto py-1`}>
             {options.length === 0 ? (
               <div className="px-3.5 py-3 text-sm text-gray-400 text-center">{emptyMessage}</div>
             ) : (
@@ -152,7 +193,9 @@ export default function CustomDropdown({
             )}
           </div>
         </div>
-      )}
+        );
+        return portal && typeof document !== "undefined" ? createPortal(menu, document.body) : menu;
+      })()}
     </div>
   );
 }
