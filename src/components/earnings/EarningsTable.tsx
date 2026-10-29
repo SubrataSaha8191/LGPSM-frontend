@@ -3,6 +3,8 @@
 import React from "react";
 import { EarningsRecord } from "@/types/earnings";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
+import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
+import { useRouter } from "next/navigation";
 
 interface EarningsTableProps {
   activeTab: "organizer" | "event";
@@ -19,6 +21,8 @@ interface EarningsTableProps {
   toggleSelectAll: () => void;
   toggleSelectRow: (id: string) => void;
   onDeleteSelected: () => void;
+  /** Hides one row from this view (same as selecting it and pressing the bin) */
+  onHideRow: (id: string) => void;
   onExportCSV: () => void;
 }
 
@@ -37,8 +41,10 @@ export default function EarningsTable({
   toggleSelectAll,
   toggleSelectRow,
   onDeleteSelected,
+  onHideRow,
   onExportCSV,
 }: EarningsTableProps) {
+  const router = useRouter();
   return (
     <div className="bg-white border border-gray-200 rounded-md p-6 shadow-2xs space-y-5">
       <div className="flex items-center justify-between">
@@ -204,11 +210,14 @@ export default function EarningsTable({
                 <td className="py-4 px-4 text-gray-600">${r.rate}</td>
                 <td className="py-4 px-4 text-emerald-600 font-bold">${r.amount}</td>
                 <td className="py-4 px-4 text-right">
-                  <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 10a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4zm6 0a2 2 0 110 4 2 2 0 010-4z" />
-                    </svg>
-                  </button>
+                  {/* was an inert "⋯"; event rows can open their event, and any row can be hidden from this view */}
+                  <RowMenu
+                    label={`Actions for ${activeTab === "organizer" ? r.organizer : r.eventName}`}
+                    items={[
+                      ...(r.id.startsWith("evt_") ? [{ label: "Open event", icon: EditIcon, onClick: () => router.push(`/events/${r.id.slice(4)}`) }] : []),
+                      { label: "Hide from this list", icon: TrashIcon, onClick: () => onHideRow(r.id) },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

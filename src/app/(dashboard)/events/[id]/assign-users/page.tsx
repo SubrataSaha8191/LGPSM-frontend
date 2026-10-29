@@ -17,6 +17,8 @@ import { TableSkeleton } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import RowMenu, { EditIcon, TrashIcon } from "@/components/common/RowMenu";
 import Icon from "@/components/icons/Icon";
+import Pagination from "@/components/common/Pagination";
+import { paginate } from "@/utils/pagination.mjs";
 
 export default function EventAssignUsersPage() {
   const { confirm } = useAlert();
@@ -33,6 +35,7 @@ export default function EventAssignUsersPage() {
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllSystemUsers, setShowAllSystemUsers] = useState(false);
+  const [page, setPage] = useState(1);
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null);
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -259,6 +262,8 @@ export default function EventAssignUsersPage() {
   });
 
   const isAllSelected = selectedUserIds.length === filteredUsers.length && filteredUsers.length > 0;
+  // 10 people per page (the old bottom-left "1" was a fixed, inert button)
+  const { current: currentPage, totalPages, rows: pageUsers } = paginate(filteredUsers, page, 10);
   // Figma 217:19768 shows only the empty state (no select-all row or table headers) when nobody is assigned yet
   const showEmptyAssigned = !isLoading && users.length > 0 && filteredUsers.length === 0 && !showAllSystemUsers && !searchQuery.trim();
 
@@ -302,7 +307,7 @@ export default function EventAssignUsersPage() {
                 type="search"
                 placeholder="Search system user"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                 className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
               />
             </div>
@@ -312,7 +317,7 @@ export default function EventAssignUsersPage() {
               variant="plain"
               ariaLabel="Which system users to show"
               value={showAllSystemUsers ? "all" : "assigned"}
-              onChange={(v) => { setShowAllSystemUsers(v === "all"); setSelectedUserIds([]); }}
+              onChange={(v) => { setShowAllSystemUsers(v === "all"); setSelectedUserIds([]); setPage(1); }}
               options={[{ value: "assigned", label: "Assigned to this event" }, { value: "all", label: "All" }]}
             />
             <Link href="/user-management/add?new=1" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
@@ -374,7 +379,7 @@ export default function EventAssignUsersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((u) => {
+                pageUsers.map((u) => {
                   const isSelected = selectedUserIds.includes(u.id);
                   const isExpanded = expandedUserIds.includes(u.id);
                   const countText = getAssignedCountText(u.assignments);
@@ -488,9 +493,7 @@ export default function EventAssignUsersPage() {
         {/* Bottom Control Bar */}
         <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-1 text-xs">
-            <button className="w-8 h-8 rounded border border-[#FF5B22] text-[#FF5B22] font-bold flex items-center justify-center">
-              1
-            </button>
+            <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} label="System user pages" />
           </div>
 
           {/* Nothing ticked, nothing to act on: the button appears once someone is selected */}

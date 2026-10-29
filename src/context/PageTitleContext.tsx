@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { eventService } from "@/services/eventService";
+import { eventIdFromPath } from "@/utils/eventRoute.mjs";
 
 interface PageTitleContextType {
   customTitle: string | null;
@@ -167,9 +168,9 @@ function TitleWatcher({
   const searchParams = useSearchParams();
 
   // Extract eventId if on an event route
-  const eventMatch = pathname.match(/^\/events\/([^/]+)/);
-  const currentEventId = eventMatch ? eventMatch[1] : null;
-  const isExcludedId = !currentEventId || currentEventId === "add";
+  // Only real event ids: /events/add and the sidebar's /events/select/... are route names, not events to fetch
+  const currentEventId = eventIdFromPath(pathname);
+  const isExcludedId = !currentEventId;
 
   const [fetchedEventTitle, setFetchedEventTitle] = useState<string | null>(() => {
     return isExcludedId ? null : getStoredEventTitle(currentEventId);

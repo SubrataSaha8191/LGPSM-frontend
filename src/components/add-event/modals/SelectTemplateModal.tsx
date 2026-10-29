@@ -111,23 +111,28 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
               {templates.length === 0 ? "No templates have been published yet." : "No templates for this category. Try another category or clear the filter."}
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {visible.map((t) => {
-                const selected = pendingId === t._id;
-                return (
-                  <button
-                    key={t._id}
-                    type="button"
-                    onClick={() => setPendingId(selected ? null : t._id)}
-                    aria-pressed={selected}
-                    className={`text-left rounded-md overflow-hidden border-2 cursor-pointer ${selected ? "border-[#FF651D]" : "border-transparent hover:border-gray-300"}`}
-                  >
-                    <TemplateThumb imageKey={t.previewImageKey} name={t.name} />
-                    <span className="block px-1.5 py-1 text-xs font-medium text-gray-900 truncate">{t.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            // Figma 217:7912: a heading for the chosen subcategory, then a 6-up grid of small cards; the name shows on hover
+            <>
+              <p className="text-sm font-medium text-[#15191C] mb-2">{(filterCategory && categories.subcategoryName(filterCategory, filterSub)) || (filterCategory && categories.categoryName(filterCategory)) || "All templates"}</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {visible.map((t) => {
+                  const selected = pendingId === t._id;
+                  return (
+                    <button
+                      key={t._id}
+                      type="button"
+                      onClick={() => setPendingId(selected ? null : t._id)}
+                      aria-pressed={selected}
+                      aria-label={t.name}
+                      title={t.name}
+                      className={`rounded-md overflow-hidden border-2 cursor-pointer ${selected ? "border-[#FF651D]" : "border-transparent hover:border-gray-300"}`}
+                    >
+                      <TemplateThumb imageKey={t.previewImageKey} name={t.name} className="aspect-[2/3]!" />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 

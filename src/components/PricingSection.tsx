@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -313,9 +314,9 @@ export default function PricingSection() {
               <p className="text-xs text-gray-500 font-medium mb-8">Up to 250 Attendees per month</p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
+              <Link href="/signup" className="block w-full text-center py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
                 Start My 15-day Trial
-              </button>
+              </Link>
 
               {/* Divider */}
               <div className="w-full h-[1px] bg-gray-100 mb-6" />
@@ -368,9 +369,9 @@ export default function PricingSection() {
               <p className="text-xs text-gray-300 font-medium mb-8">Up to 1,500 Attendees per month</p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 bg-[#c65318] hover:bg-[#A83800] text-white font-bold text-xs rounded-none transition-all cursor-pointer shadow-md mb-8">
+              <Link href="/signup" className="block w-full text-center py-3 px-4 bg-[#c65318] hover:bg-[#A83800] text-white font-bold text-xs rounded-none transition-all cursor-pointer shadow-md mb-8">
                 Start My 15-day Trial
-              </button>
+              </Link>
 
               {/* Divider */}
               <div className="w-full h-[1px] bg-gray-700/60 mb-6" />
@@ -411,9 +412,9 @@ export default function PricingSection() {
               </p>
 
               {/* CTA Button */}
-              <button className="w-full py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
+              <Link href="/signup" className="block w-full text-center py-3 px-4 border border-[#c65318] text-[#c65318] hover:bg-[#c65318] hover:text-white font-bold text-xs rounded-none transition-all cursor-pointer mb-8">
                 Start My 15-day Trial
-              </button>
+              </Link>
 
               {/* Divider */}
               <div className="w-full h-[1px] bg-gray-100 mb-6" />

@@ -209,6 +209,7 @@ export default function EarningsPage() {
           toggleSelectAll={toggleSelectAll}
           toggleSelectRow={toggleSelectRow}
           onDeleteSelected={handleDeleteSelected}
+          onHideRow={(id) => { setHiddenIds((prev) => [...prev, id]); setSelectedIds((prev) => prev.filter((x) => x !== id)); }}
           onExportCSV={exportCSV}
         />
       </div>

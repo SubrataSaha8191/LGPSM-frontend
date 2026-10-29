@@ -74,7 +74,27 @@ async function performTokenRefresh(): Promise<string | null> {
   }
 }
 
+// Identical GETs that are already on their way are shared: several parts of a page (the page itself, the tab strip, the page
+// title) often ask for the same event, sessions or categories at the same moment. Only requests in flight are shared, nothing
+// is cached, so a later call always fetches fresh data. Each extra caller gets its own copy of the result.
+const inflightGets = new Map<string, Promise<ApiResponse<unknown>>>();
+
 export async function apiClient<T = unknown>(
+  endpoint: string,
+  options: RequestInit = {},
+  requiresAuth: boolean = false
+): Promise<ApiResponse<T>> {
+  const method = (options.method || "GET").toUpperCase();
+  if (method !== "GET" || options.body || options.signal) return requestApi<T>(endpoint, options, requiresAuth);
+  const key = `${requiresAuth ? tokenStorage.getAccessToken() || "" : "public"} ${endpoint}`;
+  const pending = inflightGets.get(key);
+  if (pending) return structuredClone(await pending) as ApiResponse<T>;
+  const request = requestApi<T>(endpoint, options, requiresAuth).finally(() => inflightGets.delete(key));
+  inflightGets.set(key, request as Promise<ApiResponse<unknown>>);
+  return request;
+}
+
+async function requestApi<T = unknown>(
   endpoint: string,
   options: RequestInit = {},
   requiresAuth: boolean = false

@@ -10,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
 import RowMenu from "@/components/common/RowMenu";
 import Icon from "@/components/icons/Icon";
+import Pagination from "@/components/common/Pagination";
+import { paginate } from "@/utils/pagination.mjs";
 
 interface OrganizerRow {
   id: string;
@@ -25,6 +27,7 @@ export default function AllOrganizersPage() {
   const { user } = useAuth();
   const [organizers, setOrganizers] = useState<OrganizerRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -88,6 +91,9 @@ export default function AllOrganizersPage() {
       o.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       o.phone.includes(searchQuery)
   );
+  // The list used to show fixed "1 2 … 9 10" buttons that did nothing; it now really pages, 10 organizers at a time
+  const PAGE_SIZE = 10;
+  const { current: currentPage, totalPages, rows: pageOrganizers } = paginate(filteredOrganizers, page, PAGE_SIZE);
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
@@ -97,7 +103,7 @@ export default function AllOrganizersPage() {
         {/* Page Content */}
         <main className="px-4 sm:px-6 pt-[30px] pb-24 w-full space-y-6">
           {/* Controls (Figma 462:10218) */}
-          <ListControls label="Organizer" searchId="organizer-search" placeholder="Search organizers" value={searchQuery} onChange={setSearchQuery}>
+          <ListControls label="Organizer" searchId="organizer-search" placeholder="Search organizers" value={searchQuery} onChange={(v) => { setSearchQuery(v); setPage(1); }}>
             <Link href="/event-organizer/add" className={addButtonClass}>
               <Icon name="events/add-white" width={24} height={24} />
               Add Organizer
@@ -190,7 +196,7 @@ export default function AllOrganizersPage() {
                   {!loading && !loadError && filteredOrganizers.length === 0 && (
                     <tr><td colSpan={6} className="py-12 text-center text-gray-400 text-sm">No organizers found.</td></tr>
                   )}
-                  {filteredOrganizers.map((org) => {
+                  {pageOrganizers.map((org) => {
                     const isSelected = selectedIds.includes(org.id);
 
                     return (
@@ -264,28 +270,12 @@ export default function AllOrganizersPage() {
               </table>
             </div>
 
-            {/* Pagination Controls */}
-            <div className="p-4 border-t border-gray-200 flex items-center justify-start gap-1 text-xs">
-              <button className="w-8 h-8 rounded border border-gray-200 bg-gray-100 text-gray-400 flex items-center justify-center cursor-not-allowed">
-                &lt;
-              </button>
-              <button className="w-8 h-8 rounded border border-[#FF5B22] text-[#FF5B22] font-bold flex items-center justify-center">
-                1
-              </button>
-              <button className="w-8 h-8 rounded border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50">
-                2
-              </button>
-              <span className="px-1 text-gray-400">...</span>
-              <button className="w-8 h-8 rounded border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50">
-                9
-              </button>
-              <button className="w-8 h-8 rounded border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50">
-                10
-              </button>
-              <button className="w-8 h-8 rounded border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50">
-                &gt;
-              </button>
-            </div>
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-gray-200 flex items-center justify-between gap-3 text-xs text-[#828282]">
+                <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} label="Organizer pages" />
+                <span>Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredOrganizers.length)} of {filteredOrganizers.length}</span>
+              </div>
+            )}
           </div>
         </main>
     </div>

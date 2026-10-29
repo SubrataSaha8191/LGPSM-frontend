@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -137,9 +138,9 @@ export default function SubHeroIntro() {
 
         {/* Book a Demo Button & Animated Spiralled Arrow SVG */}
         <div className="pt-2 flex flex-col items-center justify-center relative">
-          <button className="px-6 py-2.5 bg-[#171D22] hover:bg-[#0F1418] text-white text-sm font-normal rounded-[10px] shadow-sm transition-all hover:scale-105 active:scale-95 font-sans tracking-wide cursor-pointer">
+          <Link href="/contact" className="inline-block px-6 py-2.5 bg-[#171D22] hover:bg-[#0F1418] text-white text-sm font-normal rounded-[10px] shadow-sm transition-all hover:scale-105 active:scale-95 font-sans tracking-wide cursor-pointer">
             Book a Demo
-          </button>
+          </Link>
           
           {/* Orange Spiralled Arrow SVG matching Figma design */}
           <div ref={arrowContainerRef} className="mt-0 text-[#FF5B22] flex justify-center z-10">
