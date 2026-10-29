@@ -12,8 +12,6 @@ import {
   AuthLogo,
   AuthSplitLayout,
   BackLink,
-  GoogleButton,
-  OrDivider,
   PasswordInput,
   Spinner,
   authInputClass,
@@ -72,7 +70,7 @@ function RoleTabs({ currentMode, onSelect }: { currentMode: PortalMode; onSelect
 function SigninContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
 
   const initial = parsePortalMode(searchParams.get("mode"));
   const mode: PortalMode = initial.mode;
@@ -140,18 +138,6 @@ function SigninContent() {
       }
     } catch {
       setErrorMessage(ERROR_MESSAGES.network.genericFailure);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogle = async (idToken: string) => {
-    setErrorMessage("");
-    setIsSubmitting(true);
-    try {
-      const res = await loginWithGoogle(idToken, portalRole(mode));
-      if (res.success) onSuccess(res.data?.user?.role);
-      else setErrorMessage(res.message || ERROR_MESSAGES.network.genericFailure);
     } finally {
       setIsSubmitting(false);
     }
@@ -254,8 +240,6 @@ function SigninContent() {
           )}
           {isVerifiedParam && <AuthAlert tone="success">Email verified successfully! Please sign in to access your dashboard.</AuthAlert>}
           {errorMessage && <AuthAlert tone="error">{errorMessage}</AuthAlert>}
-          <GoogleButton onToken={handleGoogle} disabled={isSubmitting} />
-          <OrDivider />
           {sharedForm}
           <p className="text-center mt-[37px] text-sm leading-5 text-[#4A5568]">
             Don&apos;t have an account?{" "}

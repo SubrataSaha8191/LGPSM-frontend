@@ -70,20 +70,6 @@ export const authService = {
     return response;
   },
 
-  async googleLogin(idToken: string, role?: "ADMIN" | "ORGANIZER"): Promise<ApiResponse<AuthResponseData>> {
-    const response = await apiClient<AuthResponseData>("/api/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ token: idToken, ...(role ? { role } : {}) }),
-    });
-    if (response.success && response.data) {
-      const { user, accessToken, refreshToken } = response.data;
-      if (user) tokenStorage.setUser(user);
-      if (accessToken) tokenStorage.setAccessToken(accessToken);
-      if (refreshToken) tokenStorage.setRefreshToken(refreshToken);
-    }
-    return response;
-  },
-
   async logout(): Promise<ApiResponse> {
     const refreshToken = tokenStorage.getRefreshToken();
     let response: ApiResponse = { success: true };

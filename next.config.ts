@@ -21,12 +21,12 @@ const ENFORCED_CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'
 // even so it blocks loading script, frames and connections from origins the app does not use.
 const REPORT_ONLY_CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://accounts.google.com",
-  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
-  `img-src 'self' data: blob: ${apiOrigin} https://*.googleusercontent.com https://tile.openstreetmap.org`,
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${apiOrigin} https://tile.openstreetmap.org`,
   "font-src 'self' data:",
-  `connect-src 'self' ${apiOrigin} https://accounts.google.com https://nominatim.openstreetmap.org`,
-  "frame-src https://accounts.google.com",
+  `connect-src 'self' ${apiOrigin} https://nominatim.openstreetmap.org`,
+  "frame-src 'none'",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");
