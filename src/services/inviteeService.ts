@@ -15,6 +15,8 @@ export interface InviteeData {
   company?: string;
   /** e.g. "Employee ID: 4521" */
   professionalIdentity?: string;
+  dietaryPreference?: string;
+  dietarySelections?: { title: string; value: string }[];
   category?: string;
   qrCode?: string;
   registrationStatus?: "pending" | "confirmed" | "checked_in" | "cancelled";
@@ -32,6 +34,7 @@ export interface CreateInviteePayload {
   professionalIdentity?: string;
   category?: string;
   dietaryPreference?: string;
+  dietarySelections?: { title: string; value: string }[];
   rsvpStatus?: "PENDING" | "ACCEPTED" | "DECLINED";
   sessionAccess?: SessionAccessItem[];
 }

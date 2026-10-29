@@ -2,9 +2,47 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { invitationService, PublicInvitationData } from "@/services/invitationService";
+import { DietarySelection, invitationService, PublicInvitationData } from "@/services/invitationService";
 import { usePageTitle } from "@/context/PageTitleContext";
 import BrandLoader from "@/components/common/BrandLoader";
+import CustomDropdown from "@/components/common/CustomDropdown";
+
+interface DietaryPrompt {
+  title: string;
+  options: string[];
+}
+
+function getDietaryPrompts(preference?: PublicInvitationData["event"]["dietaryPreference"]): DietaryPrompt[] {
+  if (!preference?.enabled || !Array.isArray(preference.options)) return [];
+  const groups = preference.options.filter((option): option is { title?: string; options?: unknown[] } =>
+    !!option && typeof option === "object" && !Array.isArray(option)
+  );
+  if (groups.length) {
+    return groups
+      .map((group) => ({ title: group.title?.trim() || preference.title?.trim() || "Dietary Preference", options: Array.isArray(group.options) ? group.options.map(String).map((value) => value.trim()).filter(Boolean) : [] }))
+      .filter((group) => group.options.length > 0);
+  }
+  const options = preference.options.map(String).map((value) => value.trim()).filter(Boolean);
+  return options.length ? [{ title: preference.title?.trim() || "Dietary Preference", options }] : [];
+}
+
+function restoreDietaryChoices(prompts: DietaryPrompt[], selections?: DietarySelection[], legacyValue?: string): Record<string, string> {
+  if (selections?.length) {
+    return Object.fromEntries(prompts.flatMap((prompt, index) => {
+      const saved = selections.find((selection) => selection.title === prompt.title && prompt.options.includes(selection.value));
+      return saved ? [[String(index), saved.value]] : [];
+    }));
+  }
+  if (!legacyValue) return {};
+  if (prompts.length === 1 && prompts[0].options.includes(legacyValue)) return { "0": legacyValue };
+  const pieces = legacyValue.split(" · ");
+  return Object.fromEntries(prompts.flatMap((prompt, index) => {
+    const prefix = `${prompt.title}: `;
+    const piece = pieces.find((part) => part.startsWith(prefix));
+    const value = piece?.slice(prefix.length);
+    return value && prompt.options.includes(value) ? [[String(index), value]] : [];
+  }));
+}
 
 export default function PublicInvitationPage() {
   const params = useParams();
@@ -13,17 +51,19 @@ export default function PublicInvitationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invitationData, setInvitationData] = useState<PublicInvitationData | null>(null);
+  const [cardImageFailed, setCardImageFailed] = useState(false);
 
   const eventTitle = invitationData?.event?.title;
   const rsvpEnabled = invitationData?.event?.rsvp?.enabled !== false;
   usePageTitle(eventTitle ? `Invitation: ${eventTitle}` : "Event Invitation");
 
-  const [selectedRsvp, setSelectedRsvp] = useState<"ACCEPTED" | "DECLINED">("ACCEPTED");
-  const [dietaryPref, setDietaryPref] = useState<string>("");
+  const [selectedRsvp, setSelectedRsvp] = useState<"ACCEPTED" | "DECLINED" | null>(null);
+  const [dietaryChoices, setDietaryChoices] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccessMsg, setSubmitSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    setCardImageFailed(false);
     if (!token) {
       setError("Invitation token is missing.");
       setLoading(false);
@@ -44,14 +84,8 @@ export default function PublicInvitationPage() {
 
         if (data && data.event && data.invitee) {
           setInvitationData(data);
-          if (data.invitee.rsvpStatus === "DECLINED") {
-            setSelectedRsvp("DECLINED");
-          } else {
-            setSelectedRsvp("ACCEPTED");
-          }
-          if (data.invitee.dietaryPreference) {
-            setDietaryPref(data.invitee.dietaryPreference);
-          }
+          setSelectedRsvp(data.invitee.rsvpStatus === "ACCEPTED" || data.invitee.rsvpStatus === "DECLINED" ? data.invitee.rsvpStatus : null);
+          setDietaryChoices(restoreDietaryChoices(getDietaryPrompts(data.event.dietaryPreference), data.invitee.dietarySelections, data.invitee.dietaryPreference));
         } else {
           setError(res.message || "Invitation not found or link is invalid.");
         }
@@ -68,6 +102,15 @@ export default function PublicInvitationPage() {
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
+    if (!selectedRsvp) {
+      setError("Choose Accept or Decline before submitting your response.");
+      return;
+    }
+
+    const prompts = getDietaryPrompts(invitationData?.event.dietaryPreference);
+    const selections: DietarySelection[] = selectedRsvp === "ACCEPTED"
+      ? prompts.flatMap((prompt, index) => dietaryChoices[String(index)] ? [{ title: prompt.title, value: dietaryChoices[String(index)] }] : [])
+      : [];
 
     try {
       setSubmitting(true);
@@ -76,19 +119,23 @@ export default function PublicInvitationPage() {
 
       const res = await invitationService.submitRsvp(token, {
         rsvpStatus: selectedRsvp,
-        dietaryPreference: dietaryPref,
+        dietarySelections: selections,
       });
 
       if (res.success || (res as any).data?.message) {
         setSubmitSuccessMsg("Thank you! Your RSVP has been saved.");
-        // Re-fetch to reflect persisted backend data
-        const updated = await invitationService.getPublicInvitation(token);
-        const updatedData = (updated?.data && (updated.data as any).event)
-          ? (updated.data as PublicInvitationData)
-          : (updated as unknown as PublicInvitationData);
-        
-        if (updatedData && updatedData.invitee) {
-          setInvitationData(updatedData);
+        try {
+          const updated = await invitationService.getPublicInvitation(token);
+          const updatedData = (updated?.data && (updated.data as any).event)
+            ? (updated.data as PublicInvitationData)
+            : (updated as unknown as PublicInvitationData);
+          if (updatedData?.invitee) {
+            setInvitationData(updatedData);
+            setSelectedRsvp(updatedData.invitee.rsvpStatus === "ACCEPTED" || updatedData.invitee.rsvpStatus === "DECLINED" ? updatedData.invitee.rsvpStatus : null);
+            setDietaryChoices(restoreDietaryChoices(getDietaryPrompts(updatedData.event.dietaryPreference), updatedData.invitee.dietarySelections, updatedData.invitee.dietaryPreference));
+          }
+        } catch {
+          // The RSVP has already been saved; a refresh failure must not report the submission as failed.
         }
       } else {
         setError(res.message || "Failed to submit RSVP. Please try again.");
@@ -120,6 +167,11 @@ export default function PublicInvitationPage() {
 
   const { event, invitee } = invitationData!;
   const locationText = typeof event.location === "string" ? event.location : event.location?.address || "";
+  const dietaryPrompts = getDietaryPrompts(event.dietaryPreference);
+  const closesAt = event.rsvp?.closesAt ? new Date(event.rsvp.closesAt) : null;
+  const rsvpClosed = !!closesAt && !Number.isNaN(closesAt.getTime()) && closesAt.getTime() < Date.now();
+  const eventCancelled = event.status?.toUpperCase() === "CANCELLED";
+  const canRespond = rsvpEnabled && !rsvpClosed && !eventCancelled;
   const startDate = event.schedule?.start ? new Date(event.schedule.start) : null;
   const endDate = event.schedule?.end ? new Date(event.schedule.end) : null;
   const formatDateTime = (d: Date | null) =>
@@ -135,7 +187,7 @@ export default function PublicInvitationPage() {
           <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
             Event Invitation
           </span>
-          <h1 className="text-2xl font-extrabold tracking-tight break-words">{event.title}</h1>
+          <h1 className="mx-auto max-w-full min-w-0 text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
           {event.format && (
             <p className="text-xs text-white/90 font-medium mt-1 uppercase tracking-wide">
               Format: {event.format}
@@ -145,6 +197,18 @@ export default function PublicInvitationPage() {
 
         {/* Card Content */}
         <div className="p-6 space-y-6">
+          {!cardImageFailed && (
+            <figure className="mx-auto flex max-w-[220px] flex-col items-center gap-2">
+              <img
+                src={invitationService.publicInvitationCardUrl(token)}
+                alt={`${event.title} digital access pass for ${invitee.name}`}
+                onError={() => setCardImageFailed(true)}
+                className="block w-full rounded-xl border border-slate-200 bg-white object-contain shadow-lg"
+              />
+              <figcaption className="text-[11px] font-medium tracking-wide text-slate-500">DIGITAL ACCESS PASS</figcaption>
+            </figure>
+          )}
+
           {/* Invitee Welcome */}
           <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -212,12 +276,15 @@ export default function PublicInvitationPage() {
           <hr className="border-slate-100" />
 
           {/* RSVP Form — only when the organiser asked guests to respond (the API refuses answers otherwise) */}
-          {rsvpEnabled && (
+          {canRespond ? (
           <form onSubmit={handleSubmitRsvp} className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-800">Respond to Invitation</h3>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Respond to Invitation</h3>
+              <p className="mt-1 text-xs text-slate-500">Choose whether you can attend, then submit your response.</p>
+            </div>
 
             {error && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">
+              <div role="alert" aria-live="assertive" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">
                 {error}
               </div>
             )}
@@ -231,7 +298,8 @@ export default function PublicInvitationPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedRsvp("ACCEPTED")}
+                aria-pressed={selectedRsvp === "ACCEPTED"}
+                onClick={() => { setSelectedRsvp("ACCEPTED"); setError(null); }}
                 className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   selectedRsvp === "ACCEPTED"
                     ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
@@ -246,7 +314,8 @@ export default function PublicInvitationPage() {
 
               <button
                 type="button"
-                onClick={() => setSelectedRsvp("DECLINED")}
+                aria-pressed={selectedRsvp === "DECLINED"}
+                onClick={() => { setSelectedRsvp("DECLINED"); setDietaryChoices({}); setError(null); }}
                 className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   selectedRsvp === "DECLINED"
                     ? "bg-rose-600 text-white border-rose-600 shadow-sm"
@@ -260,22 +329,28 @@ export default function PublicInvitationPage() {
               </button>
             </div>
 
-            {/* Dietary Preference Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700">Dietary Preference (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. Vegetarian, Jain, Vegan, No Nuts..."
-                value={dietaryPref}
-                onChange={(e) => setDietaryPref(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#FF5B22] focus:bg-white transition-colors"
-              />
-            </div>
+            {selectedRsvp === "ACCEPTED" && dietaryPrompts.length > 0 && (
+              <fieldset className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+                <legend className="px-1 text-xs font-semibold text-slate-700">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
+                {dietaryPrompts.map((prompt, index) => (
+                  <div key={`${index}-${prompt.title}`} className="space-y-1.5">
+                    <label className="text-xs font-medium text-slate-700">{prompt.title}</label>
+                    <CustomDropdown
+                      value={dietaryChoices[String(index)] || ""}
+                      onChange={(value) => setDietaryChoices((current) => ({ ...current, [String(index)]: value }))}
+                      options={prompt.options.map((value) => ({ value, label: value }))}
+                      placeholder="Choose an option (optional)"
+                      ariaLabel={prompt.title}
+                    />
+                  </div>
+                ))}
+              </fieldset>
+            )}
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full py-3 px-4 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={submitting || !selectedRsvp}
+              className="w-full py-3 px-4 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
@@ -287,6 +362,10 @@ export default function PublicInvitationPage() {
               )}
             </button>
           </form>
+          ) : (
+            <div role="status" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              {!rsvpEnabled ? "RSVP is not required for this event." : eventCancelled ? "This event has been cancelled." : "The response deadline for this invitation has passed."}
+            </div>
           )}
         </div>
       </div>

@@ -59,6 +59,7 @@ export interface PublicInvitationData {
     title: string;
     description?: string;
     format?: string;
+    status?: string;
     location?: string | { address?: string };
     schedule?: {
       start?: string;
@@ -66,20 +67,35 @@ export interface PublicInvitationData {
     };
     /** Whether guests can answer; older API responses omit it (treated as on) */
     rsvp?: { enabled: boolean; closesAt: string | null };
+    dietaryPreference?: {
+      enabled?: boolean;
+      title?: string;
+      options?: Array<string | { title?: string; options?: unknown[] }>;
+    };
   };
   invitee: {
     name: string;
     rsvpStatus: "PENDING" | "ACCEPTED" | "DECLINED";
     dietaryPreference?: string;
+    dietarySelections?: Array<{ title: string; value: string }>;
   };
+}
+
+export interface DietarySelection {
+  title: string;
+  value: string;
 }
 
 export interface RsvpPayload {
   rsvpStatus: "ACCEPTED" | "DECLINED";
-  dietaryPreference?: string;
+  dietarySelections?: DietarySelection[];
 }
 
 export const invitationService = {
+  publicInvitationCardUrl(token: string): string {
+    return `${API_BASE_URL}/api/v1/public/invitations/${encodeURIComponent(token)}/card`;
+  },
+
   /**
    * Send invitations to selected invitees
    * POST /api/v1/events/:eventId/invitations/send
