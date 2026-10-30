@@ -248,7 +248,7 @@ export default function PublicInvitationPage() {
           {passStatus === "REVOKED" && !eventCancelled && (
             <div role="alert" className="rounded-xl border border-[#E0E0E0] bg-[#F4F4F4] p-4 space-y-2 text-sm text-[color:var(--inv-ink)]">
               <p className="font-semibold">Your access pass has been withdrawn.</p>
-              <p><strong className="font-semibold">The QR code no longer works for entry.</strong> If you think this is a mistake, please contact the organizer{event.contactNumber ? <> on <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="underline">{event.contactNumber}</a></> : null}.</p>
+              <p><strong className="font-semibold">The QR code no longer works for entry.</strong> This page still shows your event details and lets you answer your invitation. If you think this is a mistake, please contact the organizer{event.contactNumber ? <> on <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="underline">{event.contactNumber}</a></> : null}.</p>
             </div>
           )}
 

@@ -33,7 +33,7 @@ import { TableSkeleton } from "@/components/common/Skeleton";
 import Icon from "@/components/icons/Icon";
 import PassActionModal from "@/components/invitees/PassActionModal";
 import { credentialService, CredentialHistoryRow, CredentialStatus } from "@/services/credentialService";
-import { STATUS_PILL, hasUnknown, hasUnsent, historyTitle, noticeText, reasonLabel, replaceAvailability, revokeAvailability } from "@/utils/credentialUi";
+import { STATUS_PILL, hasUnknown, hasUnsent, historyReason, historyTitle, noticeText, passRef, reasonLabel, replaceAvailability, revokeAvailability } from "@/utils/credentialUi";
 
 interface Invitee {
   _id: string;
@@ -938,8 +938,8 @@ export default function InviteesManagementPage() {
                         {passHistory.map((r) => (
                           <tr key={r._id} className="align-top">
                             <td className="py-2.5 pr-3 text-gray-900">{r.inviteeName}</td>
-                            <td className="py-2.5 pr-3">{historyTitle(r)}{r.actor ? <span className="block text-xs text-[#828282]">by {r.actor}</span> : null}</td>
-                            <td className="py-2.5 pr-3 text-xs break-words max-w-[200px]">{r.reasonCategory ? reasonLabel(r.reasonCategory) : "—"}{r.note ? <span className="block text-[#828282]">{r.note}</span> : null}{r.reviewConfirmed ? <span className="block text-[#828282]">Reviewed before replacing</span> : null}</td>
+                            <td className="py-2.5 pr-3">{historyTitle(r)}{passRef(r.credentialId) ? <span className="block text-xs text-[#828282]" title="Reference of this pass (not its code)">pass {passRef(r.credentialId)}{r.previousCredentialId ? ` replaced ${passRef(r.previousCredentialId)}` : ""}</span> : null}{r.derived ? <span className="block text-xs text-[#828282]">follows from the event, not an action</span> : null}{r.actor ? <span className="block text-xs text-[#828282]">by {r.actor}</span> : null}</td>
+                            <td className="py-2.5 pr-3 text-xs break-words max-w-[200px]">{historyReason(r)}{r.note ? <span className="block text-[#828282]">{r.note}</span> : null}{r.reviewConfirmed ? <span className="block text-[#828282]">Reviewed before replacing</span> : null}</td>
                             <td className="py-2.5 pr-3 text-xs">
                               {[noticeText("Email", r.notice?.email), noticeText("WhatsApp", r.notice?.whatsapp)].filter(Boolean).map((t) => <span key={t} className="block">{t}</span>) }
                               {!r.notice && "—"}

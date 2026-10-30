@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { REASONS, reasonsFor, validatePassForm, STATUS_PILL, revokeAvailability, replaceAvailability, historyTitle, noticeText, hasUnsent, hasUnknown } from "./credentialUi.ts";
+import { historyReason, passRef, REASONS, reasonsFor, validatePassForm, STATUS_PILL, revokeAvailability, replaceAvailability, historyTitle, noticeText, hasUnsent, hasUnknown } from "./credentialUi.ts";
 
 test("the six reason categories are offered; 'Access withdrawn' is not a reason to replace", () => {
   assert.deepEqual(REASONS.map((r) => r.label), ["Lost or compromised pass", "Pass forwarded or shared", "Duplicate or incorrectly issued pass", "Access withdrawn", "Attendee requested replacement", "Other"]);
@@ -55,4 +55,19 @@ test("message outcomes are stated honestly: accepted is not delivered, unknown i
   assert.equal(hasUnsent([{ notice: { email: { status: "FAILED" }, whatsapp: { status: "NOT_USED" } } }]), true);
   assert.equal(hasUnknown([{ notice: { email: { status: "UNKNOWN" }, whatsapp: { status: "NOT_USED" } } }]), true);
   assert.equal(hasUnsent([{ notice: { email: { status: "UNKNOWN" }, whatsapp: { status: "SENT" } } }]), false);
+});
+
+test("activation and expiry have their own history wording; expiry follows from the event, not from an action", () => {
+  assert.equal(historyTitle({ type: "ACTIVATED", version: 2, source: "REPLACE" }), "Pass 2 activated (now the current pass)");
+  assert.equal(historyTitle({ type: "EXPIRED", version: 2, source: "EVENT" }), "Pass 2 expired");
+  assert.equal(historyReason({ type: "EXPIRED", reasonCategory: "EVENT_CANCELLED" }), "The event was cancelled");
+  assert.equal(historyReason({ type: "EXPIRED", reasonCategory: "ADMISSION_CLOSED" }), "The admission window closed");
+  assert.equal(historyReason({ type: "EXPIRED", reasonCategory: "EVENT_COMPLETED" }), "The event was completed or closed");
+  assert.equal(historyReason({ type: "REVOKED", reasonCategory: "ACCESS_WITHDRAWN" }), "Access withdrawn");
+  assert.equal(historyReason({ type: "ISSUED" }), "—");
+});
+
+test("a pass reference is a short id, never the code, and absent when there is no id", () => {
+  assert.equal(passRef("6ae4c1b8fef7f74abb41ca41"), "#41ca41");
+  assert.equal(passRef(undefined), null);
 });

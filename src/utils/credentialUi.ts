@@ -64,6 +64,8 @@ export function replaceAvailability(i: PassInvitee, eventStatus?: string): PassA
 export function historyTitle(row: Pick<CredentialHistoryRow, "type" | "version" | "previousVersion" | "source">): string {
   if (row.type === "REVOKED") return `Pass ${row.version} revoked`;
   if (row.type === "ISSUED") return `Pass ${row.version} issued`;
+  if (row.type === "ACTIVATED") return `Pass ${row.version} activated (now the current pass)`;
+  if (row.type === "EXPIRED") return `Pass ${row.version} expired`;
   const how = row.source === "RESEND" ? "re-sent with a new pass" : "replaced";
   return `Pass ${row.previousVersion ?? row.version - 1} ${how} → pass ${row.version} (Active)`;
 }
@@ -83,3 +85,18 @@ export function noticeText(label: string, c?: NoticeChannelState): string | null
 
 export const hasUnsent = (rows: CredentialHistoryRow[]) => rows.some((r) => [r.notice?.email, r.notice?.whatsapp].some((c) => c && (c.status === "FAILED" || c.status === "UNAVAILABLE")));
 export const hasUnknown = (rows: CredentialHistoryRow[]) => rows.some((r) => [r.notice?.email, r.notice?.whatsapp].some((c) => c?.status === "UNKNOWN"));
+
+const EXPIRY_TEXT: Record<string, string> = {
+  EVENT_CANCELLED: "The event was cancelled",
+  EVENT_COMPLETED: "The event was completed or closed",
+  ADMISSION_CLOSED: "The admission window closed",
+};
+
+/** The "reason" cell of a history row: a chosen reason for revoke/replace, the event's state for an expiry. */
+export function historyReason(row: Pick<CredentialHistoryRow, "type" | "reasonCategory">): string {
+  if (row.type === "EXPIRED") return EXPIRY_TEXT[row.reasonCategory as string] ?? "The event no longer admits guests";
+  return row.reasonCategory ? reasonLabel(row.reasonCategory) : "—";
+}
+
+/** A short, non-secret reference to a pass, so rows about the same pass can be told apart. */
+export const passRef = (credentialId?: string): string | null => (credentialId ? `#${credentialId.slice(-6)}` : null);

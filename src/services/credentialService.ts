@@ -11,11 +11,17 @@ export interface CredentialHistoryRow {
   _id: string;
   inviteeId: string;
   inviteeName: string;
-  type: "ISSUED" | "REPLACED" | "REVOKED";
+  /** EXPIRED rows are derived from the event's own state (nothing is stored for them) */
+  type: "ISSUED" | "ACTIVATED" | "REPLACED" | "REVOKED" | "EXPIRED";
   version: number;
   previousVersion?: number;
-  source: "SEND" | "RESEND" | "REPLACE" | "REVOKE";
-  reasonCategory?: ReasonCategory;
+  /** The pass this row is about, and for a replacement the one it replaced (ids only, never the secret) */
+  credentialId?: string;
+  previousCredentialId?: string;
+  result?: "SUCCESS";
+  derived?: boolean;
+  source: "SEND" | "RESEND" | "REPLACE" | "REVOKE" | "EVENT";
+  reasonCategory?: ReasonCategory | "EVENT_CANCELLED" | "EVENT_COMPLETED" | "ADMISSION_CLOSED";
   note?: string;
   reviewConfirmed?: boolean;
   actor?: string;
