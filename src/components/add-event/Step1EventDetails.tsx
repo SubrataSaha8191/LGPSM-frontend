@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DraftErrors, EventDraft } from "./eventDraft";
 import { formatDateTime } from "@/utils/dateTime";
-import { browserTimeZone } from "@/utils/admissionWindow";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
@@ -12,12 +11,9 @@ import { UserData } from "@/services/tokenStorage";
 import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import InfoTip from "@/components/common/InfoTip";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
-import dynamic from "next/dynamic";
 
-// The map library is only needed once someone presses Verify, so it is not part of the Add Event page load
-const VerifyLocationModal = dynamic(() => import("./modals/VerifyLocationModal"), { ssr: false });
 
-export type EventDateField = "start" | "end" | "rsvpDeadline" | "admissionOpens" | "admissionCloses";
+export type EventDateField = "start" | "end" | "rsvpDeadline";
 
 export const TITLE_MAX = EVENT_TITLE_MAX_LENGTH;
 export const DESCRIPTION_MAX = EVENT_DESCRIPTION_MAX_LENGTH;
@@ -266,8 +262,6 @@ function DateButton({ label, value, placeholder, onClick, error }: { label: stri
 
 // Controlled step: all values live in the wizard draft owned by the page
 export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, categories, canManageCategories, isAdmin, rsvpAllowed, errors, onNext, onCancel }: Step1EventDetailsProps) {
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [verifyHint, setVerifyHint] = useState<string | null>(null);
   return (
     <form
       onSubmit={(e) => {
@@ -304,7 +298,7 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
 
       <div>
         <div className="flex justify-between items-center mb-1.5 gap-2">
-          <label htmlFor="event-description" className={labelClass}>Description<Req /></label>
+          <span className="flex items-center gap-1.5"><label htmlFor="event-description" className={labelClass}>Description <span className="font-normal text-[#828282]">(optional)</span></label><InfoTip label="About the description" text="A short note guests see on their invitation page: what the event is, what to expect, anything to bring. Leave it empty and the event title is used." align="left" /></span>
           <span className="text-xs text-[#828282]">{DESCRIPTION_MAX - draft.description.length} Chars remaining</span>
         </div>
         <textarea
@@ -344,31 +338,6 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           <span className={`block ${labelClass} mb-1.5`}>Event End Date Time<Req /></span>
           <DateButton label="Event end date and time" value={draft.end} placeholder="Select end date and time" onClick={() => onOpenDatePicker("end")} error={errors.end} />
           <Err msg={errors.end} />
-        </div>
-      </div>
-
-      {/* The event's hours and the hours guests can be let in are separate: check-in may open before the event starts */}
-      <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className={labelClass}>Check-in window</span>
-          <InfoTip label="About the check-in window" text="Guests can only be checked in while the window is open, using the server's clock. By default it opens when the event starts and closes when it ends. Open it earlier if guests arrive before the start. After it closes, passes stop working." />
-        </div>
-        <p className="text-xs text-[#4B4F52]">
-          Check-in opens at the event start and closes at the event end unless you set different times below. Times are in {browserTimeZone()}.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <span className={`block ${labelClass} mb-1.5`}>Check-in opens</span>
-            <DateButton label="Check-in opening time" value={draft.admissionOpens ?? null} placeholder={draft.start ? `Event start — ${formatDateTime(draft.start)}` : "Event start"} onClick={() => onOpenDatePicker("admissionOpens")} error={errors.admissionOpens} />
-            {draft.admissionOpens && <button type="button" onClick={() => onChange({ admissionOpens: null })} className="mt-1 text-xs text-[#FF651D] underline cursor-pointer">Use event start</button>}
-            <Err msg={errors.admissionOpens} />
-          </div>
-          <div>
-            <span className={`block ${labelClass} mb-1.5`}>Check-in closes</span>
-            <DateButton label="Check-in closing time" value={draft.admissionCloses ?? null} placeholder={draft.end ? `Event end — ${formatDateTime(draft.end)}` : "Event end"} onClick={() => onOpenDatePicker("admissionCloses")} error={errors.admissionCloses} />
-            {draft.admissionCloses && <button type="button" onClick={() => onChange({ admissionCloses: null })} className="mt-1 text-xs text-[#FF651D] underline cursor-pointer">Use event end</button>}
-            <Err msg={errors.admissionCloses} />
-          </div>
         </div>
       </div>
 
@@ -432,50 +401,31 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
       </div>
 
       <div>
-        <label htmlFor="event-address" className={`block ${labelClass} mb-1.5`}>Event Address<Req /></label>
-        <div className="relative">
-          <input
-            id="event-address"
-            type="text"
-            value={draft.venue}
-            maxLength={300}
-            // editing the text makes an earlier map pin untrustworthy, so it has to be verified again
-            onChange={(e) => { setVerifyHint(null); onChange({ venue: e.target.value, venuePin: null }); }}
-            placeholder="Enter Event Address"
-            aria-invalid={!!errors.venue}
-            className={`${inputClass} ${border(errors.venue)} pr-[120px]`}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (draft.venue.trim().length < 3) { setVerifyHint("Type the address first, then verify it on the map."); return; }
-              setVerifyHint(null);
-              setVerifyOpen(true);
-            }}
-            title={draft.venuePin ? "Location pinned on the map. Click to review it." : "Check this address on the map"}
-            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#1A9242] hover:bg-[#157A37] text-white text-xs font-semibold cursor-pointer"
-          >
-            {draft.venuePin ? (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg>
-            )}
-            {draft.venuePin ? "Verified" : "Verify"}
-          </button>
-        </div>
-        {verifyHint && <p role="status" className="mt-1 text-xs font-medium text-[#B45309]">{verifyHint}</p>}
+        <label htmlFor="event-location" className={`block ${labelClass} mb-1.5`}>Event Location<Req /></label>
+        <input
+          id="event-location"
+          type="text"
+          value={draft.venue}
+          maxLength={300}
+          onChange={(e) => onChange({ venue: e.target.value })}
+          placeholder="Where is it? (shown on the invitation card)"
+          aria-invalid={!!errors.venue}
+          className={`${inputClass} ${border(errors.venue)}`}
+        />
         <Err msg={errors.venue} />
-        {verifyOpen && (
-          <VerifyLocationModal
-            address={draft.venue.trim()}
-            pin={draft.venuePin ?? null}
-            onClose={() => setVerifyOpen(false)}
-            onConfirm={(pin, useAddress) => {
-              onChange({ venuePin: pin, ...(useAddress ? { venue: useAddress.slice(0, 300) } : {}) });
-              setVerifyOpen(false);
-            }}
-          />
-        )}
+      </div>
+
+      <div>
+        <label htmlFor="event-address-details" className={`block ${labelClass} mb-1.5`}>Address <span className="font-normal text-[#828282]">(optional)</span></label>
+        <textarea
+          id="event-address-details"
+          rows={2}
+          value={draft.addressDetails ?? ""}
+          maxLength={300}
+          onChange={(e) => onChange({ addressDetails: e.target.value })}
+          placeholder="Full address, landmark or directions"
+          className={`${inputClass} leading-relaxed`}
+        />
       </div>
 
       <div className="pt-5 border-t border-[#E5E5E5] flex items-center justify-end gap-3">

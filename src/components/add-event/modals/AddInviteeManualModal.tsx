@@ -4,12 +4,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { inviteeService, CreateInviteePayload } from "@/services/inviteeService";
 import CustomDropdown, { CustomDropdownOption } from "@/components/common/CustomDropdown";
+import type { InviteeFieldKey } from "@/utils/inviteeFields";
 
 interface AddInviteeManualModalProps {
   isOpen: boolean;
   eventId: string;
   existingInvitees?: Array<{ name: string; email?: string; mobile?: string }>;
-  showCompany?: boolean;
+  /** The fields this event collects: the same list the Excel sample is built from (utils/inviteeFields) */
+  fields?: InviteeFieldKey[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -31,10 +33,11 @@ export default function AddInviteeManualModal({
   isOpen,
   eventId,
   existingInvitees = [],
-  showCompany = false,
+  fields = ["name", "email", "mobile"],
   onClose,
   onSaved,
 }: AddInviteeManualModalProps) {
+  const has = (k: InviteeFieldKey) => fields.includes(k);
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -216,7 +219,7 @@ export default function AddInviteeManualModal({
             </div>
 
             {/* Company – shown for corporate events or always as optional */}
-            {showCompany && (
+            {has("company") && (
               <div>
                 <label htmlFor="ai-company" className={labelClass}>
                   Company Name
@@ -233,7 +236,8 @@ export default function AddInviteeManualModal({
               </div>
             )}
 
-            {/* Professional identity */}
+            {/* Professional identity: only when the event's card uses it (same condition as the Excel sample) */}
+            {has("identity") && (
             <div>
               <label className={labelClass}>
                 Professional Identity <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
@@ -257,8 +261,10 @@ export default function AddInviteeManualModal({
                 />
               )}
             </div>
+            )}
 
-            {/* Dietary preference */}
+            {/* Dietary preference: only when the event asks for it */}
+            {has("dietary") && (
             <div>
               <label htmlFor="ai-dietary-preference" className={labelClass}>
                 Dietary Preference <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
@@ -273,6 +279,7 @@ export default function AddInviteeManualModal({
                 autoComplete="off"
               />
             </div>
+            )}
 
             {/* Error */}
             {error && (

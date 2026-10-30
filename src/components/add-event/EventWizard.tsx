@@ -1,5 +1,6 @@
 "use client";
 
+import { templateColumnsFor } from "@/utils/inviteeTemplate";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import StepHeader from "./StepHeader";
@@ -137,6 +138,8 @@ export default function EventWizard({
     }
   }, [blockedCount]);
 
+  // the same field definition the Excel sample, the preview and the manual Add Invitee form use
+  const inviteeConfig = templateColumnsFor({ cardInfo: draft.cardInfo, dietaryEnabled: draft.dietaryEnabled, corporate: /corporate/i.test(categories.categoryName(draft.categoryId) || "") });
   const subcategoryRequired = !!draft.categoryId && categories.subcategoryOptionsFor(draft.categoryId).length > 0;
   const isAdmin = user?.role === "ADMIN";
   const allErrors = useMemo(() => validateEventDraft(draft, { subcategoryRequired }), [draft, subcategoryRequired]);
@@ -223,7 +226,7 @@ export default function EventWizard({
 
   const pickerValue = (() => {
     if (!pickerTarget) return null;
-    if (pickerTarget.kind === "event") return (pickerTarget.field === "admissionCloses" ? draft.admissionCloses || draft.end : draft[pickerTarget.field] || draft.start) as string | null;
+    if (pickerTarget.kind === "event") return (draft[pickerTarget.field] || draft.start) as string | null;
     const session = draft.sessions.find((s) => s.key === pickerTarget.key);
     return session ? session[pickerTarget.field] : null;
   })();
@@ -231,7 +234,7 @@ export default function EventWizard({
   const pickerTitle = (() => {
     if (!pickerTarget) return undefined;
     if (pickerTarget.kind === "event") {
-      return { start: "Event start", end: "Event end", rsvpDeadline: "RSVP last date", admissionOpens: "Check-in opens", admissionCloses: "Check-in closes" }[pickerTarget.field];
+      return { start: "Event start", end: "Event end", rsvpDeadline: "RSVP last date" }[pickerTarget.field];
     }
     const session = draft.sessions.find((s) => s.key === pickerTarget.key);
     return `${session?.name || "Session"} ${pickerTarget.field === "start" ? "start" : "end"}`;
@@ -243,8 +246,6 @@ export default function EventWizard({
     if (!target) return;
     if (target.kind === "event") {
       if (target.field === "rsvpDeadline") patch({ rsvpDeadline: iso });
-      else if (target.field === "admissionOpens") patch({ admissionOpens: iso });
-      else if (target.field === "admissionCloses") patch({ admissionCloses: iso });
       else setDraft((prev) => applyEventWindow(prev, { [target.field]: iso }));
       return;
     }
@@ -340,7 +341,7 @@ export default function EventWizard({
                   onCancel={onCancel}
                 />
               ) : currentStep === 2 ? (
-                <Step2Settings draft={draft} onChange={patch} errors={visibleErrors} features={features} onNext={() => handleStepChange(3)} onBack={() => setCurrentStep(1)} />
+                <Step2Settings draft={draft} onChange={patch} errors={visibleErrors} features={features} onCustomizeCardInfo={() => setInfoPreviewPayload({ title: draft.title.trim() || undefined, startIso: draft.start || undefined, endIso: draft.end || undefined, venue: draft.venue.trim() || undefined, categoryName: categories.categoryName(draft.categoryId) || undefined, subcategoryName: categories.subcategoryName(draft.categoryId, draft.subcategoryId) || undefined, logoKey: draft.logoKey && /^media:[0-9a-fA-F]{24}$/.test(draft.logoKey) ? draft.logoKey : undefined })} onNext={() => handleStepChange(3)} onBack={() => setCurrentStep(1)} />
               ) : (
                 <Step3Sessions
                   sessions={draft.sessions}
@@ -348,6 +349,7 @@ export default function EventWizard({
                   sessionFiles={sessionFiles}
                   onSessionFileChange={(key, file) => setSessionFiles((prev) => ({ ...prev, [key]: file || undefined }))}
                   skipInvitees={draft.skipInvitees}
+                  templateColumns={inviteeConfig}
                   onSkipInviteesChange={(skipInvitees) => patch({ skipInvitees })}
                   eventStart={draft.start}
                   eventEnd={draft.end}
@@ -377,8 +379,6 @@ export default function EventWizard({
               subcategoryName={categories.subcategoryName(draft.categoryId, draft.subcategoryId)}
               onOpenTemplateModal={() => setIsTemplateModalOpen(true)}
               cardInfo={draft.cardInfo ?? null}
-              // Additional Info exists only in the Super Admin designs (Event_Add event-1…5); the Organiser frames (217:7725–32941) show "Change Template" alone
-              onOpenAdditionalInfo={isAdmin ? (payload) => setInfoPreviewPayload(payload) : undefined}
             />
             </div>
           </div>
@@ -419,6 +419,8 @@ export default function EventWizard({
           title="Invitees List Preview"
           subtitle={`${previewSession?.name || "Session"} · ${previewFile.name}`}
           rows={previewFile.rows}
+          showCompany={!!inviteeConfig.company || previewFile.rows.some((r) => r.company)}
+          showIdentity={!!inviteeConfig.identity || previewFile.rows.some((r) => r.identity)}
           onClose={() => setPreviewKey(null)}
           onSave={(rows) => {
             // Edits replace the uploaded file, so the import receives exactly what was previewed

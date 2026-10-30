@@ -2,7 +2,6 @@
 // All dates are ISO strings (see utils/dateTime.ts); payload builders produce the exact backend contract.
 
 import { addHours, isAfter, isValidIso, nextWholeHourIso, parseIso } from "@/utils/dateTime";
-import { admissionPayload, validateAdmission } from "@/utils/admissionWindow";
 import { resolveImageUrl } from "@/utils/mediaUrl";
 import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import type { CreateEventRequest, UpdateEventRequest } from "@/services/eventService";
@@ -60,18 +59,18 @@ export interface EventDraft {
   categoryId: string;
   subcategoryId: string;
   contactNumber: string;
+  /** Event Location: mandatory, printed on the card */
   venue: string;
+  /** Address: optional full address / directions */
+  addressDetails?: string;
   /** Where the venue was pinned on the map (the "Verify" step); cleared when the address text changes */
   venuePin?: { lat: number; lng: number } | null;
   start: string;
   end: string;
   rsvpEnabled: boolean;
   rsvpDeadline: string | null;
-  /** When check-in opens; null = at the event start. Older saved drafts do not have it. */
-  admissionOpens?: string | null;
-  /** When check-in closes; null = at the event end */
-  admissionCloses?: string | null;
-  thresholdLimit: string;
+  /** kept only so older saved drafts still load; the setting was removed from Add Event */
+  thresholdLimit?: string;
   allowAllInvited: boolean;
   allowNotResponded: boolean;
   allowDeclined: boolean;
@@ -100,7 +99,7 @@ export function createSessionDraft(name: string, start: string, end: string): Dr
     name,
     start,
     end,
-    accessControl: "NO_RESTRICTION",
+    accessControl: "ONLY_ONCE",
     validateAgainstOtherSessions: false,
     inviteeSource: "NEW_LIST",
     sourceSessionKey: null,
@@ -124,8 +123,6 @@ export function createEmptyEventDraft(): EventDraft {
     end,
     rsvpEnabled: true,
     rsvpDeadline: null,
-    admissionOpens: null,
-    admissionCloses: null,
     thresholdLimit: "",
     allowAllInvited: true,
     allowNotResponded: false,
@@ -192,23 +189,18 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
   const errors: DraftErrors = {};
   if (!draft.title.trim()) errors.title = "Title is required.";
   else if (draft.title.trim().length > EVENT_TITLE_MAX_LENGTH) errors.title = `Title cannot exceed ${EVENT_TITLE_MAX_LENGTH} characters.`;
-  if (draft.description.length > EVENT_DESCRIPTION_MAX_LENGTH) errors.description = `Description cannot exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters.`;
-  if (!draft.description.trim()) errors.description = "Description is required.";
+  if (draft.description.length > EVENT_DESCRIPTION_MAX_LENGTH) errors.description = `Description cannot exceed ${EVENT_DESCRIPTION_MAX_LENGTH} characters.`; // optional: empty is fine
   if (!draft.categoryId) errors.categoryId = "Choose an event category.";
   else if (options.subcategoryRequired && !draft.subcategoryId) errors.subcategoryId = "Choose a subcategory.";
   const contactDigits = draft.contactNumber.replace(/\D/g, "");
   if (!contactDigits) errors.contactNumber = "Contact number is required.";
   else if (contactDigits.length < 7 || contactDigits.length > 15) errors.contactNumber = "Enter a valid contact number.";
-  if (!draft.venue.trim()) errors.venue = "Event address is required.";
+  if (!draft.venue.trim()) errors.venue = "Event location is required.";
   if (!isValidIso(draft.start)) errors.start = "Choose a start date and time.";
   if (!isValidIso(draft.end)) errors.end = "Choose an end date and time.";
   else if (!isAfter(draft.end, draft.start)) errors.end = "End must be after the start.";
   if (draft.rsvpEnabled && draft.rsvpDeadline && isAfter(draft.rsvpDeadline, draft.end)) {
     errors.rsvpDeadline = "RSVP deadline should be before the event ends.";
-  }
-  Object.assign(errors, validateAdmission({ start: draft.start, end: draft.end, opens: draft.admissionOpens ?? null, closes: draft.admissionCloses ?? null }));
-  if (draft.thresholdLimit.trim() && !(Number(draft.thresholdLimit) > 0)) {
-    errors.thresholdLimit = "Attendee limit must be a positive number.";
   }
   if (draft.dietaryEnabled) {
     const hasMissingOptions = draft.preferenceCategories.some((category) => !category.options.some((option) => option.trim()));
@@ -238,7 +230,7 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
 
 export function stepOfError(key: string): 1 | 2 | 3 {
   if (key.startsWith("session:")) return 3;
-  if (key === "thresholdLimit" || key === "dietaryPreference") return 2;
+  if (key === "dietaryPreference") return 2;
   return 1;
 }
 
@@ -254,9 +246,9 @@ function buildDietaryPreference(draft: EventDraft) {
 }
 
 function commonPayload(draft: EventDraft) {
-  const threshold = Number(draft.thresholdLimit);
   return {
     title: draft.title.trim(),
+    // optional: an empty description falls back to the title
     description: draft.description.trim() || draft.title.trim(),
     ...(draft.organizerIds && draft.organizerIds.length > 0
       ? { organizerIds: draft.organizerIds, organizerId: draft.organizerIds[0] }
@@ -265,11 +257,9 @@ function commonPayload(draft: EventDraft) {
     ...(draft.subcategoryId ? { subcategoryId: draft.subcategoryId } : {}),
     ...(draft.contactNumber.trim() ? { contactNumber: draft.contactNumber.trim() } : {}),
     ...(draft.venue.trim()
-      ? { location: { address: draft.venue.trim(), ...(draft.venuePin ? { coordinates: [draft.venuePin.lng, draft.venuePin.lat] as [number, number] } : {}) } }
+      ? { location: { address: draft.venue.trim(), ...(draft.addressDetails?.trim() ? { addressDetails: draft.addressDetails.trim() } : {}) } }
       : {}),
     schedule: { start: draft.start, end: draft.end },
-    // null = follow the event's start/end; always sent so clearing a value really resets it
-    admission: admissionPayload({ opens: draft.admissionOpens ?? null, closes: draft.admissionCloses ?? null }),
     rsvp: {
       enabled: draft.rsvpEnabled,
       ...(draft.rsvpEnabled && draft.rsvpDeadline ? { acceptanceLastDate: draft.rsvpDeadline } : {}),
@@ -277,7 +267,6 @@ function commonPayload(draft: EventDraft) {
       allowNotResponded: draft.allowNotResponded,
       allowDeclined: draft.allowDeclined,
     },
-    attendeeSettings: threshold > 0 ? { thresholdLimit: threshold } : {},
     dietaryPreference: buildDietaryPreference(draft),
     ...(draft.template ? { templateId: draft.template.id } : {}),
     ...(draft.cardInfo ? { cardInfo: draft.cardInfo } : {}),
@@ -377,13 +366,11 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     contactNumber: event?.contactNumber || "",
     venue: typeof event?.location === "string" ? event.location : event?.location?.address || "",
     venuePin: pinOf(event?.location),
+    addressDetails: typeof event?.location === "object" && event?.location ? (event.location as { addressDetails?: string }).addressDetails || "" : "",
     start,
     end,
     rsvpEnabled: event?.rsvp?.enabled ?? base.rsvpEnabled,
     rsvpDeadline: event?.rsvp?.acceptanceLastDate || null,
-    admissionOpens: event?.admission?.opensAt || null,
-    admissionCloses: event?.admission?.closesAt || null,
-    thresholdLimit: event?.attendeeSettings?.thresholdLimit ? String(event.attendeeSettings.thresholdLimit) : "",
     allowAllInvited: event?.rsvp?.allowAllInvited ?? base.allowAllInvited,
     allowNotResponded: event?.rsvp?.allowNotResponded ?? base.allowNotResponded,
     allowDeclined: event?.rsvp?.allowDeclined ?? base.allowDeclined,
@@ -412,7 +399,7 @@ function draftSessionsFromServer(sessions: ServerSession[], start: string, end: 
       name: s.name || "",
       start: s.schedule?.start || start,
       end: s.schedule?.end || end,
-      accessControl: (s.accessControl === "ONLY_ONCE" ? "ONLY_ONCE" : "NO_RESTRICTION") as AccessControl,
+      accessControl: (s.accessControl === "NO_RESTRICTION" ? "NO_RESTRICTION" : "ONLY_ONCE") as AccessControl,
       validateAgainstOtherSessions: index === 0 && !!s.validateAgainstOtherSessions,
       inviteeSource: "NEW_LIST" as InviteeSource,
       sourceSessionKey: null as string | null,

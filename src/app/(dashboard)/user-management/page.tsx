@@ -26,6 +26,7 @@ export default function AllUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const isAdminView = user?.role === "ADMIN";
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Modals
@@ -353,33 +354,23 @@ export default function AllUsersPage() {
             Select All
           </span>
           </div>
-          {/* Delete selected users: top right, under Add User (Figma User Management); with a selection, the count and the assign action appear beside it */}
-          <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
-            <div role="toolbar" aria-label="Actions for the selected users" className="flex items-center gap-3 animate-overlay">
-              <span className="text-sm font-medium text-[#15191C]" aria-live="polite">{selectionLabel(selectedIds.length)}</span>
-              <button
-                type="button"
-                onClick={() => { setErrorFeedback(null); setIsAssignModalOpen(true); }}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-[#FF651D] text-[#FF651D] hover:bg-[#FF651D] hover:text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
-              >
-                Assign to event
-              </button>
-            </div>
+          {/* Organizer (Figma 217:23029): only the trash icon, top right. The admin page has no icon here: its trash and
+              "Assign N users" sit in a bar under the table (Figma 453:7298). Organizers assign staff from an event
+              (Assign System Users on the event page), as in the Organizer designs. */}
+          {!isAdminView && (
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={selectedIds.length === 0}
+              aria-label="Delete selected users"
+              title="Delete selected users"
+              className="p-1 rounded text-[#4B4F52] hover:text-red-600 disabled:opacity-40 disabled:hover:text-[#4B4F52] cursor-pointer disabled:cursor-not-allowed"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+              </svg>
+            </button>
           )}
-          <button
-            type="button"
-            onClick={handleBulkDelete}
-            disabled={selectedIds.length === 0}
-            aria-label="Delete selected users"
-            title="Delete selected users"
-            className="p-1 rounded text-[#4B4F52] hover:text-red-600 disabled:opacity-40 disabled:hover:text-[#4B4F52] cursor-pointer disabled:cursor-not-allowed"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
-            </svg>
-          </button>
-          </div>
         </div>
 
         {/* Users Table */}
@@ -517,6 +508,35 @@ export default function AllUsersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Admin selection bar (Figma 453:7298): trash + "Assign N users →" under the table */}
+        {isAdminView && (
+          <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleBulkDelete}
+              disabled={selectedIds.length === 0}
+              aria-label="Delete selected users"
+              title="Delete selected users"
+              className="p-2.5 text-[#FF5B22] hover:text-red-600 hover:bg-red-50 border border-transparent disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-colors cursor-pointer disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setErrorFeedback(null); setIsAssignModalOpen(true); }}
+              disabled={selectedIds.length === 0}
+              className="inline-flex items-center gap-2 px-4 py-[11px] border border-[#FF651D] text-[#FF651D] hover:bg-[#FF651D] hover:text-white font-medium text-base rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#FF651D] disabled:cursor-not-allowed"
+            >
+              <span>Assign {selectedIds.length} {selectedIds.length === 1 ? "user" : "users"}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        )}
       </main>
 
       {/* ── Edit User Modal ── */}

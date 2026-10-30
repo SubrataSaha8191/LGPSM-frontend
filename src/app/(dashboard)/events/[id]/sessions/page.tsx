@@ -12,7 +12,7 @@ import PageHeader from "@/components/common/PageHeader";
 import { addHours, formatCompactDateTime, formatDateTime, formatTime, isAfter, nextWholeHourIso } from "@/utils/dateTime";
 
 const sameDay = (a?: string, b?: string) => !!a && !!b && new Date(a).toDateString() === new Date(b).toDateString();
-import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
+import { downloadInviteeTemplate, templateColumnsFor, type TemplateColumns } from "@/utils/inviteeTemplate";
 import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerModal";
 import EventSubNav from "@/components/EventSubNav";
 
@@ -103,15 +103,18 @@ export default function EventSessionsPage() {
   // ISO values; default to the event's own window once it is known
   const [startTime, setStartTime] = useState<string>(() => nextWholeHourIso());
   const [endTime, setEndTime] = useState<string>(() => addHours(nextWholeHourIso(), 4));
-  const [accessControl, setAccessControl] = useState<"NO_RESTRICTION" | "ONLY_ONCE">("NO_RESTRICTION");
+  const [accessControl, setAccessControl] = useState<"NO_RESTRICTION" | "ONLY_ONCE">("ONLY_ONCE");
   const [formError, setFormError] = useState<string | null>(null);
+  const [sampleColumns, setSampleColumns] = useState<TemplateColumns>({});
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!eventId) return;
     eventService.getEvent(eventId).then((res) => {
-      const schedule = res.success ? (res.data as any)?.schedule : null;
+      const ev = res.success ? (res.data as any) : null;
+      const schedule = ev?.schedule;
+      if (ev) setSampleColumns(templateColumnsFor({ cardInfo: ev.cardInfo, dietaryEnabled: !!ev.dietaryPreference?.enabled, corporate: /corporate/i.test(typeof ev.categoryId === "object" ? ev.categoryId?.name || "" : "") }));
       if (schedule?.start && schedule?.end) {
         setStartTime(schedule.start);
         setEndTime(schedule.end);
@@ -158,7 +161,7 @@ export default function EventSessionsPage() {
       if (res.success) {
         // Invitees from the uploaded sheet are imported into this event through the backend
         if (uploadedFile) {
-          const importRes = await inviteeService.importExcel(eventId, uploadedFile);
+          const importRes = await inviteeService.importExcel(eventId, uploadedFile, undefined, "APPEND");
           if (!importRes.success) {
             alert(`Session created, but the invitee file could not be imported: ${importRes.message || "unknown error"}`);
           } else if (importRes.data && importRes.data.rejected > 0) {
@@ -366,8 +369,8 @@ export default function EventSessionsPage() {
                       value={accessControl}
                       onChange={(val) => setAccessControl(val as "NO_RESTRICTION" | "ONLY_ONCE")}
                       options={[
-                        { value: "NO_RESTRICTION", label: "No Restrictions" },
                         { value: "ONLY_ONCE", label: "Only Once" },
+                        { value: "NO_RESTRICTION", label: "No Restrictions" },
                       ]}
                       placeholder="Access Control"
                     />
@@ -383,10 +386,11 @@ export default function EventSessionsPage() {
                     </label>
                     <span className="px-3 text-xs text-[#828282] truncate">{uploadedFileName || "No file chosen"}</span>
                   </div>
+                  <p className="mt-1.5 text-xs text-[#828282]">The invitees are added to this event's existing list. Nobody already on it is removed, and people already invited are not imported again.</p>
 
                   <div className="flex items-center justify-end gap-2 mt-2 text-sm">
                     <div className="w-4 h-4 rounded bg-emerald-600 text-white font-bold flex items-center justify-center text-[9px]">X</div>
-                    <button type="button" onClick={() => downloadInviteeTemplate()} className="text-[#15191C] font-medium underline hover:text-[#FF651D] cursor-pointer">
+                    <button type="button" onClick={() => downloadInviteeTemplate(sampleColumns)} className="text-[#15191C] font-medium underline hover:text-[#FF651D] cursor-pointer">
                       Download Excel Sample
                     </button>
                     <InfoTip label="About the Excel sample" text="Download the sample template from the link and enter your invitees in the same format. There are three main columns - Name, Email and Mobile. Name and Mobile are mandatory fields. All numbers must be with country code, for e.g. +91xxxxxxxxxx, without any space in between." />

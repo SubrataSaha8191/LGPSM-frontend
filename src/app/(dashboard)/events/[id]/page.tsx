@@ -8,7 +8,8 @@ import { eventService } from "@/services/eventService";
 import { sessionService, SessionData } from "@/services/sessionService";
 import { assignmentService } from "@/services/assignmentService";
 import { reportService, EventReportData } from "@/services/reportService";
-import { auditLogService, AuditLogItem } from "@/services/auditLogService";
+import { checkInService } from "@/services/checkInService";
+import { AccessLogRow, EXIT_NOT_RECORDED, toAccessLogRow } from "@/utils/accessLogRows";
 import { formatCompactDateTime, formatDateTime, formatTime } from "@/utils/dateTime";
 import EventCardPreview from "@/components/events/EventCardPreview";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
@@ -146,7 +147,7 @@ export default function EventDetailsPage() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [assignmentsCount, setAssignmentsCount] = useState(0);
   const [report, setReport] = useState<EventReportData | null>(null);
-  const [accessLogs, setAccessLogs] = useState<AuditLogItem[]>([]);
+  const [accessLogs, setAccessLogs] = useState<AccessLogRow[]>([]);
   const [analysisSession, setAnalysisSession] = useState("");
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
@@ -185,12 +186,12 @@ export default function EventDetailsPage() {
     const [asgRes, repRes, logRes] = await Promise.all([
       assignmentService.getEventAssignments(eventId),
       reportService.getEventReport(eventId),
-      auditLogService.getAuditLogs({ eventId, limit: 10 }),
+      checkInService.getCheckIns(eventId, { limit: 10 }),
     ]);
     if (requestId !== requestIdRef.current) return;
     setAssignmentsCount(asgRes.success && Array.isArray(asgRes.data) ? asgRes.data.length : 0);
     setReport(repRes.success && repRes.data ? repRes.data : null);
-    setAccessLogs(logRes.success && Array.isArray(logRes.data) ? logRes.data : []);
+    setAccessLogs(logRes.success && Array.isArray(logRes.data) ? logRes.data.map(toAccessLogRow) : []);
 
   }, [eventId]);
 
@@ -470,19 +471,21 @@ export default function EventDetailsPage() {
             <div className="border border-[#E0E0E0] rounded-lg p-4 min-w-0">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Access Logs</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm min-w-[360px]">
+                <table className="w-full text-left text-sm min-w-[520px]">
                   <thead className="text-[#828282] border-b border-[#D3D3D3]">
-                    <tr><th className="py-2 pr-3 font-medium">User Type</th><th className="py-2 pr-3 font-medium">Date &amp; Time</th><th className="py-2 font-medium">Action</th></tr>
+                    <tr><th className="py-2 pr-3 font-medium">Guest</th><th className="py-2 pr-3 font-medium">Session</th><th className="py-2 pr-3 font-medium">Entry Time</th><th className="py-2 pr-3 font-medium">Exit Time</th><th className="py-2 font-medium">Staff</th></tr>
                   </thead>
                   <tbody className="divide-y divide-[#EEEEEE] text-[#4B4F52]">
                     {accessLogs.length === 0 ? (
-                      <tr><td colSpan={3} className="py-6 text-center text-[#828282]">No recorded activity yet.</td></tr>
+                      <tr><td colSpan={5} className="py-6 text-center text-[#828282]">No guests have entered yet.</td></tr>
                     ) : (
                       accessLogs.map((log) => (
-                        <tr key={log._id}>
-                          <td className="py-2 pr-3 whitespace-nowrap">{log.actorType === "SYSTEM_USER" ? "System User" : log.actorType === "ORGANIZER" ? "Organizer" : "Admin"}</td>
-                          <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
-                          <td className="py-2 max-w-[220px] truncate" title={log.action}>{log.action}</td>
+                        <tr key={log.id}>
+                          <td className="py-2 pr-3 max-w-[160px] truncate" title={log.guest}>{log.guest}</td>
+                          <td className="py-2 pr-3 whitespace-nowrap">{log.session}</td>
+                          <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(log.entryAt)}</td>
+                          <td className="py-2 pr-3 whitespace-nowrap">{log.exitAt ? formatDateTime(log.exitAt) : <span title={EXIT_NOT_RECORDED} aria-label="No exit time recorded">—</span>}</td>
+                          <td className="py-2 max-w-[140px] truncate" title={log.staff}>{log.staff}</td>
                         </tr>
                       ))
                     )}

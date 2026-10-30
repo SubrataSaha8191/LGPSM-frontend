@@ -1,6 +1,9 @@
 "use client";
 
-import React from "react";
+import { CARD_INFO_OPTIONS } from "./eventDraft";
+import CustomDropdown from "@/components/common/CustomDropdown";
+import { CheckInPolicy, POLICY_FLAGS, POLICY_LABEL, policyOf, policyOptions } from "@/utils/checkInPolicy";
+import React, { useEffect, useRef } from "react";
 import { DraftErrors, EventDraft, PreferenceCategory, newClientKey } from "./eventDraft";
 import { EventFeatureSettings } from "@/services/platformSettingsService";
 import InfoTip from "@/components/common/InfoTip";
@@ -11,54 +14,24 @@ interface Step2SettingsProps {
   errors: DraftErrors;
   // Options the platform administrator switched off are not offered
   features: EventFeatureSettings;
+  /** Opens the card-information dialog (Additional Information lives in this step now) */
+  onCustomizeCardInfo?: () => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-function OptionRow({
-  id,
-  checked,
-  disabled,
-  onChange,
-  label,
-  help,
-  tip,
-}: {
-  id: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  help: string;
-  /** Optional tooltip next to the label (Figma 636:3176) */
-  tip?: string;
-}) {
-  return (
-    <div className={`p-3.5 border rounded-md flex items-start gap-3 ${disabled ? "bg-[#F4F5F8] border-[#E5E5E5]" : "bg-white border-[#E0E0E0]"}`}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 rounded border-gray-300 accent-[#16A34A] cursor-pointer disabled:cursor-not-allowed"
-      />
-      <label htmlFor={id} className={`text-sm ${disabled ? "text-[#828282] cursor-not-allowed" : "text-gray-900 cursor-pointer"}`}>
-        <span className="font-medium">{label}</span>
-        <span className="block text-xs text-[#828282] mt-0.5">{help}</span>
-      </label>
-      {tip && <InfoTip label={`About: ${label}`} text={tip} align="left" className="mt-0.5" />}
-    </div>
-  );
-}
-
 // Controlled step: values live in the wizard draft owned by the page
-export default function Step2Settings({ draft, onChange, errors, features, onNext, onBack }: Step2SettingsProps) {
+export default function Step2Settings({ draft, onChange, errors, features, onCustomizeCardInfo, onNext, onBack }: Step2SettingsProps) {
   const categories = draft.preferenceCategories;
   const setCategories = (next: PreferenceCategory[]) => onChange({ preferenceCategories: next });
   const updateCategory = (id: string, patch: Partial<PreferenceCategory>) => setCategories(categories.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  // "Accept all invited attendees" already admits guests who have not responded
-  const notRespondedImplied = features.acceptInvitedAttendees && draft.allowAllInvited;
+  // A newly added option or question takes the cursor straight away, so the organizer can keep typing
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusNext.current) return;
+    document.getElementById(focusNext.current)?.focus();
+    focusNext.current = null;
+  }, [categories]);
   const anyRsvpOption = features.acceptInvitedAttendees || features.chooseNotRespondedInvitees || features.chooseRSVPDeclinedInvitees;
 
   return (
@@ -70,55 +43,40 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
       noValidate
       className="p-4 sm:p-6 space-y-5"
     >
-      <div>
-        <label htmlFor="event-threshold" className="block text-sm font-medium text-gray-900 mb-1.5">Attendee threshold limit</label>
-        <input
-          id="event-threshold"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          value={draft.thresholdLimit}
-          onChange={(e) => onChange({ thresholdLimit: e.target.value })}
-          placeholder="Enter Max Attendee count"
-          aria-invalid={!!errors.thresholdLimit}
-          className={`w-full max-w-lg px-3.5 py-2.5 bg-[#FAFAFA] border rounded-md text-sm text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D] ${errors.thresholdLimit ? "border-rose-400" : "border-[#E0E0E0]"}`}
-        />
-        {errors.thresholdLimit && <p className="mt-1 text-xs font-medium text-rose-600">{errors.thresholdLimit}</p>}
-      </div>
+      {/* Who can check in: one dropdown, shown only while RSVP is on (it is about how guests' answers affect entry).
+          Food preference below does not depend on RSVP being on. */}
+      {draft.rsvpEnabled && anyRsvpOption && (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <label className="text-sm font-medium text-gray-900">Who can check in</label>
+            <InfoTip label="About who can check in" text="Decides how a guest's RSVP answer affects entry. The check-in app enforces this at the door." align="left" />
+          </div>
+          <div className="max-w-lg">
+            <CustomDropdown
+              value={policyOf(draft)}
+              onChange={(v) => onChange(POLICY_FLAGS[v as CheckInPolicy])}
+              options={policyOptions(features).map((k) => ({ value: k, label: POLICY_LABEL[k] }))}
+              ariaLabel="Who can check in"
+            />
+          </div>
+        </div>
+      )}
 
-      {anyRsvpOption && (
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-gray-900 mb-2">Who can check in</legend>
-          {features.acceptInvitedAttendees && (
-            <OptionRow
-              id="opt-accept-all"
-              checked={draft.allowAllInvited}
-              onChange={(v) => onChange({ allowAllInvited: v })}
-              label="Accept all invited attendees"
-              help="Everyone on the invitee list can check in, whether or not they responded."
-            />
-          )}
-          {features.chooseNotRespondedInvitees && (
-            <OptionRow
-              id="opt-not-responded"
-              checked={notRespondedImplied || draft.allowNotResponded}
-              disabled={notRespondedImplied}
-              onChange={(v) => onChange({ allowNotResponded: v })}
-              label="Allow not-responded invitees"
-              tip="Disallowing this means invitees who have not responded will not be allowed to enter the event."
-              help={notRespondedImplied ? "Included because all invited attendees are accepted." : "Guests who have not replied to the RSVP can still check in."}
-            />
-          )}
-          {features.chooseRSVPDeclinedInvitees && (
-            <OptionRow
-              id="opt-declined"
-              checked={draft.allowDeclined}
-              onChange={(v) => onChange({ allowDeclined: v })}
-              label="Allow RSVP declined invitees"
-              help="Guests who declined the invitation can still check in."
-            />
-          )}
-        </fieldset>
+      {onCustomizeCardInfo && (
+        <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900">Additional Information</span>
+            <InfoTip label="About additional information" text="Choose which guest details are printed under each guest's name on their invitation card. This also decides the extra columns in the invitee sample sheet." align="left" />
+          </div>
+          <p className="text-sm text-[#4B4F52]">
+            {draft.cardInfo
+              ? [draft.cardInfo.primary, draft.cardInfo.secondary].map((f, i) => (f ? `Line ${i + 1}: ${CARD_INFO_OPTIONS.find((o) => o.value === f)?.label ?? f}` : null)).filter(Boolean).join(" · ") || "No extra guest details on the card."
+              : "Not set: the card shows the guest's name, then their company."}
+          </p>
+          <button type="button" onClick={onCustomizeCardInfo} className="px-4 py-2 border border-[#FF651D] text-[#E5520F] hover:bg-orange-50 text-sm font-medium rounded-md cursor-pointer">
+            {draft.cardInfo ? "Edit additional information" : "Add additional information"}
+          </button>
+        </div>
       )}
 
       {features.askFoodPreference && (
@@ -163,6 +121,7 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
                         <span aria-hidden className="size-4 rounded-full border-2 border-[#16A34A] shrink-0" />
                         <input
                           type="text"
+                          id={`pref-opt-${category.id}-${optIdx}`}
                           aria-label={`Option ${optIdx + 1}`}
                           value={opt}
                           maxLength={60}
@@ -185,14 +144,14 @@ export default function Step2Settings({ draft, onChange, errors, features, onNex
                       </li>
                     ))}
                   </ul>
-                  <button type="button" onClick={() => updateCategory(category.id, { options: [...category.options, ""] })} className="text-sm font-medium text-[#16A34A] hover:underline cursor-pointer">
+                  <button type="button" onClick={() => { focusNext.current = `pref-opt-${category.id}-${category.options.length}`; updateCategory(category.id, { options: [...category.options, ""] }); }} className="text-sm font-medium text-[#16A34A] hover:underline cursor-pointer">
                     Add another option
                   </button>
                 </div>
               ))}
               <button
                 type="button"
-                onClick={() => setCategories([...categories, { id: newClientKey("pref"), title: "", options: [""] }])}
+                onClick={() => { const id = newClientKey("pref"); focusNext.current = `pref-title-${id}`; setCategories([...categories, { id, title: "", options: [""] }]); }}
                 className="px-4 py-2 border border-[#FF651D] text-[#E5520F] hover:bg-orange-50 text-sm font-medium rounded-md cursor-pointer"
               >
                 + Add another question

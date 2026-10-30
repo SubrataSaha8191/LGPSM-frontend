@@ -1,14 +1,15 @@
 import * as XLSX from "xlsx";
+import { inviteeConfigFor, templateRow, type InviteeFieldConfig } from "@/utils/inviteeFields";
 
-// Column layout accepted by POST /api/v1/events/:eventId/invitees/import
-const TEMPLATE_ROWS = [
-  { Name: "Guest Name", Email: "guest@example.com", Mobile: "+919876543210", "Company Name": "Company", "Dietary Preference": "Veg" },
-];
+// Column layout accepted by POST /api/v1/events/:eventId/invitees/import.
+// The columns come from the event's configuration (see inviteeFields.ts), the same list the manual Add Invitee form uses.
+export type TemplateColumns = InviteeFieldConfig;
+export const templateColumnsFor = inviteeConfigFor;
 
 // Downloads an .xlsx template with the expected invitee columns; returns false if generation failed
-export function downloadInviteeTemplate(): boolean {
+export function downloadInviteeTemplate(cols: TemplateColumns = {}): boolean {
   try {
-    const worksheet = XLSX.utils.json_to_sheet(TEMPLATE_ROWS);
+    const worksheet = XLSX.utils.json_to_sheet([templateRow(cols)]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Invitees");
     XLSX.writeFile(workbook, "LGPSM_Invitee_Sample_Template.xlsx");

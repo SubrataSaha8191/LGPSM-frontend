@@ -9,6 +9,7 @@ export interface InviteeSheetRow {
   email: string;
   phone: string;
   company: string;
+  identity?: string;
   sessions?: Record<string, boolean>;
 }
 
@@ -27,14 +28,15 @@ export async function parseInviteeSheet(file: File, sessionNames: string[] = [])
   const nonBlank = raw.filter((r) => Array.isArray(r) && r.some((c) => clean(c) !== ""));
   if (nonBlank.length === 0) return { rows: [], problems: [] };
 
-  let nameIdx = -1, emailIdx = -1, mobileIdx = -1, companyIdx = -1;
+  let nameIdx = -1, emailIdx = -1, mobileIdx = -1, companyIdx = -1, identityIdx = -1;
   const sessionColumns = new Map<number, string>();
   const header = nonBlank[0].map((c) => clean(c).toLowerCase());
   const hasHeader = header.some((c) => c.includes("name") || c.includes("email") || c.includes("mobile") || c.includes("phone") || c.includes("company"));
   if (hasHeader) {
     header.forEach((c, i) => {
       if (!c) return;
-      if (c.includes("company") || c.includes("organization") || c.includes("organisation")) companyIdx = i;
+      if (c.includes("identity") || c.includes("designation")) identityIdx = i;
+      else if (c.includes("company") || c.includes("organization") || c.includes("organisation")) companyIdx = i;
       else if (c.includes("name")) nameIdx = i;
       else if (c.includes("email") || c.includes("mail")) emailIdx = i;
       else if (c.includes("mobile") || c.includes("phone") || c.includes("contact") || c.includes("whatsapp")) mobileIdx = i;
@@ -52,7 +54,7 @@ export async function parseInviteeSheet(file: File, sessionNames: string[] = [])
   dataRows.forEach((r, i) => {
     const rowNo = String(i + (hasHeader ? 2 : 1));
     const sessionValues = sessionColumns.size ? Object.fromEntries([...sessionColumns].map(([idx, name]) => [name, !["N", "NO", "FALSE", "0"].includes(cell(r, idx).toUpperCase())])) : undefined;
-    const row: InviteeSheetRow = { id: rowNo, name: cell(r, nameIdx), email: cell(r, emailIdx).toLowerCase(), phone: cell(r, mobileIdx), company: cell(r, companyIdx), sessions: sessionValues };
+    const row: InviteeSheetRow = { id: rowNo, name: cell(r, nameIdx), email: cell(r, emailIdx).toLowerCase(), phone: cell(r, mobileIdx), company: cell(r, companyIdx), identity: cell(r, identityIdx), sessions: sessionValues };
     const problem = rowProblem(row);
     if (problem) problems.push({ row: rowNo, error: problem });
     rows.push(row);
@@ -73,7 +75,7 @@ export function rowProblem(row: Pick<InviteeSheetRow, "name" | "email" | "phone"
 // Rebuilds a sheet from (edited) rows so edits go through the same import as an uploaded file
 export function rowsToSheetFile(rows: InviteeSheetRow[], fileName: string, sessionNames: string[] = []): File {
   const sheet = XLSX.utils.json_to_sheet(rows.map((r) => ({
-    Name: r.name, Email: r.email, Mobile: r.phone, "Company Name": r.company,
+    Name: r.name, Email: r.email, Mobile: r.phone, "Company Name": r.company, ...(r.identity ? { "Professional Identity": r.identity } : {}),
     ...Object.fromEntries(sessionNames.map((name) => [name, r.sessions?.[name] === false ? "N" : "Y"])),
   })));
   const workbook = XLSX.utils.book_new();

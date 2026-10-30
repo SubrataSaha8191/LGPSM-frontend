@@ -17,17 +17,23 @@ import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import { eventService } from "@/services/eventService";
 import { sessionService, SessionData } from "@/services/sessionService";
-import { inviteeService } from "@/services/inviteeService";
+import { inviteeService, type ImportMode } from "@/services/inviteeService";
 import { invitationService, InvitationData } from "@/services/invitationService";
 import { useAlert } from "@/context/AlertContext";
 import { formatPhoneNumber } from "@/utils/eventUtils";
 import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
-import { mergeInviteeImport } from "@/utils/mergeInviteeImport.mjs";
+import ImportModeDialog from "@/components/invitees/ImportModeDialog";
+import InviteeListsModal from "@/components/invitees/InviteeListsModal";
+import { canManageInviteeLists } from "@/utils/inviteeLists";
+import { inviteeConfigFor, inviteeFieldsFor } from "@/utils/inviteeFields";
 import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import Icon from "@/components/icons/Icon";
+import PassActionModal from "@/components/invitees/PassActionModal";
+import { credentialService, CredentialHistoryRow, CredentialStatus } from "@/services/credentialService";
+import { STATUS_PILL, hasUnknown, hasUnsent, historyTitle, noticeText, reasonLabel, replaceAvailability, revokeAvailability } from "@/utils/credentialUi";
 
 interface Invitee {
   _id: string;
@@ -40,6 +46,9 @@ interface Invitee {
   invitationStatus: "PENDING" | "SENT" | "FAILED";
   rsvpStatus: "PENDING" | "ACCEPTED" | "DECLINED";
   sessionAccess?: { sessionId: string; allowed: boolean }[];
+  // access pass: its own status, separate from delivery and RSVP
+  credentialStatus?: CredentialStatus;
+  credentialRevocation?: { category?: string; at?: string } | null;
 }
 
 const INVITEE_PAGE_SIZE = 50;
@@ -67,7 +76,7 @@ function InviteeStatusPill({ invitationStatus, rsvpStatus }: { invitationStatus:
 }
 
 // "⋯" row menu (Figma 217:20587: dark panel with a pointer). Edit and Resend as designed; card preview and remove kept.
-function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name: string; onPreview: () => void; onEdit: () => void; onResend?: () => void; onRemove: () => void }) {
+function InviteeRowMenu({ name, onPreview, onEdit, onResend, onReplace, onRevoke, replaceNote, revokeNote, onRemove }: { name: string; onPreview: () => void; onEdit: () => void; onResend?: () => void; onReplace?: () => void; onRevoke?: () => void; replaceNote?: string; revokeNote?: string; onRemove: () => void }) {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -79,30 +88,38 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onRemove }: { name:
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [position]);
+  const MENU_WIDTH = 176;
   const toggle = () => {
     if (position) { setPosition(null); return; }
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const height = 8 + 24 + (onResend ? 4 : 3) * 28;
+    const height = 8 + 24 + (onResend ? 6 : 5) * 28;
     const below = rect.bottom + height + 8 <= window.innerHeight;
-    setPosition({ top: below ? rect.bottom + 4 : Math.max(8, rect.top - height - 4), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 52, window.innerWidth - 120)) });
+    setPosition({ top: below ? rect.bottom + 4 : Math.max(8, rect.top - height - 4), left: Math.max(8, Math.min(rect.left + rect.width / 2 - MENU_WIDTH / 2, window.innerWidth - MENU_WIDTH - 8)) });
   };
   const run = (action: () => void) => () => { setPosition(null); action(); };
   const base = "flex items-center gap-1.5 py-1 text-sm font-medium cursor-pointer text-left";
   const item = `${base} text-white hover:text-[#FFB08A]`;
+  const off = "flex items-center gap-1.5 py-1 text-sm font-medium text-left text-[#7C8185] cursor-not-allowed";
   return (
     <>
       <button ref={buttonRef} type="button" onClick={toggle} aria-label={`Actions for ${name}`} aria-expanded={!!position} className="px-2 py-1 rounded hover:bg-gray-100 cursor-pointer">
         <span aria-hidden className="text-[10px] text-[#3B3B3B] tracking-[1px]">●●●</span>
       </button>
       {position && createPortal(
-        <div ref={menuRef} style={{ position: "fixed", ...position }} className="z-[9999] w-[104px] flex flex-col items-center">
+        <div ref={menuRef} style={{ position: "fixed", ...position, width: MENU_WIDTH }} className="z-[9999] flex flex-col items-center">
           <Icon name="events/menu-arrow" width={16} height={8} />
-          <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]">
-            <button type="button" onClick={run(onEdit)} className={item}><Icon name="events/edit" width={16} height={16} />Edit</button>
-            {onResend && <button type="button" onClick={run(onResend)} className={item}><Icon name="events/send" width={16} height={16} />Resend</button>}
-            <button type="button" onClick={run(onPreview)} className={item}>Card</button>
-            <button type="button" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}>Remove</button>
+          <div className="w-full bg-[#15191C] rounded-xl px-4 py-3 flex flex-col gap-[3px]" role="menu">
+            <button type="button" role="menuitem" onClick={run(onEdit)} className={item}><Icon name="events/edit" width={16} height={16} />Edit</button>
+            {onResend && <button type="button" role="menuitem" onClick={run(onResend)} className={item}><Icon name="events/send" width={16} height={16} />Resend Invitation</button>}
+            {onReplace
+              ? <button type="button" role="menuitem" onClick={run(onReplace)} className={item}>Replace Access Pass</button>
+              : <span role="menuitem" aria-disabled="true" title={replaceNote} className={off}>Replace Access Pass</span>}
+            {onRevoke
+              ? <button type="button" role="menuitem" onClick={run(onRevoke)} className={item}>Revoke Access Pass</button>
+              : <span role="menuitem" aria-disabled="true" title={revokeNote} className={off}>Revoke Access Pass</span>}
+            <button type="button" role="menuitem" onClick={run(onPreview)} className={item}>Card</button>
+            <button type="button" role="menuitem" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}>Remove</button>
           </div>
         </div>,
         document.body
@@ -129,7 +146,7 @@ export default function InviteesManagementPage() {
   const isAdmin = user?.role === "ADMIN";
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
-  const [event, setEvent] = useState<{ title?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean } } | null>(null);
+  const [event, setEvent] = useState<{ title?: string; status?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean }; cardInfo?: { primary?: string | null; secondary?: string | null } } | null>(null);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [history, setHistory] = useState<InvitationData[]>([]);
@@ -140,13 +157,21 @@ export default function InviteesManagementPage() {
   const [inviteePage, setInviteePage] = useState(1);
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
+  const [invitationFilter, setInvitationFilter] = useState<"" | "SENT" | "NOT_SENT">("");
   const [channel, setChannel] = useState<Channel>("BOTH");
   const [busy, setBusy] = useState<null | "send" | "resend" | "import" | "access" | "clear">(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
+  const [importChoice, setImportChoice] = useState<{ rows: InviteeSheetRow[]; fileName: string; sentSets: number | null } | null>(null);
   const [upload, setUpload] = useState<{ file: File; rows: InviteeSheetRow[] } | null>(null);
   const [showListPreview, setShowListPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [listsTab, setListsTab] = useState<"lists" | "aside" | null>(null);
+  const [passAction, setPassAction] = useState<{ action: "REVOKE" | "REPLACE"; invitee: Invitee; needsReview?: boolean } | null>(null);
+  const [passHistory, setPassHistory] = useState<CredentialHistoryRow[] | null>(null);
+  const [passHistoryError, setPassHistoryError] = useState<string | null>(null);
+  const [ackDuplicate, setAckDuplicate] = useState(false);
+  const [retryingNotices, setRetryingNotices] = useState(false);
   const [cardFor, setCardFor] = useState<Invitee | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -195,6 +220,25 @@ export default function InviteesManagementPage() {
     load();
   }, [load]);
 
+  const loadPassHistory = useCallback(async () => {
+    try {
+      const res = await credentialService.history(eventId);
+      if (res.success && Array.isArray(res.data)) { setPassHistory(res.data); setPassHistoryError(null); }
+      else setPassHistoryError(res.message || "The pass history could not be loaded.");
+    } catch (e) {
+      setPassHistoryError(e instanceof Error ? e.message : "The pass history could not be loaded.");
+    }
+  }, [eventId]);
+  useEffect(() => { if (showHistory) void Promise.resolve().then(loadPassHistory); }, [showHistory, loadPassHistory]);
+
+  const retryPassNotices = async (includeUnknown: boolean) => {
+    setRetryingNotices(true);
+    await credentialService.retryNotices(eventId, { includeUnknown }).catch(() => undefined);
+    setAckDuplicate(false);
+    await loadPassHistory();
+    setRetryingNotices(false);
+  };
+
   // Super Admin frame 2114:6535 shows RSVP as its own column; "--" when the event does not ask guests to respond
   const rsvpEnabled = (event as { rsvp?: { enabled?: boolean } } | null)?.rsvp?.enabled !== false;
   const categoryName = event && typeof event.categoryId === "object" ? event.categoryId?.name || "" : "";
@@ -220,7 +264,8 @@ export default function InviteesManagementPage() {
   const filteredInvitees = invitees.filter(
     (i) =>
       (!term || [i.name, i.email, i.mobile, i.companyName].some((v) => (v || "").toLowerCase().includes(term))) &&
-      (!filterSession || allowedIn(i, filterSession))
+      (!filterSession || allowedIn(i, filterSession)) &&
+      (!invitationFilter || (invitationFilter === "SENT") === (i.invitationStatus === "SENT"))
   );
   const inviteePageCount = Math.max(1, Math.ceil(filteredInvitees.length / INVITEE_PAGE_SIZE));
   const visible = filteredInvitees.slice((inviteePage - 1) * INVITEE_PAGE_SIZE, inviteePage * INVITEE_PAGE_SIZE);
@@ -228,7 +273,7 @@ export default function InviteesManagementPage() {
 
   useEffect(() => {
     setInviteePage(1);
-  }, [term, sessionFilter]);
+  }, [term, sessionFilter, invitationFilter]);
 
   useEffect(() => {
     if (inviteePage > inviteePageCount) setInviteePage(inviteePageCount);
@@ -323,23 +368,31 @@ export default function InviteesManagementPage() {
     }
   };
 
+  // With nobody on the list yet there is nothing to replace; otherwise the organizer chooses Add or Replace first
   const handleImport = async (rows: InviteeSheetRow[]) => {
     if (!upload || importInFlight.current) return;
-    const merge = mergeInviteeImport(
-      rows,
-      invitees,
-      ownListSessions.map((session) => ({ id: String(session._id), name: session.name }))
-    );
-    if (merge.rows.length > 1000) {
-      setFeedback({ type: "error", message: "The combined invitee list exceeds the 1,000 row import limit. Remove some new rows or split the upload." });
+    if (rows.length > 1000) {
+      setFeedback({ type: "error", message: "A sheet can contain at most 1,000 invitees. Remove some rows or split the upload." });
       return;
     }
+    if (invitees.length === 0) {
+      await runImport(rows, upload.file.name, "REPLACE");
+      return;
+    }
+    setImportChoice({ rows, fileName: upload.file.name, sentSets: null });
+    const sets = await inviteeService.getInviteeSets(eventId).catch(() => null);
+    // if the lookup fails, say nothing misleading: the dialog still explains that invited guests are never removed
+    setImportChoice((cur) => (cur ? { ...cur, sentSets: sets?.success && sets.data ? sets.data.sets.filter((x) => x.locked).length : 0 } : cur));
+  };
+
+  const runImport = async (rows: InviteeSheetRow[], fileName: string, mode: ImportMode) => {
+    if (importInFlight.current) return;
     setBusy("import");
     importInFlight.current = true;
     setFeedback(null);
     let res: Awaited<ReturnType<typeof inviteeService.importExcel>>;
     try {
-      res = await inviteeService.importExcel(eventId, rowsToSheetFile(merge.rows, upload.file.name, ownListSessions.map((session) => session.name)));
+      res = await inviteeService.importExcel(eventId, rowsToSheetFile(rows, fileName, ownListSessions.map((session) => session.name)), undefined, mode);
     } catch {
       setFeedback({ type: "error", message: "The import request could not reach the server. Existing invitees are unchanged; please retry." });
       return;
@@ -347,18 +400,21 @@ export default function InviteesManagementPage() {
       importInFlight.current = false;
       setBusy(null);
     }
+    setImportChoice(null);
     setUpload(null);
     if (!res.success || !res.data) {
       setFeedback({ type: "error", message: res.message || "The invitee list could not be imported." });
       return;
     }
     const d = res.data;
-    const parts = [`${d.imported} added`, `${d.updated ?? 0} kept or updated`, `${merge.retained} existing pending retained`];
-    if (merge.matchedExisting) parts.push(`${merge.matchedExisting} uploaded row(s) matched existing invitees`);
-    if (merge.duplicateInUpload) parts.push(`${merge.duplicateInUpload} duplicate row(s) in the upload skipped`);
-    if (merge.conflicts) parts.push(`${merge.conflicts} conflicting contact row(s) skipped`);
-    if (merge.invalidRows) parts.push(`${merge.invalidRows} row(s) need a valid name and contact`);
-    if (d.removed) parts.push(`${d.removed} removed (not in the new file)`);
+    const parts = [`${d.imported} added`];
+    if (d.updated) parts.push(`${d.updated} already on the list`);
+    if (d.alreadyInvited) parts.push(`${d.alreadyInvited} already invited (not imported again)`);
+    if (d.archived) parts.push(`${d.archived} never-invited guest(s) of the earlier list set aside (see Invitee Lists > Set-aside guests)`);
+    if (d.preservedSets) parts.push(`${d.preservedSets} previously sent list(s) preserved`);
+    if (d.failedKept) parts.push(`${d.failedKept} guest(s) with failed sends kept (they can be retried)`);
+    if (d.unknownKept) parts.push(`${d.unknownKept} guest(s) with an unresolved delivery kept`);
+    if (d.duplicateCount) parts.push(`${d.duplicateCount} duplicate row(s) skipped`);
     if (d.rejected) parts.push(`${d.rejected} rejected`);
     setFeedback({
       type: d.rejected ? "error" : "success",
@@ -410,7 +466,9 @@ export default function InviteesManagementPage() {
   const btn = "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
   // Figma send button: outlined orange, 16px semibold, washed out until something can be sent
   const primaryOutline = "inline-flex items-center gap-2 px-6 py-[11px] border border-[#FF651D] text-[#FF651D] bg-white hover:bg-orange-50 text-base font-semibold rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
-  const showCompany = isCorporate;
+  // one definition of the event's invitee fields drives the Excel sample, this preview, and the manual Add Invitee form
+  const fieldConfig = inviteeConfigFor({ cardInfo: event?.cardInfo, dietaryEnabled: !!event?.dietaryPreference?.enabled, corporate: isCorporate });
+  const showCompany = fieldConfig.company;
   const showDietary = lifecycleStarted && !!event?.dietaryPreference?.enabled;
 
   return (
@@ -514,6 +572,7 @@ export default function InviteesManagementPage() {
                   />
                 )}
                 <PlainSelect ariaLabel="Filter by session" value={sessionFilter} onChange={setSessionFilter} options={[{ value: "", label: "All Session" }, ...sessions.map((s) => ({ value: s._id!, label: s.name }))]} />
+                <PlainSelect ariaLabel="Filter by invitation" value={invitationFilter} onChange={(v) => setInvitationFilter(v as "" | "SENT" | "NOT_SENT")} options={[{ value: "", label: "All Invitations" }, { value: "SENT", label: "Invitation Sent" }, { value: "NOT_SENT", label: "Not Sent" }]} />
                 <button type="button" onClick={() => setShowChooser(true)} disabled={busy !== null} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg cursor-pointer disabled:opacity-50">
                   <Icon name="events/add-white" width={24} height={24} />
                   Add Invitees
@@ -568,7 +627,7 @@ export default function InviteesManagementPage() {
                     ]}
                 />
               </div>
-              <button type="button" onClick={() => downloadInviteeTemplate()} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+              <button type="button" onClick={() => downloadInviteeTemplate(fieldConfig)} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
                 <ButtonIcon name="download" />
                 Download Excel Sample
               </button>
@@ -576,6 +635,12 @@ export default function InviteesManagementPage() {
                 <ButtonIcon name="eye" />
                 Preview List
               </button>
+              {canManageInviteeLists(user?.role) && (
+                <button type="button" onClick={() => setListsTab("lists")} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+                  <ButtonIcon name="history" />
+                  Invitee Lists
+                </button>
+              )}
               {(notInvited.length > 0 || !lifecycleStarted) && (
                 <button
                   type="button"
@@ -588,7 +653,7 @@ export default function InviteesManagementPage() {
                   {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
                 </button>
               )}
-              <button type="button" onClick={() => setShowHistory(true)} disabled={visibleHistory.length === 0} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+              <button type="button" onClick={() => setShowHistory(true)} disabled={visibleHistory.length === 0 && !invitees.some((i) => i.credentialStatus && i.credentialStatus !== "NOT_ISSUED")} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
                 <ButtonIcon name="history" />
                 History
               </button>
@@ -645,6 +710,7 @@ export default function InviteesManagementPage() {
                       {showCompany && <th className="h-[46px] px-2.5 font-medium">Company Name</th>}
                       <th className="h-[46px] px-2.5 font-medium">Status</th>
                       {isAdmin && <th className="h-[46px] px-2.5 font-medium whitespace-nowrap">RSVP Status</th>}
+                      <th className="h-[46px] px-2.5 font-medium whitespace-nowrap">Access Pass</th>
                       {showDietary && <th className="h-[46px] px-2.5 font-medium">Dietary Preference</th>}
                       {sessions.map((sess) => <th key={sess._id} className="h-[46px] px-2.5 font-medium whitespace-nowrap">{sess.name.replace(/\s+session$/i, "")}</th>)}
                       <th className="h-[46px] px-2.5 font-medium text-right">Action</th>
@@ -684,6 +750,11 @@ export default function InviteesManagementPage() {
                                 : pill("bg-[#FFF3C4] text-[#B38A00]", "Pending")}
                             </td>
                           )}
+                          <td className="py-3 px-2.5">
+                            {i.credentialStatus
+                              ? <span title={i.credentialStatus === "REVOKED" ? `Revoked: ${reasonLabel(i.credentialRevocation?.category)}` : undefined}>{pill(STATUS_PILL[i.credentialStatus].cls, STATUS_PILL[i.credentialStatus].label)}</span>
+                              : <span className="text-[#828282]">—</span>}
+                          </td>
                           {showDietary && (
                             <td className="py-3 px-2.5 text-center">
                               {i.dietaryPreference ? <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-[#D3D3D3] rounded-full text-xs"><span className="size-1 rounded-full bg-[#15191C]" />{i.dietaryPreference}</span> : "--"}
@@ -702,6 +773,10 @@ export default function InviteesManagementPage() {
                               onPreview={() => setCardFor(i)}
                               onEdit={() => setEditing({ id: i._id, name: i.name, email: i.email || "", phone: i.mobile || "" })}
                               onResend={sentRecord?._id && i.invitationStatus !== "PENDING" ? () => handleResend([sentRecord]) : undefined}
+                              onReplace={replaceAvailability(i, event?.status).allowed ? () => setPassAction({ action: "REPLACE", invitee: i, needsReview: replaceAvailability(i, event?.status).needsReview }) : undefined}
+                              onRevoke={revokeAvailability(i, event?.status).allowed ? () => setPassAction({ action: "REVOKE", invitee: i }) : undefined}
+                              replaceNote={replaceAvailability(i, event?.status).why}
+                              revokeNote={revokeAvailability(i, event?.status).why}
                               onRemove={() => setDeletingId(i._id)}
                             />
                           </td>
@@ -709,7 +784,7 @@ export default function InviteesManagementPage() {
                       );
                     })}
                     {visible.length === 0 && (
-                      <tr><td colSpan={9 + sessions.length} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
+                      <tr><td colSpan={10 + sessions.length} className="py-10 text-center text-[#828282]">No invitees match the current filters.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -729,12 +804,23 @@ export default function InviteesManagementPage() {
         )}
       </div>
 
+      {importChoice && (
+        <ImportModeDialog
+          fileName={importChoice.fileName}
+          rowCount={importChoice.rows.length}
+          sentSets={importChoice.sentSets}
+          busy={busy === "import"}
+          onCancel={() => setImportChoice(null)}
+          onChoose={(mode) => runImport(importChoice.rows, importChoice.fileName, mode)}
+        />
+      )}
       {upload && (
         <InviteesPreviewModal
           title="Invitees List Preview"
-          subtitle={`${upload.file.name} · Existing pending invitees are retained; only new contacts are added.`}
+          subtitle={`${upload.file.name} · Invitees who are already on the list or already invited are never imported twice.`}
           rows={upload.rows}
-          showCompany={isCorporate || upload.rows.some((r) => r.company)}
+          showCompany={fieldConfig.company || upload.rows.some((r) => r.company)}
+          showIdentity={fieldConfig.identity || upload.rows.some((r) => r.identity)}
           onClose={() => setUpload(null)}
           onSave={handleImport}
         />
@@ -757,6 +843,16 @@ export default function InviteesManagementPage() {
         />
       )}
       {cardFor && <CardPreviewModal eventId={eventId} inviteeId={cardFor._id} inviteeName={cardFor.name} onClose={() => setCardFor(null)} />}
+      {passAction && (
+        <PassActionModal
+          key={`${passAction.action}-${passAction.invitee._id}`}
+          action={passAction.action}
+          invitee={passAction.invitee}
+          needsReview={passAction.needsReview}
+          onClose={() => setPassAction(null)}
+          onDone={async (message) => { setPassAction(null); setFeedback({ type: "success", message }); await load(); await loadPassHistory(); }}
+        />
+      )}
       <EditInviteeModal isOpen={!!editing} onClose={() => setEditing(null)} invitee={editing} onSave={saveEdit} />
       <DeleteInviteeModal isOpen={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={confirmDelete} />
       <AddInviteeChooserModal
@@ -769,16 +865,19 @@ export default function InviteesManagementPage() {
         isOpen={showManualAdd}
         eventId={eventId}
         existingInvitees={invitees}
-        showCompany={showCompany}
+        fields={inviteeFieldsFor(fieldConfig)}
         onClose={() => setShowManualAdd(false)}
         onSaved={async () => { await load(); notifyDbUpdate(); }}
       />
 
+      {listsTab && (
+        <InviteeListsModal eventId={eventId} initialTab={listsTab} onClose={() => setListsTab(null)} onRestored={async () => { await load(); notifyDbUpdate(); }} />
+      )}
       {showHistory && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="history-title">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div className="px-6 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
-              <h2 id="history-title" className="text-base font-medium text-gray-900">Invitation Delivery History</h2>
+              <h2 id="history-title" className="text-base font-medium text-gray-900">Delivery History</h2>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -809,6 +908,48 @@ export default function InviteesManagementPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Access Pass History: credential events only. Message delivery states above and pass states here are never mixed. */}
+              <section aria-labelledby="pass-history-title" className="mt-8 pt-6 border-t border-[#E5E5E5]">
+                <h3 id="pass-history-title" className="text-base font-medium text-gray-900">Access Pass History</h3>
+                <p className="mt-1 text-xs text-[#828282]">Passes issued, replaced and revoked, with the reason and what happened to the message sent to the guest. “Accepted by the provider” is not proof of delivery.</p>
+                {passHistoryError && <p role="alert" className="mt-3 text-sm text-rose-600">{passHistoryError}</p>}
+                {!passHistory && !passHistoryError && <p className="mt-3 text-sm text-[#828282]">Loading…</p>}
+                {passHistory && passHistory.length === 0 && <p className="mt-3 text-sm text-[#828282]">No access pass has been issued, replaced or revoked yet.</p>}
+                {passHistory && passHistory.length > 0 && (
+                  <>
+                    <table className="mt-3 w-full text-left text-sm min-w-[560px]">
+                      <thead className="text-[#828282] border-b border-[#D3D3D3]"><tr><th className="py-2 pr-3 font-medium">Guest</th><th className="py-2 pr-3 font-medium">What happened</th><th className="py-2 pr-3 font-medium">Reason</th><th className="py-2 pr-3 font-medium">Message to the guest</th><th className="py-2 font-medium">When</th></tr></thead>
+                      <tbody className="divide-y divide-[#EEEEEE] text-[#4B4F52]">
+                        {passHistory.map((r) => (
+                          <tr key={r._id} className="align-top">
+                            <td className="py-2.5 pr-3 text-gray-900">{r.inviteeName}</td>
+                            <td className="py-2.5 pr-3">{historyTitle(r)}{r.actor ? <span className="block text-xs text-[#828282]">by {r.actor}</span> : null}</td>
+                            <td className="py-2.5 pr-3 text-xs break-words max-w-[200px]">{r.reasonCategory ? reasonLabel(r.reasonCategory) : "—"}{r.note ? <span className="block text-[#828282]">{r.note}</span> : null}{r.reviewConfirmed ? <span className="block text-[#828282]">Reviewed before replacing</span> : null}</td>
+                            <td className="py-2.5 pr-3 text-xs">
+                              {[noticeText("Email", r.notice?.email), noticeText("WhatsApp", r.notice?.whatsapp)].filter(Boolean).map((t) => <span key={t} className="block">{t}</span>) }
+                              {!r.notice && "—"}
+                            </td>
+                            <td className="py-2.5 text-xs whitespace-nowrap">{formatDateTime(r.at, "—")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="mt-4 flex flex-wrap items-start gap-4">
+                      {hasUnsent(passHistory) && (
+                        <button type="button" onClick={() => retryPassNotices(false)} disabled={retryingNotices} className="px-4 py-2 border border-[#FF651D] text-[#FF651D] hover:bg-[#FFF3EC] rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">{retryingNotices ? "Retrying…" : "Retry unsent messages"}</button>
+                      )}
+                      {hasUnknown(passHistory) && (
+                        <div role="group" aria-label="Messages with an unknown outcome" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900 space-y-2 max-w-md">
+                          <p>For some messages the app does not know whether they were sent. The guest may already have received them; retrying can send a second one.</p>
+                          <label className="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked={ackDuplicate} onChange={(e) => setAckDuplicate(e.target.checked)} className="mt-0.5 size-4 accent-rose-600" /><span>I understand a guest may receive a message twice.</span></label>
+                          <button type="button" onClick={() => retryPassNotices(true)} disabled={retryingNotices || !ackDuplicate} className="px-4 py-2 border border-rose-600 text-rose-700 hover:bg-rose-100 rounded-md text-sm font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">Retry these anyway</button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </section>
             </div>
           </div>
         </div>

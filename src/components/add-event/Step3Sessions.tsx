@@ -4,7 +4,7 @@ import React from "react";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { AccessControl, DraftErrors, DraftSession, createSessionDraft } from "./eventDraft";
 import { formatDateTime } from "@/utils/dateTime";
-import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
+import { downloadInviteeTemplate, type TemplateColumns } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet } from "@/utils/inviteeSheet";
 import InfoTip from "@/components/common/InfoTip";
 
@@ -22,6 +22,7 @@ interface Step3SessionsProps {
   sessionFiles: Record<string, SessionInviteeFile | undefined>;
   onSessionFileChange: (sessionKey: string, file: SessionInviteeFile | null) => void;
   skipInvitees: boolean;
+  templateColumns?: TemplateColumns;
   onSkipInviteesChange: (value: boolean) => void;
   eventStart: string;
   eventEnd: string;
@@ -35,8 +36,8 @@ interface Step3SessionsProps {
 }
 
 const ACCESS_OPTIONS: { value: AccessControl; label: string }[] = [
-  { value: "NO_RESTRICTION", label: "No Restrictions" },
   { value: "ONLY_ONCE", label: "Only Once" },
+  { value: "NO_RESTRICTION", label: "No Restrictions" },
 ];
 
 const labelClass = "block text-sm font-medium text-gray-900 mb-1.5";
@@ -69,6 +70,7 @@ export default function Step3Sessions({
   sessionFiles,
   onSessionFileChange,
   skipInvitees,
+  templateColumns,
   onSkipInviteesChange,
   eventStart,
   eventEnd,
@@ -168,16 +170,8 @@ export default function Step3Sessions({
             </div>
 
             {isPrimary && (
-              <div>
-                <Checkbox
-                  id={`session-validate-${sess.key}`}
-                  checked={sess.validateAgainstOtherSessions}
-                  onChange={(v) => updateSession(sess.key, { validateAgainstOtherSessions: v })}
-                >
-                  Consider Access session validation on other session access
-                </Checkbox>
-                <p className="mt-1 ml-6.5 text-xs text-[#828282]">When on, guests must check in to this session before entering any other session.</p>
-              </div>
+              <p className="text-sm text-[#828282]">This session is the primary session for the event. Its start and end times are used as the default for any new sessions you add. You can change them here or in the event's Sessions page later.
+              </p>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -294,6 +288,7 @@ export default function Step3Sessions({
                     )}
                   </div>
                 </div>
+                {fileInfo && <p className="mt-1 text-xs text-[#828282]">These invitees are added to the event's list when you create the event. People who appear twice are imported once.</p>}
                 {fileError[sess.key] && <p role="alert" className="mt-1 text-xs font-medium text-rose-600">{fileError[sess.key]}</p>}
                 {fileInfo && fileInfo.problemCount > 0 && (
                   <p className="mt-1 text-xs font-medium text-amber-700">{fileInfo.problemCount} row(s) need attention — open the preview to fix them.</p>
@@ -301,7 +296,7 @@ export default function Step3Sessions({
                 <div className="flex flex-wrap justify-between items-center gap-2 mt-2">
                   <p className="text-xs text-[#828282]">Imported when you save. Files are not kept in the saved draft.</p>
                   <span className="inline-flex items-center gap-2">
-                    <button type="button" onClick={() => downloadInviteeTemplate()} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 underline hover:text-[#E5520F] cursor-pointer">
+                    <button type="button" onClick={() => downloadInviteeTemplate(templateColumns)} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-900 underline hover:text-[#E5520F] cursor-pointer">
                       <ExcelLogo /> Download Excel Sample
                     </button>
                     <InfoTip label="About the Excel sample" text="Download the sample template from the link and enter your invitees in the same format. There are three main columns - Name, Email and Mobile. Name and Mobile are mandatory fields. All numbers must be with country code, for e.g. +91xxxxxxxxxx, without any space in between." />
@@ -322,9 +317,11 @@ export default function Step3Sessions({
       </button>
 
       <div className="pt-4 border-t border-[#E5E5E5] flex flex-col sm:flex-row sm:items-center justify-end gap-3">
-        <Checkbox id="skip-invitees" checked={skipInvitees} onChange={onSkipInviteesChange}>
-          I don&apos;t have any invitees list yet, skip for later
-        </Checkbox>
+        {!Object.values(sessionFiles).some(Boolean) && (
+          <Checkbox id="skip-invitees" checked={skipInvitees} onChange={onSkipInviteesChange}>
+            I don&apos;t have any invitees list yet, skip for later
+          </Checkbox>
+        )}
         <div className="flex items-center justify-end gap-3">
           <button type="button" onClick={onBack} className="px-6 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-medium rounded-md cursor-pointer">
             Back

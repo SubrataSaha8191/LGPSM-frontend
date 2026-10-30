@@ -168,9 +168,32 @@ export default function PublicInvitationPage() {
 
   const { event, invitee } = invitationData!;
   const theme = resolveInvitationTheme(invitationData!.theme);
+  const passStatus = invitationData!.credential?.status;
+
+  // An old link whose pass was replaced: say so and point to the new message. Nothing about the new pass is shown here.
+  if (passStatus === "REPLACED") {
+    return (
+      <div style={themeCssVars(theme)} className="min-h-screen bg-[color:var(--inv-bg)] text-[color:var(--inv-ink)] flex items-center justify-center p-4 sm:p-6 font-sans">
+        <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl border border-[color:var(--inv-line)] overflow-hidden">
+          <div className="px-7 pt-7 pb-8 text-center text-[color:var(--inv-on-primary)]" style={{ background: "linear-gradient(135deg, var(--inv-primary) 0%, color-mix(in srgb, var(--inv-primary) 72%, var(--inv-accent)) 100%)" }}>
+            <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.18em] mb-3 border border-current/30 bg-white/15">Access pass replaced</span>
+            <h1 style={{ fontFamily: "var(--inv-heading)" }} className="mx-auto max-w-[24rem] px-2 text-2xl font-bold leading-tight [overflow-wrap:anywhere]">{event.title}</h1>
+          </div>
+          <div aria-hidden className="h-1.5 bg-[color:var(--inv-accent)]" />
+          <div className="p-6">
+            <div role="alert" className="rounded-xl border border-[#E0E0E0] bg-[#F4F4F4] p-4 space-y-2 text-sm">
+              <p className="font-semibold">Hello {invitee.name}, this access pass has been replaced.</p>
+              <p><strong className="font-semibold">This link and its QR code no longer work.</strong> We have sent you a new pass: please use the latest message from the organizer by email or WhatsApp.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const locationText = event.format === "VIRTUAL"
     ? "Online event"
     : typeof event.location === "string" ? event.location : event.location?.address || "";
+  const addressDetails = typeof event.location === "object" ? event.location?.addressDetails || "" : "";
   const dietaryPrompts = getDietaryPrompts(event.dietaryPreference);
   const closesAt = event.rsvp?.closesAt ? new Date(event.rsvp.closesAt) : null;
   const rsvpClosed = !!closesAt && !Number.isNaN(closesAt.getTime()) && closesAt.getTime() < Date.now();
@@ -222,7 +245,14 @@ export default function PublicInvitationPage() {
             </div>
           )}
 
-          {!cardImageFailed && !eventCancelled && (
+          {passStatus === "REVOKED" && !eventCancelled && (
+            <div role="alert" className="rounded-xl border border-[#E0E0E0] bg-[#F4F4F4] p-4 space-y-2 text-sm text-[color:var(--inv-ink)]">
+              <p className="font-semibold">Your access pass has been withdrawn.</p>
+              <p><strong className="font-semibold">The QR code no longer works for entry.</strong> If you think this is a mistake, please contact the organizer{event.contactNumber ? <> on <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="underline">{event.contactNumber}</a></> : null}.</p>
+            </div>
+          )}
+
+          {!cardImageFailed && !eventCancelled && passStatus !== "REVOKED" && (
             <figure className="mx-auto flex max-w-[220px] flex-col items-center gap-2">
               <img
                 src={invitationService.publicInvitationCardUrl(token)}
@@ -295,6 +325,7 @@ export default function PublicInvitationPage() {
                         {locationText}
                       </a>
                     )}
+                    {addressDetails && <p className="text-slate-500 break-words whitespace-pre-line mt-0.5">{addressDetails}</p>}
                   </div>
                 </div>
               )}
@@ -373,7 +404,12 @@ export default function PublicInvitationPage() {
               <button
                 type="button"
                 aria-pressed={selectedRsvp === "ACCEPTED"}
-                onClick={() => { setSelectedRsvp("ACCEPTED"); setError(null); }}
+                onClick={() => {
+                  setSelectedRsvp("ACCEPTED");
+                  // the first option the organizer configured is pre-selected; a guest's earlier choice is kept
+                  setDietaryChoices((current) => Object.fromEntries(dietaryPrompts.map((p, i) => [String(i), current[String(i)] || p.options[0] || ""])));
+                  setError(null);
+                }}
                 className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   selectedRsvp === "ACCEPTED"
                     ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
@@ -403,7 +439,7 @@ export default function PublicInvitationPage() {
               </button>
             </div>
 
-            {dietaryPrompts.length > 0 && (
+            {selectedRsvp === "ACCEPTED" && dietaryPrompts.length > 0 && (
               <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
                 <legend className="px-1 text-xs font-semibold text-[color:var(--inv-ink)]">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
                 {dietaryPrompts.map((prompt, index) => (
@@ -423,7 +459,7 @@ export default function PublicInvitationPage() {
               </fieldset>
             )}
 
-            {event.dietaryPreference?.enabled && dietaryPrompts.length === 0 && (
+            {selectedRsvp === "ACCEPTED" && event.dietaryPreference?.enabled && dietaryPrompts.length === 0 && (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                 Dietary preference is enabled, but the organizer has not configured any options yet.
               </p>

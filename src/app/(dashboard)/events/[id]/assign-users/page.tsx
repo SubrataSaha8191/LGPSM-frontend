@@ -11,7 +11,7 @@ import { eventService } from "@/services/eventService";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import PageHeader from "@/components/common/PageHeader";
-import { getAssignedCountText, SystemUserRow } from "@/utils/systemUserRows";
+import { getAssignedCountText, SystemUserRow, filterSystemUsers, USERS_ON_EVENT, ALL_SYSTEM_USERS } from "@/utils/systemUserRows";
 import { useAlert } from "@/context/AlertContext";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";
@@ -34,7 +34,9 @@ export default function EventAssignUsersPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAllSystemUsers, setShowAllSystemUsers] = useState(false);
+  // Which staff to list: everyone on this event, the staff of one session, or every system user
+  const [userFilter, setUserFilter] = useState<string>(USERS_ON_EVENT);
+  const showAllSystemUsers = userFilter === ALL_SYSTEM_USERS;
   const [page, setPage] = useState(1);
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null);
 
@@ -252,7 +254,7 @@ export default function EventAssignUsersPage() {
     }
   };
 
-  const eventUsers = showAllSystemUsers ? users : users.filter((u) => u.assignments.some((assignment) => assignment.eventId === eventId));
+  const eventUsers = filterSystemUsers(users, eventId, userFilter);
   const filteredUsers = eventUsers.filter((u) => {
     return (
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -265,7 +267,7 @@ export default function EventAssignUsersPage() {
   // 10 people per page (the old bottom-left "1" was a fixed, inert button)
   const { current: currentPage, totalPages, rows: pageUsers } = paginate(filteredUsers, page, 10);
   // Figma 217:19768 shows only the empty state (no select-all row or table headers) when nobody is assigned yet
-  const showEmptyAssigned = !isLoading && users.length > 0 && filteredUsers.length === 0 && !showAllSystemUsers && !searchQuery.trim();
+  const showEmptyAssigned = !isLoading && users.length > 0 && filteredUsers.length === 0 && userFilter === USERS_ON_EVENT && !searchQuery.trim();
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans select-none">
@@ -316,9 +318,13 @@ export default function EventAssignUsersPage() {
             <CustomDropdown
               variant="plain"
               ariaLabel="Which system users to show"
-              value={showAllSystemUsers ? "all" : "assigned"}
-              onChange={(v) => { setShowAllSystemUsers(v === "all"); setSelectedUserIds([]); setPage(1); }}
-              options={[{ value: "assigned", label: "Assigned to this event" }, { value: "all", label: "All" }]}
+              value={userFilter}
+              onChange={(v) => { setUserFilter(v); setSelectedUserIds([]); setPage(1); }}
+              options={[
+                { value: USERS_ON_EVENT, label: "All sessions" },
+                ...sessions.map((sess, idx) => ({ value: String(sess._id || sess.id), label: sess.name || `Session ${idx + 1}` })),
+                { value: ALL_SYSTEM_USERS, label: "All system users" },
+              ]}
             />
             <Link href="/user-management/add?new=1" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
               <Icon name="events/add-white" width={24} height={24} />
@@ -364,12 +370,14 @@ export default function EventAssignUsersPage() {
                   <td colSpan={6} className="py-12 text-center text-gray-500 text-sm">
                     {users.length === 0 ? (
                       <span>No SYSTEM_USER accounts found. <Link href="/user-management/add?new=1" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
-                    ) : !showAllSystemUsers && !searchQuery.trim() ? (
+                    ) : userFilter !== USERS_ON_EVENT && userFilter !== ALL_SYSTEM_USERS && !searchQuery.trim() ? (
+                      <span>No system users are assigned to this session yet. <button type="button" onClick={() => setUserFilter(ALL_SYSTEM_USERS)} className="font-semibold text-[#E5520F] underline cursor-pointer">Show all system users</button> to assign someone.</span>
+                    ) : userFilter === USERS_ON_EVENT && !searchQuery.trim() ? (
                       // Figma 217:19798 empty state; "Assign User" lists every system user to pick from
                       <div className="flex flex-col items-center gap-[26px] py-16 max-w-[344px] mx-auto whitespace-normal">
                         <Icon name="events/users-empty" width={80} height={67} />
                         <p className="text-lg font-medium text-black/50">No system users assigned yet. Assign system users to your event now.</p>
-                        <button type="button" onClick={() => setShowAllSystemUsers(true)} className="px-6 py-[11px] bg-[#F3F3F3] hover:bg-[#EAEAEA] rounded-lg text-base font-semibold text-[#FF651D] cursor-pointer">
+                        <button type="button" onClick={() => setUserFilter(ALL_SYSTEM_USERS)} className="px-6 py-[11px] bg-[#F3F3F3] hover:bg-[#EAEAEA] rounded-lg text-base font-semibold text-[#FF651D] cursor-pointer">
                           Assign User
                         </button>
                       </div>

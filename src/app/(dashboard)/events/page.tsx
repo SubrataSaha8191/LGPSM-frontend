@@ -469,7 +469,7 @@ export default function EventListingPage() {
           )}
 
           {loading ? (
-            <SkeletonRegion label="Loading events" className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <SkeletonRegion label="Loading events" className="grid grid-cols-1 lg:grid-cols-2 min-[1500px]:grid-cols-3 gap-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} aria-hidden className="border border-[#E0E0E0] rounded-lg p-4 flex gap-4">
                   <Skeleton className="w-[60px] h-[104px] shrink-0" />
@@ -486,7 +486,7 @@ export default function EventListingPage() {
               )}
             </p>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-[1034px]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 min-[1500px]:grid-cols-3 gap-6">
               {visible.map((r) => (
                 <OrganizerEventCard key={r.id} row={r} onOpen={() => router.push(`/events/${r.id}`)} onDelete={setDeleting} />
               ))}

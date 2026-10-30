@@ -36,7 +36,7 @@ interface TemplateCard {
 // Browse templates; organizers see published ones (backend-enforced), admins also see drafts
 export default function TemplatesPage() {
   return (
-    <Suspense fallback={<SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}</SkeletonRegion>}>
+    <Suspense fallback={<SkeletonRegion label="Loading templates" className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-5">{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[2/3]" />)}</SkeletonRegion>}>
       <TemplatesPageContent />
     </Suspense>
   );
@@ -125,7 +125,7 @@ function TemplatesPageContent() {
   return (
     <div className="w-full min-h-full bg-white">
       <PageHeader title="Templates" actions={<Link href="/templates/ai" className="mr-2 inline-flex items-center gap-1.5 rounded-md bg-[#FF651D] px-3 py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E5520F]"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>Design with AI</Link>} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>} />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6 pb-24">
+      <div className="p-4 sm:p-6 w-full space-y-6 pb-24">
         <div role="tablist" aria-label="Template list" className="inline-flex rounded-md bg-[#F4F5F8] p-1 text-sm">
           {([["all", "All templates"], ["mine", "My templates"]] as const).map(([key, label]) => (
             <button key={key} type="button" role="tab" aria-selected={view === key} onClick={() => { setView(key); setPreview(null); }} className={`rounded px-4 py-1.5 cursor-pointer ${view === key ? "bg-white shadow-sm font-medium text-gray-900" : "text-gray-600"}`}>
@@ -134,7 +134,7 @@ function TemplatesPageContent() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-[18px]">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1.5">Event Category</label>
             <CustomDropdown
@@ -159,8 +159,8 @@ function TemplatesPageContent() {
         </div>
 
         {loading ? (
-          <SkeletonRegion label="Loading templates" className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[302/524]" />)}
+          <SkeletonRegion label="Loading templates" className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-5">
+{Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="aspect-[2/3]" />)}
 </SkeletonRegion>
         ) : loadError ? (
           <p role="alert" className="py-16 text-center text-sm text-rose-600 break-words">{loadError}</p>
@@ -168,7 +168,7 @@ function TemplatesPageContent() {
           <p className="py-16 text-center text-sm text-[#828282]">
             {templates.length === 0
               ? view === "mine"
-                ? "You haven't saved any templates yet."
+                ? "You haven't saved any templates with this account yet. Designs made by an administrator and shared with everyone are listed under All templates, not here."
                 : "No templates are available yet."
               : "No templates match the selected category."}
             {templates.length === 0 && view === "mine" && (
@@ -179,23 +179,25 @@ function TemplatesPageContent() {
             )}
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          // Figma Templates: full-width cards (140 x 210 minimum, 2:3), as many per row as fit, with an expand glyph and a
+          // "Use This Template" chip on hover; the name and category stay available as the tooltip / accessible name
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-5">
             {visible.map((t) => (
               <button
                 key={t.id}
                 type="button"
+                title={`${t.name} · ${labelFor(t)}${t.isCustom && !t.isMine ? " · AI design shared with all organizers" : t.isMine ? " · Yours" : ""}`}
+                aria-label={`Preview template ${t.name}`}
                 onClick={() => { setLivePreview(null); setPreview(t); }}
-                className="text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] transition-colors cursor-pointer"
+                className="group relative text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] focus-visible:border-[#FF651D] focus:outline-none transition-colors cursor-pointer"
               >
-                <div className="relative">
-                  <TemplateThumb imageKey={t.imageKey} name={t.name} />
-                  {t.isDraft && <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-white/95 border border-gray-200 text-xs text-gray-700">Draft</span>}
-                  {(t.isCustom || t.kind === "POSTER") && <span className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 text-xs text-white">{t.kind === "POSTER" ? "Poster" : "AI"}</span>}
-                </div>
-                <div className="px-2.5 py-2">
-                  <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
-                  <p className="text-xs text-[#828282] truncate">{labelFor(t)}</p>
-                </div>
+                <TemplateThumb imageKey={t.imageKey} name={t.name} className="aspect-[2/3]!" />
+                <span aria-hidden className="absolute top-2 right-2 size-6 rounded bg-black/55 text-white flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+                </span>
+                {t.isDraft && <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-white/95 border border-gray-200 text-xs text-gray-700">Draft</span>}
+                {(t.isCustom || t.kind === "POSTER") && <span className={`absolute left-2 px-2 py-0.5 rounded bg-black/70 text-xs text-white ${t.isDraft ? "top-9" : "top-2"}`}>{t.kind === "POSTER" ? "Poster" : "AI"}</span>}
+                <span aria-hidden className="absolute inset-x-2 bottom-2 rounded bg-white px-2 py-1.5 text-center text-xs font-medium text-[#15191C] shadow opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">Use This Template</span>
               </button>
             ))}
           </div>

@@ -64,7 +64,7 @@ export async function persistSessionsAndInvitees(
       problems.push(`Invitee file "${fileInfo.name}" was not imported because session "${session.name}" was not saved`);
       continue;
     }
-    const res = await inviteeService.importExcel(eventId, fileInfo.file, sessionId);
+    const res = await inviteeService.importExcel(eventId, fileInfo.file, sessionId, "APPEND");
     if (!res.success) {
       problems.push(`Invitee file "${fileInfo.name}": ${res.message || "import failed"}`);
     } else if (res.data && res.data.rejected > 0) {

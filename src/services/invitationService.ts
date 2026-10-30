@@ -56,6 +56,8 @@ export interface GetInvitationsResponse {
 
 export interface PublicInvitationData {
   /** Colours/character of the guest's invitation design; absent on older API versions */
+  /** The guest's current pass; REPLACED = this link is an old, superseded one (only the event title and guest name are sent) */
+  credential?: { status: "ACTIVE" | "REVOKED" | "EXPIRED" | "NOT_ISSUED" | "REPLACED" };
   theme?: { design?: string; background?: string; primary?: string; accent?: string; ink?: string; heading?: "serif" | "sans" };
   event: {
     title: string;
@@ -66,7 +68,7 @@ export interface PublicInvitationData {
     cancellation?: { cancelledAt?: string | null; reason?: string | null } | null;
     contactNumber?: string;
     organizerName?: string;
-    location?: string | { address?: string };
+    location?: string | { address?: string; addressDetails?: string };
     schedule?: {
       start?: string;
       end?: string;
