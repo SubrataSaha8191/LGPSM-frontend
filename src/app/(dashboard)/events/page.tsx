@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import EventCancelModal from "@/components/events/EventCancelModal";
 import { eventService } from "@/services/eventService";
 import { sessionService } from "@/services/sessionService";
 import { useCategories } from "@/hooks/useCategories";
@@ -246,7 +247,6 @@ export default function EventListingPage() {
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [filterApplyError, setFilterApplyError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<EventRow | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -261,17 +261,6 @@ export default function EventListingPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    const res = await eventService.deleteEvent(deleting.id);
-    if (!res.success) {
-      setDeleteError(res.message || "Failed to cancel event.");
-      return;
-    }
-    setDeleting(null);
-    await load();
-  };
 
   const term = search.trim().toLowerCase();
   const fromDate = filters.from ? new Date(`${filters.from}T00:00:00`) : null;
@@ -346,17 +335,13 @@ export default function EventListingPage() {
   };
 
   const deleteDialog = deleting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
-          <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
-            <h3 id="delete-event-title" className="text-base font-medium text-gray-900">Cancel Event</h3>
-            <p className="text-sm text-[#4B4F52] break-words">Cancel “{deleting.name}”? The event will be marked as cancelled. Its records are kept.</p>
-            {deleteError && <p role="alert" className="text-sm text-rose-600">{deleteError}</p>}
-            <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleting(null)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">Keep event</button>
-              <button type="button" onClick={confirmDelete} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer">Cancel event</button>
-            </div>
-          </div>
-        </div>
+        <EventCancelModal
+          isOpen
+          onClose={() => setDeleting(null)}
+          eventId={deleting.id}
+          eventTitle={deleting.name}
+          onCancelled={async () => { setDeleting(null); await load(); }}
+        />
       );
 
   const clearFilters = () => {
@@ -503,7 +488,7 @@ export default function EventListingPage() {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-w-[1034px]">
               {visible.map((r) => (
-                <OrganizerEventCard key={r.id} row={r} onOpen={() => router.push(`/events/${r.id}`)} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} />
+                <OrganizerEventCard key={r.id} row={r} onOpen={() => router.push(`/events/${r.id}`)} onDelete={setDeleting} />
               ))}
             </div>
           )}
@@ -593,7 +578,7 @@ export default function EventListingPage() {
                     <td className="px-2.5 whitespace-nowrap">{formatCompactDateTime(r.start, "—")}</td>
                     <td className="px-2.5 whitespace-nowrap">{formatCompactDateTime(r.end, "—")}</td>
                     <td className="px-2.5"><span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_STYLE[r.status]}`}>{r.status}</span></td>
-                    <td className="px-2.5 text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}><RowActions row={r} onDelete={(row) => { setDeleteError(null); setDeleting(row); }} /></td>
+                    <td className="px-2.5 text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}><RowActions row={r} onDelete={setDeleting} /></td>
                   </tr>
                 ))
               )}

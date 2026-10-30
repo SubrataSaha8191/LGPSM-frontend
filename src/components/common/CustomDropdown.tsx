@@ -28,6 +28,10 @@ interface CustomDropdownProps {
   ariaLabel?: string;
   /** "plain" is the borderless toolbar picker from the Figma list pages (e.g. 217:21076): grey 12px text and a small caret */
   variant?: "field" | "plain";
+  /** Replaces the default chevron (e.g. the Figma "down" caret on the Reports toolbar) */
+  caret?: React.ReactNode;
+  /** "ink" keeps a plain picker black instead of grey (Reports toolbar) */
+  plainTone?: "muted" | "ink";
   /** Smaller text for the compact filter drawer (Figma 217:22781) */
   compact?: boolean;
   /** Render the menu in the document layer so cards with overflow clipping cannot cut it off. */
@@ -43,6 +47,8 @@ export default function CustomDropdown({
   topAction,
   disabled = false,
   className = "",
+  caret,
+  plainTone = "muted",
   invalid = false,
   emptyMessage = "No options available",
   ariaLabel,
@@ -121,7 +127,7 @@ export default function CustomDropdown({
         onClick={() => setIsOpen(!isOpen)}
         className={`${plain ? "h-[47px] px-4 text-xs font-medium rounded-md border border-transparent hover:text-[#15191C] gap-3" : `w-full ${compact ? "min-h-[47px] px-4 text-xs font-medium" : "min-h-[44px] px-3.5 py-2.5 text-sm"} rounded-md border gap-2`} transition-colors flex items-center justify-between cursor-pointer select-none ${
           plain
-            ? `bg-transparent ${isOpen ? "text-[#15191C]" : "text-[#7F7F7F]"}`
+            ? `bg-transparent ${isOpen || plainTone === "ink" ? "text-[#15191C]" : "text-[#7F7F7F]"}`
             : disabled
             ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
             : invalid
@@ -135,9 +141,13 @@ export default function CustomDropdown({
           {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
           <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         </span>
-        <svg className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        {caret ? (
+          <span className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}>{caret}</span>
+        ) : (
+          <svg className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
       </button>
 
       {isOpen && !disabled && (() => {

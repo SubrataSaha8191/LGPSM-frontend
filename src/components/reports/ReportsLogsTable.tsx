@@ -3,6 +3,7 @@
 import React from "react";
 import { InviteeLog, AccessLog, SessionReport, ReportSessionColumn } from "@/types/reports";
 import { CheckInRecord } from "@/services/checkInService";
+import Icon from "@/components/icons/Icon";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { TableSkeletonRows } from "@/components/common/Skeleton";
 import { Skeleton, SkeletonRegion, TableSkeleton } from "@/components/common/Skeleton";
@@ -125,28 +126,19 @@ export default function ReportsLogsTable({
       <div className="p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 max-w-lg">
-            <div className="relative flex-1">
-              <svg
-                className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+            <label className="bg-[#FAFAFA] border border-[#E0E0E0] rounded-md h-[47px] px-4 flex flex-1 items-center gap-2.5 focus-within:border-[#FF651D] transition-colors">
+              <span className="size-[22px] flex items-center justify-center shrink-0 text-[#828282]">
+                <Icon name="reports/search" width={18.4} height={18.4} />
+              </span>
               <input
                 type="text"
-                placeholder="Search logs..."
+                placeholder="Search..."
+                aria-label="Search logs"
                 value={tableSearch}
                 onChange={(e) => setTableSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                className="flex-1 min-w-0 bg-transparent text-xs font-medium text-[#15191C] placeholder-[#828282] focus:outline-none"
               />
-            </div>
+            </label>
 
             {activeTab === "checkins" && onMethodFilterChange && (
               <div className="w-40 shrink-0">
@@ -167,12 +159,10 @@ export default function ReportsLogsTable({
           <button
             type="button"
             onClick={onDownloadCSV}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF5B22] hover:text-[#E04B16] cursor-pointer shrink-0"
+            className="h-[47px] px-3 inline-flex items-center gap-2.5 text-xs font-medium text-black cursor-pointer shrink-0 rounded-md hover:bg-[#FFF3EC] transition-colors"
           >
-            <svg className="w-4 h-4 text-[#FF5B22]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>Download CSV</span>
+            <Icon name="reports/download" width={15.83} height={19.22} />
+            <span>Download List</span>
           </button>
         </div>
 

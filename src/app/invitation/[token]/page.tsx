@@ -197,10 +197,10 @@ export default function PublicInvitationPage() {
         {/* Header: the colours and character of the invitation card the guest was sent */}
         <div
           className="px-7 pt-7 pb-8 text-center relative text-[color:var(--inv-on-primary)]"
-          style={{ background: "linear-gradient(135deg, var(--inv-primary) 0%, color-mix(in srgb, var(--inv-primary) 72%, var(--inv-accent)) 100%)" }}
+          style={{ background: eventCancelled ? "linear-gradient(135deg, #4B4F52 0%, #2B2F33 100%)" : "linear-gradient(135deg, var(--inv-primary) 0%, color-mix(in srgb, var(--inv-primary) 72%, var(--inv-accent)) 100%)", color: eventCancelled ? "#FFFFFF" : undefined }}
         >
           <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.18em] mb-3 border border-current/30 bg-white/15">
-            You&apos;re invited
+            {eventCancelled ? "Event cancelled" : "You're invited"}
           </span>
           <h1 style={{ fontFamily: "var(--inv-heading)" }} className="mx-auto max-w-[24rem] min-w-0 px-2 text-2xl sm:text-[28px] font-bold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
           {event.format && (
@@ -213,7 +213,16 @@ export default function PublicInvitationPage() {
 
         {/* Card Content */}
         <div className="p-6 space-y-6">
-          {!cardImageFailed && (
+          {eventCancelled && (
+            <div role="alert" className="rounded-xl border border-[#E0E0E0] bg-[#F4F4F4] p-4 space-y-2 text-sm text-[color:var(--inv-ink)]">
+              <p className="font-semibold">This event has been cancelled and is no longer taking place.</p>
+              <p><strong className="font-semibold">Your access pass is no longer valid</strong> and cannot be used for entry. You do not need to do anything.</p>
+              {event.cancellation?.reason && <p className="break-words"><span className="font-semibold">Message from the organizer:</span> {event.cancellation.reason}</p>}
+              {event.contactNumber && <p>Questions? Contact the organizer on <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="underline">{event.contactNumber}</a>.</p>}
+            </div>
+          )}
+
+          {!cardImageFailed && !eventCancelled && (
             <figure className="mx-auto flex max-w-[220px] flex-col items-center gap-2">
               <img
                 src={invitationService.publicInvitationCardUrl(token)}

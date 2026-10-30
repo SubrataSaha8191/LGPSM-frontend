@@ -372,7 +372,7 @@ export default function ReportsPage() {
           selectedEvent={selectedEventId}
           setSelectedEvent={setSelectedEventId}
           onDownloadReport={downloadReportCSV}
-          organizerOptions={isAdmin ? organizerOptions : [{ value: "", label: "My Events" }]}
+          organizerOptions={isAdmin ? organizerOptions : [{ value: "", label: user?.fullName || "Organizer name here" }]}
           eventOptions={eventOptions.length > 0 ? eventOptions : [{ value: "", label: loadingEvents ? "Loading events..." : "No events" }]}
         />
 

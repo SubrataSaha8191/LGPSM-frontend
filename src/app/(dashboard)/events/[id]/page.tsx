@@ -18,6 +18,8 @@ import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav from "@/components/EventSubNav";
 import EventCleanupModal from "@/components/events/EventCleanupModal";
 import EventCloseModal from "@/components/events/EventCloseModal";
+import EventCancelModal from "@/components/events/EventCancelModal";
+import CancellationNoticesPanel from "@/components/events/CancellationNoticesPanel";
 import AdmissionWindowModal from "@/components/events/AdmissionWindowModal";
 import { effectiveAdmissionIso } from "@/utils/admissionWindow";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
@@ -36,6 +38,8 @@ interface EventDetail {
   location?: { address?: string } | string;
   templateId?: { name?: string; previewImageKey?: string } | string | null;
   operationalDataCleared?: boolean;
+  cancelledAt?: string;
+  cancellationReason?: string;
   admission?: { opensAt?: string | null; closesAt?: string | null };
 }
 
@@ -147,6 +151,7 @@ export default function EventDetailsPage() {
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [admissionOpen, setAdmissionOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -257,6 +262,12 @@ export default function EventDetailsPage() {
             <button type="button" onClick={() => setNotice(null)} className="font-medium cursor-pointer">Dismiss</button>
           </div>
         )}
+        {event.status === "CANCELLED" && (
+          <div role="status" className="p-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-800">
+            <p className="font-medium">This event was cancelled{event.cancelledAt ? ` on ${formatDateTime(event.cancelledAt)}` : ""}.</p>
+            <p className="mt-0.5">Its QR passes no longer work, invitations and RSVPs are closed, and it cannot be reinstated. Attendance, RSVPs, reports and the activity log are kept.{event.cancellationReason ? ` Reason given: ${event.cancellationReason}` : ""}</p>
+          </div>
+        )}
         {event.operationalDataCleared && (
           <p className="p-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700">
             Operational data (sessions, invitees, invitations and staff assignments) for this completed event was permanently deleted by an administrator.
@@ -289,6 +300,11 @@ export default function EventDetailsPage() {
             )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            {(event.status === "PUBLISHED" || event.status === "DRAFT") && (
+              <button type="button" onClick={() => setCancelOpen(true)} className="px-4 py-2 border border-rose-600 text-rose-700 hover:bg-rose-50 text-sm font-medium rounded-md cursor-pointer">
+                Cancel Event
+              </button>
+            )}
             {event.status === "PUBLISHED" && (
               <button type="button" onClick={() => setCloseOpen(true)} className="px-4 py-2 border border-gray-400 text-gray-800 hover:bg-gray-50 text-sm font-medium rounded-md cursor-pointer">
                 Close Event
@@ -406,7 +422,11 @@ export default function EventDetailsPage() {
               {typeof event.templateId === "object" && event.templateId?.name ? `Template: ${event.templateId.name}` : "Design chosen from the event type"}
             </p>
             {/* Faded once invitations have gone out (Figma 426:2); resends happen per guest on the Invitees tab */}
-            {invitationLifecycleStarted ? (
+            {event.status === "CANCELLED" ? (
+              <span aria-disabled="true" title="This event is cancelled. Invitations can no longer be sent." className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#FF651D] text-white text-sm font-medium rounded-md opacity-40 cursor-not-allowed">
+                Send Invitation
+              </span>
+            ) : invitationLifecycleStarted ? (
               <span aria-disabled="true" title="Invitations have been sent. Resend to guests from the Invitees tab." className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#FF651D] text-white text-sm font-medium rounded-md opacity-50 cursor-not-allowed">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               Send Invitation
@@ -419,6 +439,8 @@ export default function EventDetailsPage() {
             )}
           </section>
         </div>
+
+        {event.status === "CANCELLED" && <CancellationNoticesPanel eventId={eventId} />}
 
         <section className={`${card} p-4 sm:p-5 space-y-5`} aria-labelledby="analysis-title">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -489,6 +511,18 @@ export default function EventDetailsPage() {
           }}
         />
       )}
+      <EventCancelModal
+        isOpen={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        eventId={eventId}
+        eventTitle={event.title}
+        onCancelled={async (result) => {
+          setCancelOpen(false);
+          const n = result.notices?.eligible ?? 0;
+          setNotice(n > 0 ? `Event cancelled. ${n} invited ${n === 1 ? "guest is" : "guests are"} being notified; see Cancellation notices below.` : "Event cancelled. No invitations had been sent, so nobody needed to be notified.");
+          await load();
+        }}
+      />
       <EventCloseModal
         isOpen={closeOpen}
         onClose={() => setCloseOpen(false)}

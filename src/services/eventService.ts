@@ -37,6 +37,31 @@ export interface EventData {
   updatedAt?: string;
 }
 
+export interface CancelEventResult {
+  eventId: string;
+  status: string;
+  cancelledAt?: string;
+  alreadyCancelled?: boolean;
+  notices?: { eligible: number; created: number };
+}
+
+export interface CancellationPreview {
+  invitedGuests: number;
+  byChannel: { email: number; whatsapp: number; unknownChannel: number };
+  notInvited: number;
+  whatsappNoticesAvailable: boolean;
+}
+
+export type NoticeCounts = Record<"PENDING" | "SENDING" | "SENT" | "FAILED" | "UNAVAILABLE", number>;
+export interface CancellationNotices {
+  cancelledAt?: string;
+  reason?: string;
+  guests: number;
+  channels: { email: NoticeCounts; whatsapp: NoticeCounts };
+  problems: { inviteeId: string; name?: string; channel: "email" | "whatsapp"; status: "FAILED" | "UNAVAILABLE"; reason?: string; attempts?: number }[];
+  note?: string;
+}
+
 export interface EventsListData {
   events: EventData[];
   total?: number;
@@ -170,6 +195,32 @@ export const eventService = {
       method: "PATCH",
       body: JSON.stringify(admission),
     }, true);
+  },
+
+  /**
+   * Cancel an event. Terminal: there is no reinstate. Previously invited guests are queued to be told.
+   * POST /api/v1/events/:eventId/cancel
+   */
+  async cancelEvent(eventId: string, reason?: string): Promise<ApiResponse<CancelEventResult>> {
+    return apiClient<CancelEventResult>(`/api/v1/events/${eventId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
+    }, true);
+  },
+
+  /** Who would be told if the event were cancelled now (GET /events/:id/cancellation/preview) */
+  async getCancellationPreview(eventId: string): Promise<ApiResponse<CancellationPreview>> {
+    return apiClient<CancellationPreview>(`/api/v1/events/${eventId}/cancellation/preview`, { method: "GET" }, true);
+  },
+
+  /** What happened to the cancellation notices (GET /events/:id/cancellation/notices) */
+  async getCancellationNotices(eventId: string): Promise<ApiResponse<CancellationNotices>> {
+    return apiClient<CancellationNotices>(`/api/v1/events/${eventId}/cancellation/notices`, { method: "GET" }, true);
+  },
+
+  /** Retry failed / unavailable notices; messages already sent are never repeated */
+  async retryCancellationNotices(eventId: string): Promise<ApiResponse<CancellationNotices>> {
+    return apiClient<CancellationNotices>(`/api/v1/events/${eventId}/cancellation/notices/retry`, { method: "POST" }, true);
   },
 
   /**

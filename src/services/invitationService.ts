@@ -62,6 +62,8 @@ export interface PublicInvitationData {
     description?: string;
     format?: string;
     status?: string;
+    /** Present only when the event was cancelled */
+    cancellation?: { cancelledAt?: string | null; reason?: string | null } | null;
     contactNumber?: string;
     organizerName?: string;
     location?: string | { address?: string };

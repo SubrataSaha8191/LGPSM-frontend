@@ -2,6 +2,7 @@
 
 import React from "react";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import Icon from "@/components/icons/Icon";
 
 interface ReportsHeaderControlsProps {
   searchQuery: string;
@@ -13,7 +14,15 @@ interface ReportsHeaderControlsProps {
   onDownloadReport: () => void;
   organizerOptions?: { value: string; label: string }[];
   eventOptions?: { value: string; label: string }[];
+  /** Organizers are only offered the event picker, admins also pick an organizer */
+  showOrganizer?: boolean;
 }
+
+// The Figma toolbar (Report, 2092:1467): a grey search field, then flat pickers and "Download Report" separated by 32px hairlines.
+// Search, caret and download glyphs are the design's own SVGs (public/icons/reports).
+// the hairline sits 24px clear of each picker (on top of the picker's own padding), as in the design
+const Divider = () => <span aria-hidden className="hidden md:block w-px h-8 bg-[#E5E5E5] shrink-0 mx-3" />;
+const caret = <Icon name="reports/caret-down" width={14} height={8} />;
 
 export default function ReportsHeaderControls({
   searchQuery,
@@ -23,78 +32,68 @@ export default function ReportsHeaderControls({
   selectedEvent,
   setSelectedEvent,
   onDownloadReport,
-  organizerOptions = [
-    { value: "", label: "All Organizers" },
-  ],
-  eventOptions = [
-    { value: "", label: "Select Event" },
-  ],
+  organizerOptions = [{ value: "", label: "All Organizers" }],
+  eventOptions = [{ value: "", label: "Select Event" }],
+  showOrganizer = true,
 }: ReportsHeaderControlsProps) {
-
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-4 flex-1">
-        {/* Search Bar */}
-        <div className="relative flex-1 min-w-[220px]">
-          <svg
-            className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200/90 rounded-md text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#FF5B22] transition-colors"
-          />
-        </div>
+    <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
+      <label className="bg-[#FAFAFA] border border-[#E0E0E0] rounded-md h-[47px] px-4 flex flex-1 min-w-[220px] items-center gap-2.5 focus-within:border-[#FF651D] transition-colors">
+        <span className="size-[22px] flex items-center justify-center shrink-0 text-[#828282]">
+          <Icon name="reports/search" width={18.4} height={18.4} />
+        </span>
+        <input
+          type="text"
+          placeholder="Search..."
+          aria-label="Search reports"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 min-w-0 bg-transparent text-xs font-medium text-[#15191C] placeholder-[#828282] focus:outline-none"
+        />
+      </label>
 
-        {/* Organizer Dropdown */}
-        <div className="min-w-[200px]">
+      <div className="flex flex-wrap md:flex-nowrap items-center gap-x-3 md:gap-x-0 gap-y-2">
+        {showOrganizer && (
+          <>
+            <div className="w-[208px] max-w-full">
+              <CustomDropdown
+                variant="plain"
+                plainTone="ink"
+                caret={caret}
+                value={selectedOrganizer}
+                onChange={setSelectedOrganizer}
+                options={organizerOptions}
+                placeholder="Organizer name here"
+                ariaLabel="Organizer"
+                className="w-full! max-w-none!"
+              />
+            </div>
+            <Divider />
+          </>
+        )}
+        <div className="w-[208px] max-w-full">
           <CustomDropdown
-            value={selectedOrganizer}
-            onChange={setSelectedOrganizer}
-            options={organizerOptions}
-            placeholder="Organizer name here"
-          />
-        </div>
-
-        {/* Event Dropdown */}
-        <div className="min-w-[220px]">
-          <CustomDropdown
+            variant="plain"
+            plainTone="ink"
+            caret={caret}
             value={selectedEvent}
             onChange={setSelectedEvent}
             options={eventOptions}
-            placeholder="Select event"
+            placeholder="Event name here"
+            ariaLabel="Event"
+            className="w-full! max-w-none!"
           />
         </div>
+        <Divider />
+        <button
+          type="button"
+          onClick={onDownloadReport}
+          className="h-[47px] px-3 inline-flex items-center gap-2.5 text-xs font-medium text-black cursor-pointer shrink-0 rounded-md hover:bg-[#FFF3EC] transition-colors"
+        >
+          <Icon name="reports/download" width={15.83} height={19.22} />
+          <span>Download Report</span>
+        </button>
       </div>
-
-      {/* Download Report Button */}
-      <button
-        type="button"
-        onClick={onDownloadReport}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF5B22] hover:text-[#E04B16] cursor-pointer shrink-0"
-      >
-        <svg className="w-4 h-4 text-[#FF5B22]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-          />
-        </svg>
-        <span>Download Report</span>
-      </button>
     </div>
   );
 }
