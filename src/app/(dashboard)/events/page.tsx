@@ -125,7 +125,7 @@ function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow
           {row.status !== "Cancelled" && row.canEdit && <Link href={`/events/${row.id}/edit`} className={item}>Edit Event</Link>}
           {row.status !== "Cancelled" && (
             <button type="button" onClick={() => { setOpen(false); onDelete(row); }} className={`${item} text-rose-300 cursor-pointer`}>
-              Delete Event
+              Cancel Event
             </button>
           )}
         </div>, document.body
@@ -184,7 +184,7 @@ function OrganizerCardMenu({ row, onDelete }: { row: EventRow; onDelete: (row: E
             {active && (
               <button type="button" onClick={() => { setOpen(false); onDelete(row); }} className={`${item} text-rose-300`}>
                 <Icon name="events/trash" width={16} height={16} />
-                Delete
+                Cancel Event
               </button>
             )}
             {!active && <span className="py-1 text-sm text-[#BDBDBD]">Event cancelled</span>}
@@ -266,7 +266,7 @@ export default function EventListingPage() {
     if (!deleting) return;
     const res = await eventService.deleteEvent(deleting.id);
     if (!res.success) {
-      setDeleteError(res.message || "Failed to delete event.");
+      setDeleteError(res.message || "Failed to cancel event.");
       return;
     }
     setDeleting(null);
@@ -348,12 +348,12 @@ export default function EventListingPage() {
   const deleteDialog = deleting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
           <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
-            <h3 id="delete-event-title" className="text-base font-medium text-gray-900">Delete Event</h3>
-            <p className="text-sm text-[#4B4F52] break-words">Delete “{deleting.name}”? It will be cancelled and its invitations stop working.</p>
+            <h3 id="delete-event-title" className="text-base font-medium text-gray-900">Cancel Event</h3>
+            <p className="text-sm text-[#4B4F52] break-words">Cancel “{deleting.name}”? The event will be marked as cancelled. Its records are kept.</p>
             {deleteError && <p role="alert" className="text-sm text-rose-600">{deleteError}</p>}
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleting(null)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">Cancel</button>
-              <button type="button" onClick={confirmDelete} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer">Delete</button>
+              <button type="button" onClick={() => setDeleting(null)} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 cursor-pointer">Keep event</button>
+              <button type="button" onClick={confirmDelete} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer">Cancel event</button>
             </div>
           </div>
         </div>

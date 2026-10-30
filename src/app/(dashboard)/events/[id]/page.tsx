@@ -17,6 +17,9 @@ import PageHeader from "@/components/common/PageHeader";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav from "@/components/EventSubNav";
 import EventCleanupModal from "@/components/events/EventCleanupModal";
+import EventCloseModal from "@/components/events/EventCloseModal";
+import AdmissionWindowModal from "@/components/events/AdmissionWindowModal";
+import { effectiveAdmissionIso } from "@/utils/admissionWindow";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import HorizontalScroll from "@/components/common/HorizontalScroll";
 import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
@@ -33,6 +36,7 @@ interface EventDetail {
   location?: { address?: string } | string;
   templateId?: { name?: string; previewImageKey?: string } | string | null;
   operationalDataCleared?: boolean;
+  admission?: { opensAt?: string | null; closesAt?: string | null };
 }
 
 const card = "bg-white border border-[#E0E0E0] rounded-lg";
@@ -142,6 +146,8 @@ export default function EventDetailsPage() {
   const [analysisSession, setAnalysisSession] = useState("");
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [admissionOpen, setAdmissionOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
@@ -181,11 +187,7 @@ export default function EventDetailsPage() {
     setReport(repRes.success && repRes.data ? repRes.data : null);
     setAccessLogs(logRes.success && Array.isArray(logRes.data) ? logRes.data : []);
 
-    const ended = ev.schedule?.end && new Date(ev.schedule.end) < new Date();
-    if (user?.role === "ADMIN" && ended && !ev.operationalDataCleared && sessionStorage.getItem(`dismiss_cleanup_${eventId}`) !== "true") {
-      setCleanupOpen(true);
-    }
-  }, [eventId, user?.role]);
+  }, [eventId]);
 
   useEffect(() => {
     if (eventId) load();
@@ -227,8 +229,11 @@ export default function EventDetailsPage() {
   const venue = typeof event.location === "string" ? event.location : event.location?.address;
   const delivery = report?.deliverySummary || { SENT: 0, PENDING: 0, FAILED: 0 };
   const invitationLifecycleStarted = delivery.SENT > 0 || delivery.FAILED > 0;
+  // The API refuses edits once invitations went out and for closed or cancelled events
+  const editLocked = invitationLifecycleStarted || event.status === "COMPLETED" || event.status === "CANCELLED";
+  const admissionWindow = effectiveAdmissionIso({ start: event.schedule?.start || "", end: event.schedule?.end || "", opens: event.admission?.opensAt || null, closes: event.admission?.closesAt || null });
   const totalInvitees = report?.totalInvitees ?? 0;
-  const timeStatus = event.status === "CANCELLED" ? "Cancelled" : getDynamicEventStatus(event.schedule?.start, event.schedule?.end, "Upcoming");
+  const timeStatus = event.status === "CANCELLED" ? "Cancelled" : event.status === "COMPLETED" ? "Completed" : getDynamicEventStatus(event.schedule?.start, event.schedule?.end, "Upcoming");
   const status = timeStatus === "Upcoming" && delivery.SENT === 0 && delivery.FAILED === 0 ? "Invitation not send" : timeStatus;
   const statusTone: Record<string, string> = {
     "Invitation not send": "bg-[#FFE9C0] text-[#9E8C00]",
@@ -237,7 +242,6 @@ export default function EventDetailsPage() {
     Completed: "bg-[#FFE3D7] text-[#FF651D]",
     Cancelled: "bg-gray-200 text-gray-700",
   };
-  const ended = !!event.schedule?.end && new Date(event.schedule.end) < new Date();
   const sessionRow = (id: string) => report?.sessionReports.find((r) => String(r.sessionId) === id);
   const selected = sessionRow(analysisSession);
   const invited = selected?.invitedCount ?? 0;
@@ -255,7 +259,7 @@ export default function EventDetailsPage() {
         )}
         {event.operationalDataCleared && (
           <p className="p-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-700">
-            Operational data (sessions, invitees, invitations and staff assignments) for this completed event was cleared by an administrator.
+            Operational data (sessions, invitees, invitations and staff assignments) for this completed event was permanently deleted by an administrator.
           </p>
         )}
 
@@ -275,15 +279,28 @@ export default function EventDetailsPage() {
               <span><span className="font-medium text-gray-900">End:</span> {formatDateTime(event.schedule?.end, "—")}</span>
             </div>
             {venue && <p className="mt-2 text-xs text-[#828282] break-words">{venue}</p>}
+            {admissionWindow.opensAt && admissionWindow.closesAt && (
+              <p className="mt-2 text-xs text-[#4B4F52] flex flex-wrap items-center gap-x-2">
+                <span><span className="font-medium text-gray-900">Check-in:</span> {formatDateTime(admissionWindow.opensAt, "—")} – {formatDateTime(admissionWindow.closesAt, "—")}{admissionWindow.opensIsDefault && admissionWindow.closesIsDefault ? " (same as the event)" : ""}</span>
+                {event.status === "PUBLISHED" && (
+                  <button type="button" onClick={() => setAdmissionOpen(true)} className="text-[#FF651D] underline cursor-pointer">Change</button>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {user?.role === "ADMIN" && ended && !event.operationalDataCleared && (
-              <button type="button" onClick={() => setCleanupOpen(true)} className="px-4 py-2 border border-amber-600 text-amber-700 hover:bg-amber-50 text-sm font-medium rounded-md cursor-pointer">
-                Clear Event Data
+            {event.status === "PUBLISHED" && (
+              <button type="button" onClick={() => setCloseOpen(true)} className="px-4 py-2 border border-gray-400 text-gray-800 hover:bg-gray-50 text-sm font-medium rounded-md cursor-pointer">
+                Close Event
+              </button>
+            )}
+            {user?.role === "ADMIN" && event.status === "COMPLETED" && !event.operationalDataCleared && (
+              <button type="button" onClick={() => setCleanupOpen(true)} className="px-4 py-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium rounded-md cursor-pointer">
+                Delete Data Permanently
               </button>
             )}
             {/* After sending, Figma 426:2 keeps Edit visible but faded: the event is locked (the API refuses edits too) */}
-            {!invitationLifecycleStarted ? (
+            {!editLocked ? (
               <Link href={`/events/${eventId}/edit`} className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF651D] hover:bg-[#E5520F] text-white text-sm font-medium rounded-md">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -456,17 +473,41 @@ export default function EventDetailsPage() {
       </div>
 
       {cardExpanded && <CardPreviewModal eventId={eventId} onClose={() => setCardExpanded(false)} />}
+      {admissionOpen && (
+        <AdmissionWindowModal
+          isOpen
+          onClose={() => setAdmissionOpen(false)}
+          eventId={eventId}
+          start={event.schedule?.start || ""}
+          end={event.schedule?.end || ""}
+          opens={event.admission?.opensAt || null}
+          closes={event.admission?.closesAt || null}
+          onSaved={async () => {
+            setAdmissionOpen(false);
+            setNotice("Check-in window updated.");
+            await load();
+          }}
+        />
+      )}
+      <EventCloseModal
+        isOpen={closeOpen}
+        onClose={() => setCloseOpen(false)}
+        eventId={eventId}
+        eventTitle={event.title}
+        onClosed={async () => {
+          setCloseOpen(false);
+          setNotice("Event closed. All guests, invitations, check-ins and reports have been kept.");
+          await load();
+        }}
+      />
       <EventCleanupModal
         isOpen={cleanupOpen}
-        onClose={() => {
-          setCleanupOpen(false);
-          sessionStorage.setItem(`dismiss_cleanup_${eventId}`, "true");
-        }}
+        onClose={() => setCleanupOpen(false)}
         eventId={eventId}
         eventTitle={event.title}
         onCleanupSuccess={async () => {
           setCleanupOpen(false);
-          setNotice("Operational data for this event has been cleared.");
+          setNotice("Operational data for this event has been permanently deleted.");
           await load();
         }}
       />

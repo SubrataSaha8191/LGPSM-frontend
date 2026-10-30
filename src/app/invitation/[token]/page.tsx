@@ -6,6 +6,7 @@ import { DietarySelection, invitationService, PublicInvitationData } from "@/ser
 import { usePageTitle } from "@/context/PageTitleContext";
 import BrandLoader from "@/components/common/BrandLoader";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import { resolveInvitationTheme, themeCssVars } from "@/utils/invitationTheme";
 
 interface DietaryPrompt {
   title: string;
@@ -166,6 +167,7 @@ export default function PublicInvitationPage() {
   }
 
   const { event, invitee } = invitationData!;
+  const theme = resolveInvitationTheme(invitationData!.theme);
   const locationText = event.format === "VIRTUAL"
     ? "Online event"
     : typeof event.location === "string" ? event.location : event.location?.address || "";
@@ -180,22 +182,34 @@ export default function PublicInvitationPage() {
     d && !isNaN(d.getTime())
       ? d.toLocaleString([], { dateStyle: "medium", timeStyle: "short", timeZone: event.timeZone })
       : "TBD";
+  // Only mentioned when the check-in window differs from the event's own hours
+  const admissionOpens = event.admission?.opensAt ? new Date(event.admission.opensAt) : null;
+  const admissionCloses = event.admission?.closesAt ? new Date(event.admission.closesAt) : null;
+  const sameInstant = (a: Date | null, b: Date | null) => !!a && !!b && a.getTime() === b.getTime();
+  const admissionNote = [
+    admissionOpens && startDate && !sameInstant(admissionOpens, startDate) ? `Check-in opens ${formatDateTime(admissionOpens)}` : null,
+    admissionCloses && endDate && !sameInstant(admissionCloses, endDate) ? `Check-in closes ${formatDateTime(admissionCloses)}` : null,
+  ].filter(Boolean).join(" · ");
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
-      <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-        {/* Header Hero Banner */}
-        <div className="bg-gradient-to-r from-[#FF5B22] to-[#ff7b4d] px-7 py-6 text-white text-center relative">
-          <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
-            Event Invitation
+    <div style={themeCssVars(theme)} className="min-h-screen bg-[color:var(--inv-bg)] text-[color:var(--inv-ink)] flex items-center justify-center p-4 sm:p-6 font-sans">
+      <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl border border-[color:var(--inv-line)] overflow-hidden">
+        {/* Header: the colours and character of the invitation card the guest was sent */}
+        <div
+          className="px-7 pt-7 pb-8 text-center relative text-[color:var(--inv-on-primary)]"
+          style={{ background: "linear-gradient(135deg, var(--inv-primary) 0%, color-mix(in srgb, var(--inv-primary) 72%, var(--inv-accent)) 100%)" }}
+        >
+          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-[0.18em] mb-3 border border-current/30 bg-white/15">
+            You&apos;re invited
           </span>
-          <h1 className="mx-auto max-w-[24rem] min-w-0 px-2 text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
+          <h1 style={{ fontFamily: "var(--inv-heading)" }} className="mx-auto max-w-[24rem] min-w-0 px-2 text-2xl sm:text-[28px] font-bold leading-tight tracking-tight text-balance [overflow-wrap:anywhere]">{event.title}</h1>
           {event.format && (
-            <p className="text-xs text-white/90 font-medium mt-1 uppercase tracking-wide">
+            <p className="text-[11px] opacity-90 font-medium mt-2 uppercase tracking-[0.16em]">
               {event.format === "VIRTUAL" ? "Online event" : "In person"}
             </p>
           )}
         </div>
+        <div aria-hidden className="h-1.5 bg-[color:var(--inv-accent)]" />
 
         {/* Card Content */}
         <div className="p-6 space-y-6">
@@ -205,17 +219,17 @@ export default function PublicInvitationPage() {
                 src={invitationService.publicInvitationCardUrl(token)}
                 alt={`${event.title} digital access pass for ${invitee.name}`}
                 onError={() => setCardImageFailed(true)}
-                className="block w-full rounded-xl border border-slate-200 bg-white object-contain shadow-lg"
+                className="block w-full rounded-xl border-2 border-[color:var(--inv-line)] bg-white object-contain shadow-lg ring-4 ring-[color:var(--inv-soft)]"
               />
-              <figcaption className="text-[11px] font-medium tracking-wide text-slate-500">DIGITAL ACCESS PASS</figcaption>
+              <figcaption className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--inv-accent-text)]">DIGITAL ACCESS PASS</figcaption>
             </figure>
           )}
 
           {/* Invitee Welcome */}
-          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="bg-[color:var(--inv-soft)] rounded-xl p-4 border border-[color:var(--inv-line)] flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs text-slate-500 font-medium">Invited Guest</p>
-              <h2 className="text-base font-bold text-slate-800 break-words">{invitee.name}</h2>
+              <h2 className="text-base font-bold text-[color:var(--inv-ink)] break-words">{invitee.name}</h2>
             </div>
             <div>
               <p className="text-xs text-slate-500 font-medium mb-0.5">RSVP Status</p>
@@ -246,29 +260,29 @@ export default function PublicInvitationPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs">
               {event.organizerName && (
-                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <div className="flex items-start gap-2 bg-[color:var(--inv-soft)] p-3 rounded-lg border border-[color:var(--inv-line)]">
+                  <svg className="w-4 h-4 text-[color:var(--inv-accent-text)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
                   </svg>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-700">Hosted by</p>
+                    <p className="font-semibold text-[color:var(--inv-ink)]">Hosted by</p>
                     <p className="text-slate-500 break-words">{event.organizerName}</p>
                   </div>
                 </div>
               )}
 
               {locationText && (
-                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-start gap-2 bg-[color:var(--inv-soft)] p-3 rounded-lg border border-[color:var(--inv-line)]">
+                  <svg className="w-4 h-4 text-[color:var(--inv-accent-text)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-700">Location</p>
+                    <p className="font-semibold text-[color:var(--inv-ink)]">Location</p>
                     {event.format === "VIRTUAL" ? (
                       <p className="text-slate-500 break-words">{locationText}</p>
                     ) : (
-                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`} target="_blank" rel="noreferrer" className="text-slate-500 break-words underline decoration-slate-300 underline-offset-2 hover:text-[#FF5B22]">
+                      <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`} target="_blank" rel="noreferrer" className="text-slate-500 break-words underline decoration-slate-300 underline-offset-2 hover:text-[color:var(--inv-accent-text)]">
                         {locationText}
                       </a>
                     )}
@@ -277,41 +291,42 @@ export default function PublicInvitationPage() {
               )}
 
               {event.schedule && (
-                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-start gap-2 bg-[color:var(--inv-soft)] p-3 rounded-lg border border-[color:var(--inv-line)]">
+                  <svg className="w-4 h-4 text-[color:var(--inv-accent-text)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-700">Date & Time</p>
+                    <p className="font-semibold text-[color:var(--inv-ink)]">Date & Time</p>
                     <p className="text-slate-500 break-words">
                       {formatDateTime(startDate)}
                       {endDate && !isNaN(endDate.getTime()) ? ` – ${formatDateTime(endDate)}` : ""}
                     </p>
+                    {admissionNote && <p className="mt-1 text-xs font-medium text-[color:var(--inv-accent-text)]">{admissionNote}</p>}
                     {event.timeZone && <p className="mt-0.5 text-[10px] text-slate-400">Times shown in {event.timeZone}</p>}
                   </div>
                 </div>
               )}
 
               {event.contactNumber && (
-                <div className="flex items-start gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <svg className="w-4 h-4 text-[#FF5B22] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <div className="flex items-start gap-2 bg-[color:var(--inv-soft)] p-3 rounded-lg border border-[color:var(--inv-line)]">
+                  <svg className="w-4 h-4 text-[color:var(--inv-accent-text)] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.95.68l1.2 3.6a1 1 0 01-.5 1.2l-2.1 1.05a11.04 11.04 0 005.12 5.12l1.05-2.1a1 1 0 011.2-.5l3.6 1.2a1 1 0 01.68.95V19a2 2 0 01-2 2h-1C9.16 21 3 14.84 3 7V5z" />
                   </svg>
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-700">Event contact</p>
-                    <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="text-slate-500 break-words hover:text-[#FF5B22]">{event.contactNumber}</a>
+                    <p className="font-semibold text-[color:var(--inv-ink)]">Event contact</p>
+                    <a href={`tel:${event.contactNumber.replace(/[^+\d]/g, "")}`} className="text-slate-500 break-words hover:text-[color:var(--inv-accent-text)]">{event.contactNumber}</a>
                   </div>
                 </div>
               )}
             </div>
 
             {!!event.sessions?.length && (
-              <section aria-labelledby="invitation-sessions-title" className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                <h3 id="invitation-sessions-title" className="text-xs font-semibold text-slate-700">Your event sessions</h3>
-                <ul className="mt-2 divide-y divide-slate-200">
+              <section aria-labelledby="invitation-sessions-title" className="rounded-lg border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-3">
+                <h3 id="invitation-sessions-title" className="text-xs font-semibold text-[color:var(--inv-ink)]">Your event sessions</h3>
+                <ul className="mt-2 divide-y divide-[color:var(--inv-line)]">
                   {event.sessions.map((session, index) => (
                     <li key={`${session.name}-${session.start || index}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0 text-xs">
-                      <span className="font-medium text-slate-700 break-words">{session.name}</span>
+                      <span className="font-medium text-[color:var(--inv-ink)] break-words">{session.name}</span>
                       <span className="text-slate-500">
                         {session.start ? formatDateTime(new Date(session.start)) : "Time TBD"}
                         {session.end ? ` – ${formatDateTime(new Date(session.end))}` : ""}
@@ -323,13 +338,13 @@ export default function PublicInvitationPage() {
             )}
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-[color:var(--inv-line)]" />
 
           {/* RSVP Form — only when the organiser asked guests to respond (the API refuses answers otherwise) */}
           {canRespond ? (
           <form onSubmit={handleSubmitRsvp} className="space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-slate-800">Respond to Invitation</h3>
+              <h3 className="text-sm font-bold text-[color:var(--inv-ink)]">Respond to Invitation</h3>
               <p className="mt-1 text-xs text-slate-500">Choose whether you can attend, then submit your response.</p>
             </div>
 
@@ -353,7 +368,7 @@ export default function PublicInvitationPage() {
                 className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   selectedRsvp === "ACCEPTED"
                     ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                    : "bg-white text-slate-700 border-slate-200 hover:border-emerald-300"
+                    : "bg-white text-[color:var(--inv-ink)] border-slate-200 hover:border-emerald-300"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,7 +384,7 @@ export default function PublicInvitationPage() {
                 className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   selectedRsvp === "DECLINED"
                     ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                    : "bg-white text-slate-700 border-slate-200 hover:border-rose-300"
+                    : "bg-white text-[color:var(--inv-ink)] border-slate-200 hover:border-rose-300"
                 }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,11 +395,11 @@ export default function PublicInvitationPage() {
             </div>
 
             {dietaryPrompts.length > 0 && (
-              <fieldset className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
-                <legend className="px-1 text-xs font-semibold text-slate-700">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
+              <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
+                <legend className="px-1 text-xs font-semibold text-[color:var(--inv-ink)]">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
                 {dietaryPrompts.map((prompt, index) => (
                   <div key={`${index}-${prompt.title}`} className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-700">{prompt.title}</label>
+                    <label className="text-xs font-medium text-[color:var(--inv-ink)]">{prompt.title}</label>
                     <CustomDropdown
                       value={dietaryChoices[String(index)] || ""}
                       onChange={(value) => setDietaryChoices((current) => ({ ...current, [String(index)]: value }))}
@@ -408,11 +423,11 @@ export default function PublicInvitationPage() {
             <button
               type="submit"
               disabled={submitting || !selectedRsvp}
-              className="w-full py-3 px-4 bg-[#FF5B22] hover:bg-[#E04B16] text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-[color:var(--inv-primary)] hover:brightness-90 text-[color:var(--inv-on-primary)] text-xs font-bold rounded-xl transition cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                   <span>Saving RSVP...</span>
                 </>
               ) : (
@@ -421,7 +436,7 @@ export default function PublicInvitationPage() {
             </button>
           </form>
           ) : (
-            <div role="status" className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <div role="status" className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 text-sm text-[color:var(--inv-ink)]">
               {!rsvpEnabled ? "RSVP is not required for this event." : eventCancelled ? "This event has been cancelled." : "The response deadline for this invitation has passed."}
             </div>
           )}

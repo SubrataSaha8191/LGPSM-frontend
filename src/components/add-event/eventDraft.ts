@@ -2,6 +2,7 @@
 // All dates are ISO strings (see utils/dateTime.ts); payload builders produce the exact backend contract.
 
 import { addHours, isAfter, isValidIso, nextWholeHourIso, parseIso } from "@/utils/dateTime";
+import { admissionPayload, validateAdmission } from "@/utils/admissionWindow";
 import { resolveImageUrl } from "@/utils/mediaUrl";
 import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import type { CreateEventRequest, UpdateEventRequest } from "@/services/eventService";
@@ -66,6 +67,10 @@ export interface EventDraft {
   end: string;
   rsvpEnabled: boolean;
   rsvpDeadline: string | null;
+  /** When check-in opens; null = at the event start. Older saved drafts do not have it. */
+  admissionOpens?: string | null;
+  /** When check-in closes; null = at the event end */
+  admissionCloses?: string | null;
   thresholdLimit: string;
   allowAllInvited: boolean;
   allowNotResponded: boolean;
@@ -119,6 +124,8 @@ export function createEmptyEventDraft(): EventDraft {
     end,
     rsvpEnabled: true,
     rsvpDeadline: null,
+    admissionOpens: null,
+    admissionCloses: null,
     thresholdLimit: "",
     allowAllInvited: true,
     allowNotResponded: false,
@@ -199,6 +206,7 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
   if (draft.rsvpEnabled && draft.rsvpDeadline && isAfter(draft.rsvpDeadline, draft.end)) {
     errors.rsvpDeadline = "RSVP deadline should be before the event ends.";
   }
+  Object.assign(errors, validateAdmission({ start: draft.start, end: draft.end, opens: draft.admissionOpens ?? null, closes: draft.admissionCloses ?? null }));
   if (draft.thresholdLimit.trim() && !(Number(draft.thresholdLimit) > 0)) {
     errors.thresholdLimit = "Attendee limit must be a positive number.";
   }
@@ -260,6 +268,8 @@ function commonPayload(draft: EventDraft) {
       ? { location: { address: draft.venue.trim(), ...(draft.venuePin ? { coordinates: [draft.venuePin.lng, draft.venuePin.lat] as [number, number] } : {}) } }
       : {}),
     schedule: { start: draft.start, end: draft.end },
+    // null = follow the event's start/end; always sent so clearing a value really resets it
+    admission: admissionPayload({ opens: draft.admissionOpens ?? null, closes: draft.admissionCloses ?? null }),
     rsvp: {
       enabled: draft.rsvpEnabled,
       ...(draft.rsvpEnabled && draft.rsvpDeadline ? { acceptanceLastDate: draft.rsvpDeadline } : {}),
@@ -308,6 +318,7 @@ export interface ServerEvent {
   contactNumber?: string;
   location?: string | { address?: string; coordinates?: { coordinates?: [number, number] } };
   schedule?: { start?: string; end?: string };
+  admission?: { opensAt?: string | null; closesAt?: string | null };
   rsvp?: { enabled?: boolean; acceptanceLastDate?: string; allowAllInvited?: boolean; allowNotResponded?: boolean; allowDeclined?: boolean };
   attendeeSettings?: { thresholdLimit?: number };
   dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] };
@@ -370,6 +381,8 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     end,
     rsvpEnabled: event?.rsvp?.enabled ?? base.rsvpEnabled,
     rsvpDeadline: event?.rsvp?.acceptanceLastDate || null,
+    admissionOpens: event?.admission?.opensAt || null,
+    admissionCloses: event?.admission?.closesAt || null,
     thresholdLimit: event?.attendeeSettings?.thresholdLimit ? String(event.attendeeSettings.thresholdLimit) : "",
     allowAllInvited: event?.rsvp?.allowAllInvited ?? base.allowAllInvited,
     allowNotResponded: event?.rsvp?.allowNotResponded ?? base.allowNotResponded,

@@ -55,6 +55,8 @@ export interface GetInvitationsResponse {
 }
 
 export interface PublicInvitationData {
+  /** Colours/character of the guest's invitation design; absent on older API versions */
+  theme?: { design?: string; background?: string; primary?: string; accent?: string; ink?: string; heading?: "serif" | "sans" };
   event: {
     title: string;
     description?: string;
@@ -68,6 +70,8 @@ export interface PublicInvitationData {
       end?: string;
     };
     timeZone?: string;
+    /** When guests can be checked in (defaults to the schedule) */
+    admission?: { opensAt?: string | null; closesAt?: string | null } | null;
     sessions?: Array<{
       name: string;
       start?: string;

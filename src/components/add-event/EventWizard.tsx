@@ -223,7 +223,7 @@ export default function EventWizard({
 
   const pickerValue = (() => {
     if (!pickerTarget) return null;
-    if (pickerTarget.kind === "event") return draft[pickerTarget.field] || draft.start;
+    if (pickerTarget.kind === "event") return (pickerTarget.field === "admissionCloses" ? draft.admissionCloses || draft.end : draft[pickerTarget.field] || draft.start) as string | null;
     const session = draft.sessions.find((s) => s.key === pickerTarget.key);
     return session ? session[pickerTarget.field] : null;
   })();
@@ -231,7 +231,7 @@ export default function EventWizard({
   const pickerTitle = (() => {
     if (!pickerTarget) return undefined;
     if (pickerTarget.kind === "event") {
-      return pickerTarget.field === "start" ? "Event start" : pickerTarget.field === "end" ? "Event end" : "RSVP last date";
+      return { start: "Event start", end: "Event end", rsvpDeadline: "RSVP last date", admissionOpens: "Check-in opens", admissionCloses: "Check-in closes" }[pickerTarget.field];
     }
     const session = draft.sessions.find((s) => s.key === pickerTarget.key);
     return `${session?.name || "Session"} ${pickerTarget.field === "start" ? "start" : "end"}`;
@@ -243,6 +243,8 @@ export default function EventWizard({
     if (!target) return;
     if (target.kind === "event") {
       if (target.field === "rsvpDeadline") patch({ rsvpDeadline: iso });
+      else if (target.field === "admissionOpens") patch({ admissionOpens: iso });
+      else if (target.field === "admissionCloses") patch({ admissionCloses: iso });
       else setDraft((prev) => applyEventWindow(prev, { [target.field]: iso }));
       return;
     }

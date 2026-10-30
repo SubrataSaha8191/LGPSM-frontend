@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DraftErrors, EventDraft } from "./eventDraft";
 import { formatDateTime } from "@/utils/dateTime";
+import { browserTimeZone } from "@/utils/admissionWindow";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
@@ -16,7 +17,7 @@ import dynamic from "next/dynamic";
 // The map library is only needed once someone presses Verify, so it is not part of the Add Event page load
 const VerifyLocationModal = dynamic(() => import("./modals/VerifyLocationModal"), { ssr: false });
 
-export type EventDateField = "start" | "end" | "rsvpDeadline";
+export type EventDateField = "start" | "end" | "rsvpDeadline" | "admissionOpens" | "admissionCloses";
 
 export const TITLE_MAX = EVENT_TITLE_MAX_LENGTH;
 export const DESCRIPTION_MAX = EVENT_DESCRIPTION_MAX_LENGTH;
@@ -343,6 +344,31 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           <span className={`block ${labelClass} mb-1.5`}>Event End Date Time<Req /></span>
           <DateButton label="Event end date and time" value={draft.end} placeholder="Select end date and time" onClick={() => onOpenDatePicker("end")} error={errors.end} />
           <Err msg={errors.end} />
+        </div>
+      </div>
+
+      {/* The event's hours and the hours guests can be let in are separate: check-in may open before the event starts */}
+      <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className={labelClass}>Check-in window</span>
+          <InfoTip label="About the check-in window" text="Guests can only be checked in while the window is open, using the server's clock. By default it opens when the event starts and closes when it ends. Open it earlier if guests arrive before the start. After it closes, passes stop working." />
+        </div>
+        <p className="text-xs text-[#4B4F52]">
+          Check-in opens at the event start and closes at the event end unless you set different times below. Times are in {browserTimeZone()}.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <span className={`block ${labelClass} mb-1.5`}>Check-in opens</span>
+            <DateButton label="Check-in opening time" value={draft.admissionOpens ?? null} placeholder={draft.start ? `Event start — ${formatDateTime(draft.start)}` : "Event start"} onClick={() => onOpenDatePicker("admissionOpens")} error={errors.admissionOpens} />
+            {draft.admissionOpens && <button type="button" onClick={() => onChange({ admissionOpens: null })} className="mt-1 text-xs text-[#FF651D] underline cursor-pointer">Use event start</button>}
+            <Err msg={errors.admissionOpens} />
+          </div>
+          <div>
+            <span className={`block ${labelClass} mb-1.5`}>Check-in closes</span>
+            <DateButton label="Check-in closing time" value={draft.admissionCloses ?? null} placeholder={draft.end ? `Event end — ${formatDateTime(draft.end)}` : "Event end"} onClick={() => onOpenDatePicker("admissionCloses")} error={errors.admissionCloses} />
+            {draft.admissionCloses && <button type="button" onClick={() => onChange({ admissionCloses: null })} className="mt-1 text-xs text-[#FF651D] underline cursor-pointer">Use event end</button>}
+            <Err msg={errors.admissionCloses} />
+          </div>
         </div>
       </div>
 

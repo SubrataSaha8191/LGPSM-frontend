@@ -24,6 +24,7 @@ export interface EventData {
     start: string;
     end: string;
   };
+  admission?: { opensAt?: string | null; closesAt?: string | null };
   rsvpDeadline?: string;
   location?: string | { address?: string };
   venueDetails?: string;
@@ -71,6 +72,8 @@ interface EventRequestBase {
   contactNumber?: string;
   location?: { address?: string; coordinates?: [number, number] };
   schedule: { start: string; end: string };
+  /** Check-in window; a null side follows the event's start/end */
+  admission?: { opensAt: string | null; closesAt: string | null };
   rsvp?: {
     enabled: boolean;
     acceptanceLastDate?: string;
@@ -159,12 +162,35 @@ export const eventService = {
   },
 
   /**
-   * Perform operational data cleanup for a completed event (ADMIN ONLY)
+   * Change only the check-in window (allowed after invitations were sent). A null side returns to its default.
+   * PATCH /api/v1/events/:eventId/admission
+   */
+  async updateAdmission(eventId: string, admission: { opensAt?: string | null; closesAt?: string | null }): Promise<ApiResponse<EventData>> {
+    return apiClient<EventData>(`/api/v1/events/${eventId}/admission`, {
+      method: "PATCH",
+      body: JSON.stringify(admission),
+    }, true);
+  },
+
+  /**
+   * Close (complete) an event. Nothing is deleted: guests, invitations, RSVPs, check-ins and reports are kept.
+   * POST /api/v1/events/:eventId/close
+   */
+  async closeEvent(eventId: string): Promise<ApiResponse<EventData>> {
+    return apiClient<EventData>(`/api/v1/events/${eventId}/close`, {
+      method: "POST",
+    }, true);
+  },
+
+  /**
+   * PERMANENTLY delete the operational data of a closed event (ADMIN ONLY, irreversible).
+   * The event title must be retyped as confirmation.
    * POST /api/v1/events/:eventId/cleanup
    */
-  async cleanupEventData(eventId: string): Promise<ApiResponse<EventData>> {
+  async cleanupEventData(eventId: string, confirmTitle: string): Promise<ApiResponse<EventData>> {
     return apiClient<EventData>(`/api/v1/events/${eventId}/cleanup`, {
       method: "POST",
+      body: JSON.stringify({ confirmTitle }),
     }, true);
   },
 
