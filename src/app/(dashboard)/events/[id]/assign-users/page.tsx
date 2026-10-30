@@ -11,7 +11,7 @@ import { eventService } from "@/services/eventService";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import PageHeader from "@/components/common/PageHeader";
-import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
+import { getAssignedCountText, SystemUserRow } from "@/utils/systemUserRows";
 import { useAlert } from "@/context/AlertContext";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import CustomDropdown from "@/components/common/CustomDropdown";

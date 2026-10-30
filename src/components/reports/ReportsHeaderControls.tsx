@@ -55,7 +55,7 @@ export default function ReportsHeaderControls({
       <div className="flex flex-wrap md:flex-nowrap items-center gap-x-3 md:gap-x-0 gap-y-2">
         {showOrganizer && (
           <>
-            <div className="w-[208px] max-w-full">
+            <div className="min-w-[208px] max-w-[300px] [&_button]:w-full">
               <CustomDropdown
                 variant="plain"
                 plainTone="ink"
@@ -71,7 +71,7 @@ export default function ReportsHeaderControls({
             <Divider />
           </>
         )}
-        <div className="w-[208px] max-w-full">
+        <div className="min-w-[208px] max-w-[300px] [&_button]:w-full">
           <CustomDropdown
             variant="plain"
             plainTone="ink"

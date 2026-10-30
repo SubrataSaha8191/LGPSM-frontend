@@ -2,13 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { CancellationNotices, eventService } from "@/services/eventService";
-import { channelLine, needsAttention } from "@/utils/cancellationSummary";
+import { UNKNOWN_WARNING, channelLine, safeRetryCount, unknownCount } from "@/utils/cancellationSummary";
 
 /** What happened to the "event cancelled" messages for a cancelled event: counts per channel, the ones that did not go, and a retry. */
 export default function CancellationNoticesPanel({ eventId }: { eventId: string }) {
   const [data, setData] = useState<CancellationNotices | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [acceptDuplicate, setAcceptDuplicate] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -26,10 +27,11 @@ export default function CancellationNoticesPanel({ eventId }: { eventId: string 
     return () => clearInterval(timer);
   }, [load, data]);
 
-  const retry = async () => {
+  const retry = async (includeUnknown = false) => {
     setRetrying(true);
     try {
-      const res = await eventService.retryCancellationNotices(eventId);
+      const res = await eventService.retryCancellationNotices(eventId, { includeUnknown });
+      setAcceptDuplicate(false);
       if (res.success && res.data) setData(res.data); else setError(res.message || "Retry failed.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Retry failed.");
@@ -52,20 +54,38 @@ export default function CancellationNoticesPanel({ eventId }: { eventId: string 
               {[channelLine("Email", data.channels.email), channelLine("WhatsApp", data.channels.whatsapp)].filter(Boolean).map((l) => <li key={l}>{l}</li>)}
             </ul>
           )}
-          {data.problems.length > 0 && (
+          {data.problems.some((p) => p.status !== "UNKNOWN") && (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 space-y-1">
               <p className="font-medium">Not sent</p>
               <ul className="space-y-0.5">
-                {data.problems.map((p) => (
+                {data.problems.filter((p) => p.status !== "UNKNOWN").map((p) => (
                   <li key={`${p.inviteeId}-${p.channel}`} className="break-words">{p.name || "Guest"} — {p.channel === "email" ? "email" : "WhatsApp"}: {p.reason || (p.status === "FAILED" ? "failed" : "unavailable")}</li>
                 ))}
               </ul>
             </div>
           )}
-          {needsAttention(data) && (
-            <button type="button" onClick={retry} disabled={retrying} className="px-4 py-2 border border-[#FF651D] text-[#FF651D] hover:bg-[#FFF3EC] rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">
+          {safeRetryCount(data) > 0 && (
+            <button type="button" onClick={() => retry(false)} disabled={retrying} className="px-4 py-2 border border-[#FF651D] text-[#FF651D] hover:bg-[#FFF3EC] rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">
               {retrying ? "Retrying…" : "Retry unsent notices"}
             </button>
+          )}
+          {unknownCount(data) > 0 && (
+            <div role="group" aria-label="Notices with an unknown outcome" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900 space-y-2">
+              <p className="font-medium">Outcome unknown ({unknownCount(data)})</p>
+              <p>{UNKNOWN_WARNING}</p>
+              <ul className="space-y-0.5">
+                {data.problems.filter((p) => p.status === "UNKNOWN").map((p) => (
+                  <li key={`${p.inviteeId}-${p.channel}`} className="break-words">{p.name || "Guest"} — {p.channel === "email" ? "email" : "WhatsApp"}</li>
+                ))}
+              </ul>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" checked={acceptDuplicate} onChange={(e) => setAcceptDuplicate(e.target.checked)} className="mt-0.5 size-4 accent-rose-600" />
+                <span>I understand a guest may receive this message twice.</span>
+              </label>
+              <button type="button" onClick={() => retry(true)} disabled={retrying || !acceptDuplicate} className="px-4 py-2 border border-rose-600 text-rose-700 hover:bg-rose-100 rounded-md text-sm font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                {retrying ? "Retrying…" : "Retry these anyway"}
+              </button>
+            </div>
           )}
           <p className="text-xs text-[#828282]">“Accepted by the provider” means the email or WhatsApp service took the message; delivery to the guest is not confirmed. Messages already accepted are never sent again.</p>
         </>

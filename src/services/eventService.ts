@@ -52,13 +52,13 @@ export interface CancellationPreview {
   whatsappNoticesAvailable: boolean;
 }
 
-export type NoticeCounts = Record<"PENDING" | "SENDING" | "SENT" | "FAILED" | "UNAVAILABLE", number>;
+export type NoticeCounts = Record<"PENDING" | "SENDING" | "SENT" | "FAILED" | "UNAVAILABLE" | "UNKNOWN", number>;
 export interface CancellationNotices {
   cancelledAt?: string;
   reason?: string;
   guests: number;
   channels: { email: NoticeCounts; whatsapp: NoticeCounts };
-  problems: { inviteeId: string; name?: string; channel: "email" | "whatsapp"; status: "FAILED" | "UNAVAILABLE"; reason?: string; attempts?: number }[];
+  problems: { inviteeId: string; name?: string; channel: "email" | "whatsapp"; status: "FAILED" | "UNAVAILABLE" | "UNKNOWN"; reason?: string; attempts?: number }[];
   note?: string;
 }
 
@@ -219,8 +219,9 @@ export const eventService = {
   },
 
   /** Retry failed / unavailable notices; messages already sent are never repeated */
-  async retryCancellationNotices(eventId: string): Promise<ApiResponse<CancellationNotices>> {
-    return apiClient<CancellationNotices>(`/api/v1/events/${eventId}/cancellation/notices/retry`, { method: "POST" }, true);
+  async retryCancellationNotices(eventId: string, opts: { includeUnknown?: boolean } = {}): Promise<ApiResponse<CancellationNotices>> {
+    // includeUnknown also retries messages whose earlier attempt may have gone out (a duplicate is possible): explicit opt-in only
+    return apiClient<CancellationNotices>(`/api/v1/events/${eventId}/cancellation/notices/retry`, { method: "POST", body: JSON.stringify(opts.includeUnknown ? { includeUnknown: true } : {}) }, true);
   },
 
   /**

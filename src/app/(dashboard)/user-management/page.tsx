@@ -10,8 +10,9 @@ import { eventService } from "@/services/eventService";
 import { useEventSessions } from "@/hooks/useEventSessions";
 import SessionScopePicker from "@/components/common/SessionScopePicker";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import { assignableEvents, describeAssignResult, eligibleSelection, selectionLabel } from "@/utils/bulkAssign";
 import { assignmentService, AssignmentData } from "@/services/assignmentService";
-import { getAssignedCountText, SystemUserRow } from "@/app/(dashboard)/user-management/assign/page";
+import { getAssignedCountText, SystemUserRow } from "@/utils/systemUserRows";
 import { useAlert } from "@/context/AlertContext";
 import { mapWithConcurrency } from "@/utils/mapWithConcurrency";
 import { TableSkeleton } from "@/components/common/Skeleton";
@@ -36,7 +37,9 @@ export default function AllUsersPage() {
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   // Form selections
-  const [eventsList, setEventsList] = useState<{ id: string; name: string }[]>([]);
+  const [eventsList, setEventsList] = useState<{ id: string; name: string; status?: string }[]>([]);
+  const [assignMessage, setAssignMessage] = useState<string | null>(null);
+  const [assignPartial, setAssignPartial] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   // null = all sessions of the selected event
   const [sessionScope, setSessionScope] = useState<string[] | null>(null);
@@ -62,13 +65,15 @@ export default function AllUsersPage() {
 
       // Events loaded alongside users above.
       const rawEvents = Array.isArray(eventsRes?.data) ? eventsRes.data : ((eventsRes?.data as any)?.events || []);
-      const formattedEvents: { id: string; name: string }[] = rawEvents.map((ev: any) => ({
+      const formattedEvents: { id: string; name: string; status?: string }[] = rawEvents.map((ev: any) => ({
+        status: ev.status,
         id: String(ev._id || ev.id || ""),
         name: ev.title || ev.eventName || "Untitled Event",
       }));
       setEventsList(formattedEvents);
-      if (formattedEvents.length > 0 && !selectedEventId) {
-        setSelectedEventId(formattedEvents[0].id);
+      const firstAssignable = assignableEvents(formattedEvents)[0];
+      if (firstAssignable && !selectedEventId) {
+        setSelectedEventId(firstAssignable.id);
       }
 
       // 3. Collect assignments across events
@@ -152,11 +157,8 @@ export default function AllUsersPage() {
   };
 
   const toggleSelectRow = (id: string) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((i) => i !== id));
-    } else {
-      setSelectedIds([...selectedIds, id]);
-    }
+    // functional update: two quick clicks must both count
+    setSelectedIds((current) => (current.includes(id) ? current.filter((i) => i !== id) : [...current, id]));
   };
 
   const handleUnassignAssignment = async (assignmentId: string) => {
@@ -252,7 +254,9 @@ export default function AllUsersPage() {
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedIds.length === 0 || !selectedEventId) return;
+    // only users still in the list are assigned; an empty or stale selection does nothing
+    const ids = eligibleSelection(selectedIds, users.map((u) => u.id));
+    if (ids.length === 0 || !selectedEventId) return;
     if (sessionScope !== null && sessionScope.length === 0) {
       setErrorFeedback("Select at least one session, or choose \"All sessions\".");
       return;
@@ -262,30 +266,32 @@ export default function AllUsersPage() {
       setSubmittingAssign(true);
       setErrorFeedback(null);
 
-      const errorMsgs: string[] = [];
-      for (const userId of selectedIds) {
-        const existing = users
-          .find((u) => u.id === userId)
-          ?.assignments.find((a) => a.eventId === selectedEventId);
-        const res = await assignmentService.saveAssignment(selectedEventId, userId, sessionScope ?? [], existing?.assignmentId);
-
-        if (!res.success) {
-          errorMsgs.push(res.message || "Assignment failed.");
+      const failures: { name: string; message: string }[] = [];
+      for (const userId of ids) {
+        const person = users.find((u) => u.id === userId);
+        const existing = person?.assignments.find((a) => a.eventId === selectedEventId);
+        try {
+          const res = await assignmentService.saveAssignment(selectedEventId, userId, sessionScope ?? [], existing?.assignmentId);
+          if (!res.success) failures.push({ name: person?.name || "User", message: res.message || "Assignment failed." });
+        } catch (err) {
+          failures.push({ name: person?.name || "User", message: err instanceof Error ? err.message : "Assignment failed." });
         }
       }
 
-      if (errorMsgs.length > 0) {
-        setErrorFeedback(errorMsgs.join(". "));
-      }
-
-      // Only confirm success when at least one assignment was actually saved
-      setIsAssignModalOpen(false);
-      if (errorMsgs.length < selectedIds.length) {
+      const outcome = describeAssignResult(ids.length, failures);
+      if (outcome.kind === "failure") {
+        setErrorFeedback(outcome.message); // stay in the dialog so the choice can be changed
+      } else {
+        setIsAssignModalOpen(false);
+        setAssignMessage(outcome.message);
+        setAssignPartial(outcome.kind === "partial");
+        if (outcome.kind === "partial") setErrorFeedback(outcome.message);
         setIsAssignSuccessModalOpen(true);
+        setSelectedIds([]);
       }
       await fetchUsersAndAssignments();
-    } catch (err: any) {
-      setErrorFeedback(err.message || "Error assigning system users.");
+    } catch (err) {
+      setErrorFeedback(err instanceof Error ? err.message : "Error assigning system users.");
     } finally {
       setSubmittingAssign(false);
     }
@@ -347,7 +353,20 @@ export default function AllUsersPage() {
             Select All
           </span>
           </div>
-          {/* Delete selected users: top right, under Add User (Figma User Management) */}
+          {/* Delete selected users: top right, under Add User (Figma User Management); with a selection, the count and the assign action appear beside it */}
+          <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && (
+            <div role="toolbar" aria-label="Actions for the selected users" className="flex items-center gap-3 animate-overlay">
+              <span className="text-sm font-medium text-[#15191C]" aria-live="polite">{selectionLabel(selectedIds.length)}</span>
+              <button
+                type="button"
+                onClick={() => { setErrorFeedback(null); setIsAssignModalOpen(true); }}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-[#FF651D] text-[#FF651D] hover:bg-[#FF651D] hover:text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Assign to event
+              </button>
+            </div>
+          )}
           <button
             type="button"
             onClick={handleBulkDelete}
@@ -360,6 +379,7 @@ export default function AllUsersPage() {
               <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
             </svg>
           </button>
+          </div>
         </div>
 
         {/* Users Table */}
@@ -592,6 +612,10 @@ export default function AllUsersPage() {
             </div>
 
             <form onSubmit={handleAssignSubmit} className="px-6 pt-5 space-y-5">
+              <p className="text-sm text-[#4B4F52]">{selectionLabel(selectedIds.length)}. They will be assigned to the event you choose below.</p>
+              {assignableEvents(eventsList).length === 0 && (
+                <p role="status" className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">There is no active event to assign staff to. Cancelled and completed events are not offered.</p>
+              )}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[#15191C]">
                   Event<span className="text-[#FF5B22]">*</span>
@@ -599,7 +623,7 @@ export default function AllUsersPage() {
                 <CustomDropdown
                   value={selectedEventId}
                   onChange={(v) => { setSelectedEventId(v); setSessionScope(null); }}
-                  options={eventsList.map((evt) => ({ value: evt.id, label: evt.name }))}
+                  options={assignableEvents(eventsList).map((evt) => ({ value: evt.id, label: evt.name }))}
                   ariaLabel="Select event"
                 />
               </div>
@@ -626,7 +650,7 @@ export default function AllUsersPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submittingAssign}
+                  disabled={submittingAssign || selectedIds.length === 0 || !selectedEventId || assignableEvents(eventsList).length === 0}
                   className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {submittingAssign ? "Saving..." : "Assign"}
@@ -647,7 +671,8 @@ export default function AllUsersPage() {
               </svg>
             </div>
 
-            <h3 className="text-lg font-bold text-gray-900">Assigned Successfully!</h3>
+            <h3 className="text-lg font-bold text-gray-900">{assignPartial ? "Partly assigned" : "Assigned Successfully!"}</h3>
+            {assignMessage && <p role="status" className="text-sm text-[#4B4F52] break-words">{assignMessage}</p>}
 
             <button
               onClick={() => setIsAssignSuccessModalOpen(false)}

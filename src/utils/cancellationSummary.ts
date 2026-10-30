@@ -26,7 +26,7 @@ export function previewLines(p: CancellationPreview): string[] {
   return lines;
 }
 
-const total = (c: NoticeCounts) => c.PENDING + c.SENDING + c.SENT + c.FAILED + c.UNAVAILABLE;
+const total = (c: NoticeCounts) => c.PENDING + c.SENDING + c.SENT + c.FAILED + c.UNAVAILABLE + c.UNKNOWN;
 
 /** "3 sent to the provider, 1 failed ..." - "sent" means the provider accepted it, which is all the app can know */
 export function channelLine(label: string, c: NoticeCounts): string | null {
@@ -36,10 +36,23 @@ export function channelLine(label: string, c: NoticeCounts): string | null {
     c.PENDING + c.SENDING ? `${c.PENDING + c.SENDING} waiting` : "",
     c.FAILED ? `${c.FAILED} failed` : "",
     c.UNAVAILABLE ? `${c.UNAVAILABLE} not sent (channel unavailable)` : "",
+    c.UNKNOWN ? `${c.UNKNOWN} outcome unknown` : "",
   ].filter(Boolean);
   return `${label}: ${parts.join(", ")}`;
 }
 
 export function needsAttention(n: Pick<CancellationNotices, "channels">): boolean {
-  return [n.channels.email, n.channels.whatsapp].some((c) => c.FAILED + c.UNAVAILABLE > 0);
+  return [n.channels.email, n.channels.whatsapp].some((c) => c.FAILED + c.UNAVAILABLE + c.UNKNOWN > 0);
 }
+
+/** Notices that can be retried safely (the message was refused or never attempted). */
+export function safeRetryCount(n: Pick<CancellationNotices, "channels">): number {
+  return [n.channels.email, n.channels.whatsapp].reduce((sum, c) => sum + c.FAILED + c.UNAVAILABLE, 0);
+}
+
+/** Notices whose earlier attempt may already have been sent: retrying them can deliver a duplicate. */
+export function unknownCount(n: Pick<CancellationNotices, "channels">): number {
+  return n.channels.email.UNKNOWN + n.channels.whatsapp.UNKNOWN;
+}
+
+export const UNKNOWN_WARNING = "The app stopped while sending these, so it does not know whether the provider accepted them. The guest may already have received the message; retrying can send a second one.";
