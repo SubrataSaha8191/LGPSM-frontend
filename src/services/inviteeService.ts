@@ -112,7 +112,25 @@ export interface RestoreResult {
   results: RestoreGuestResult[];
 }
 
+/** What an import would do, worked out by the server from the same checks as the real import; nothing is written */
+export interface ImportPreview {
+  totalRows: number;
+  validNew: number;
+  duplicateRows: number;
+  matchedExistingGuests: number;
+  existingActive: number;
+  lockedGuestsKept: number;
+  failedKept: number;
+  unknownKept: number;
+  wouldSetAside: number;
+  preservedSets: number;
+  rejectedRows: number;
+  errors: { row: number; error: string }[];
+}
+
 export interface ImportExcelResult {
+  dryRun?: boolean;
+  preview?: ImportPreview;
   totalRows: number;
   imported: number;
   updated?: number;
@@ -212,9 +230,10 @@ export const inviteeService = {
     return apiClient(`/api/v1/events/${eventId}/invitees/set-aside/restore`, { method: "POST", body: JSON.stringify({ inviteeIds }) }, true);
   },
 
-  async importExcel(eventId: string, file: File, sessionId?: string, mode: ImportMode = "REPLACE"): Promise<ApiResponse<ImportExcelResult>> {
+  async importExcel(eventId: string, file: File, sessionId?: string, mode: ImportMode = "REPLACE", options: { dryRun?: boolean } = {}): Promise<ApiResponse<ImportExcelResult>> {
     const formData = new FormData();
     formData.append("mode", mode);
+    if (options.dryRun) formData.append("dryRun", "true");
     if (sessionId) formData.append("sessionId", sessionId);
     formData.append("file", file);
 

@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canManageInviteeLists, howAdded, stateExplanation, restoreOutcome } from "./inviteeLists.ts";
+import { canManageInviteeLists, howAdded, stateExplanation, restoreOutcome, previewLines, previewDiscrepancy } from "./inviteeLists.ts";
 
 test("only organizers and admins manage invitee lists; System Users and anyone else do not", () => {
   assert.equal(canManageInviteeLists("ORGANIZER"), true);
@@ -42,4 +42,38 @@ test("restore outcome names the guest they clash with and never promises an invi
 test("when nothing could be restored the outcome is an error", () => {
   const out = restoreOutcome({ restored: 0, alreadyActive: 0, refused: 1, notFound: 0, results: [{ id: "b", status: "DUPLICATE_ACTIVE", conflictsWith: { name: "R", matchedOn: "email" } }] }, () => "G");
   assert.equal(out.tone, "error");
+});
+
+const PREVIEW = { totalRows: 6, validNew: 2, duplicateRows: 1, matchedExistingGuests: 1, existingActive: 8, lockedGuestsKept: 2, failedKept: 1, unknownKept: 1, wouldSetAside: 4, rejectedRows: 3, errors: [] };
+
+test("Replace preview says what is added, set aside and kept", () => {
+  const l = previewLines(PREVIEW, "REPLACE");
+  assert.deepEqual(l, [
+    "2 guests will be added",
+    "1 already on the list, 1 repeated in the file (not added again)",
+    "2 rows have a problem and will be skipped",
+    "4 guests who were never invited will be set aside",
+    "2 guests in already-sent lists stay exactly as they are",
+    "1 guest with a failed send stays and can be retried",
+    "1 guest with an unresolved delivery stays (they may have received it)",
+  ]);
+});
+
+test("Append preview never mentions setting anyone aside", () => {
+  const l = previewLines({ ...PREVIEW, wouldSetAside: 0 }, "APPEND");
+  assert.ok(!l.some((x) => /set aside/.test(x)));
+  assert.equal(l[l.length - 1], "All 8 current guests stay");
+});
+
+test("Replace preview with nobody to set aside says so", () => {
+  assert.ok(previewLines({ ...PREVIEW, wouldSetAside: 0 }, "REPLACE").includes("No one will be set aside"));
+});
+
+test("a result that matches the preview raises no warning; one that differs is explained", () => {
+  assert.equal(previewDiscrepancy(PREVIEW, { imported: 2, archived: 4 }), null);
+  assert.equal(previewDiscrepancy(null, { imported: 1, archived: 0 }), null);
+  const d = previewDiscrepancy(PREVIEW, { imported: 1, archived: 3 });
+  assert.match(d, /changed while you were deciding/);
+  assert.match(d, /1 guest added \(previewed 2\)/);
+  assert.match(d, /3 guests set aside \(previewed 4\)/);
 });

@@ -17,7 +17,7 @@ import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
 import { eventService } from "@/services/eventService";
 import { sessionService, SessionData } from "@/services/sessionService";
-import { inviteeService, type ImportMode } from "@/services/inviteeService";
+import { inviteeService, type ImportMode, type ImportPreview } from "@/services/inviteeService";
 import { invitationService, InvitationData } from "@/services/invitationService";
 import { useAlert } from "@/context/AlertContext";
 import { formatPhoneNumber } from "@/utils/eventUtils";
@@ -26,7 +26,7 @@ import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
 import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
 import ImportModeDialog from "@/components/invitees/ImportModeDialog";
 import InviteeListsModal from "@/components/invitees/InviteeListsModal";
-import { canManageInviteeLists } from "@/utils/inviteeLists";
+import { canManageInviteeLists, previewDiscrepancy } from "@/utils/inviteeLists";
 import { inviteeConfigFor, inviteeFieldsFor } from "@/utils/inviteeFields";
 import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
 import { TableSkeleton } from "@/components/common/Skeleton";
@@ -162,7 +162,7 @@ export default function InviteesManagementPage() {
   const [busy, setBusy] = useState<null | "send" | "resend" | "import" | "access" | "clear">(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
-  const [importChoice, setImportChoice] = useState<{ rows: InviteeSheetRow[]; fileName: string; sentSets: number | null } | null>(null);
+  const [importChoice, setImportChoice] = useState<{ rows: InviteeSheetRow[]; fileName: string; sentSets: number | null; previews: { replace: ImportPreview | null; append: ImportPreview | null } | null; previewError: string | null } | null>(null);
   const [upload, setUpload] = useState<{ file: File; rows: InviteeSheetRow[] } | null>(null);
   const [showListPreview, setShowListPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -379,13 +379,24 @@ export default function InviteesManagementPage() {
       await runImport(rows, upload.file.name, "REPLACE");
       return;
     }
-    setImportChoice({ rows, fileName: upload.file.name, sentSets: null });
+    setImportChoice({ rows, fileName: upload.file.name, sentSets: null, previews: null, previewError: null });
     const sets = await inviteeService.getInviteeSets(eventId).catch(() => null);
     // if the lookup fails, say nothing misleading: the dialog still explains that invited guests are never removed
     setImportChoice((cur) => (cur ? { ...cur, sentSets: sets?.success && sets.data ? sets.data.sets.filter((x) => x.locked).length : 0 } : cur));
+    // what each choice would do, from the server (writes nothing); the real import checks everything again
+    try {
+      const file = rowsToSheetFile(rows, upload.file.name, ownListSessions.map((session) => session.name));
+      const [rep, app] = await Promise.all([
+        inviteeService.importExcel(eventId, file, undefined, "REPLACE", { dryRun: true }),
+        inviteeService.importExcel(eventId, file, undefined, "APPEND", { dryRun: true }),
+      ]);
+      setImportChoice((cur) => (cur ? { ...cur, previews: rep.success && app.success && rep.data?.preview && app.data?.preview ? { replace: rep.data.preview, append: app.data.preview } : null, previewError: rep.success && app.success ? null : "The preview is not available right now; the import will still check everything before changing anything." } : cur));
+    } catch {
+      setImportChoice((cur) => (cur ? { ...cur, previewError: "The preview is not available right now; the import will still check everything before changing anything." } : cur));
+    }
   };
 
-  const runImport = async (rows: InviteeSheetRow[], fileName: string, mode: ImportMode) => {
+  const runImport = async (rows: InviteeSheetRow[], fileName: string, mode: ImportMode, forecast?: ImportPreview | null) => {
     if (importInFlight.current) return;
     setBusy("import");
     importInFlight.current = true;
@@ -407,6 +418,7 @@ export default function InviteesManagementPage() {
       return;
     }
     const d = res.data;
+    const drift = previewDiscrepancy(forecast, { imported: d.imported, archived: d.archived });
     const parts = [`${d.imported} added`];
     if (d.updated) parts.push(`${d.updated} already on the list`);
     if (d.alreadyInvited) parts.push(`${d.alreadyInvited} already invited (not imported again)`);
@@ -418,7 +430,7 @@ export default function InviteesManagementPage() {
     if (d.rejected) parts.push(`${d.rejected} rejected`);
     setFeedback({
       type: d.rejected ? "error" : "success",
-      message: `Invitee list imported: ${parts.join(", ")}.`,
+      message: `Invitee list imported: ${parts.join(", ")}.${drift ? ` ${drift}` : ""}`,
       // Row-level summary: rejected rows first, then rows whose existing guest details were kept
       details: [...(d.errors || []).map((e) => `Row ${e.row}: ${e.error}`), ...(d.notices || []).map((n) => `Row ${n.row}: ${n.message}`)].slice(0, 10),
     });
@@ -809,9 +821,11 @@ export default function InviteesManagementPage() {
           fileName={importChoice.fileName}
           rowCount={importChoice.rows.length}
           sentSets={importChoice.sentSets}
+          previews={importChoice.previews}
+          previewError={importChoice.previewError}
           busy={busy === "import"}
           onCancel={() => setImportChoice(null)}
-          onChoose={(mode) => runImport(importChoice.rows, importChoice.fileName, mode)}
+          onChoose={(mode) => runImport(importChoice.rows, importChoice.fileName, mode, mode === "REPLACE" ? importChoice.previews?.replace : importChoice.previews?.append)}
         />
       )}
       {upload && (

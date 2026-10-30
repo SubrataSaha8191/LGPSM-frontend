@@ -51,3 +51,41 @@ export const DELIVERY_LABEL: Record<string, string> = { NOT_SENT: "Not sent", SE
 export function restoreErrorMessage(message?: string): string {
   return message || "The guests could not be restored. Nothing was changed.";
 }
+
+// ---- Replace / Append preview ----
+
+export interface PreviewLike {
+  totalRows: number; validNew: number; duplicateRows: number; matchedExistingGuests: number; existingActive: number;
+  lockedGuestsKept: number; failedKept: number; unknownKept: number; wouldSetAside: number; rejectedRows: number;
+  errors: { row: number; error: string }[];
+}
+
+const guests = (n: number) => `${n} ${n === 1 ? "guest" : "guests"}`;
+
+/** The lines shown under each choice in the Replace / Append dialog. */
+export function previewLines(p: PreviewLike, mode: "REPLACE" | "APPEND"): string[] {
+  const out = [`${guests(p.validNew)} will be added`];
+  if (p.matchedExistingGuests || p.duplicateRows) {
+    const parts = [p.matchedExistingGuests ? `${p.matchedExistingGuests} already on the list` : "", p.duplicateRows ? `${p.duplicateRows} repeated in the file` : ""].filter(Boolean);
+    out.push(`${parts.join(", ")} (not added again)`);
+  }
+  if (p.rejectedRows - p.duplicateRows > 0) out.push(`${p.rejectedRows - p.duplicateRows} ${p.rejectedRows - p.duplicateRows === 1 ? "row has" : "rows have"} a problem and will be skipped`);
+  if (mode === "REPLACE") {
+    out.push(p.wouldSetAside ? `${guests(p.wouldSetAside)} who were never invited will be set aside` : "No one will be set aside");
+    if (p.lockedGuestsKept) out.push(`${guests(p.lockedGuestsKept)} in already-sent lists ${p.lockedGuestsKept === 1 ? "stays" : "stay"} exactly as ${p.lockedGuestsKept === 1 ? "it is" : "they are"}`);
+    if (p.failedKept) out.push(`${guests(p.failedKept)} with a failed send ${p.failedKept === 1 ? "stays" : "stay"} and can be retried`);
+    if (p.unknownKept) out.push(`${guests(p.unknownKept)} with an unresolved delivery ${p.unknownKept === 1 ? "stays" : "stay"} (${p.unknownKept === 1 ? "they may" : "they may"} have received it)`);
+  } else {
+    out.push(`All ${p.existingActive} current ${p.existingActive === 1 ? "guest stays" : "guests stay"}`);
+  }
+  return out;
+}
+
+/** The preview is a forecast: the real import checks again. When the two differ, say so plainly. */
+export function previewDiscrepancy(p: PreviewLike | null | undefined, actual: { imported: number; archived?: number }): string | null {
+  if (!p) return null;
+  const diffs: string[] = [];
+  if (actual.imported !== p.validNew) diffs.push(`${guests(actual.imported)} added (previewed ${p.validNew})`);
+  if ((actual.archived ?? 0) !== p.wouldSetAside) diffs.push(`${guests(actual.archived ?? 0)} set aside (previewed ${p.wouldSetAside})`);
+  return diffs.length ? `The list changed while you were deciding, so the result differs from the preview: ${diffs.join("; ")}. Guests who were invited in the meantime are always kept.` : null;
+}
