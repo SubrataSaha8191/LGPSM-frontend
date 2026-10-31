@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { inviteeService, type InviteeSetInfo, type InviteeSetMember, type RestoreResult, type SetAsideGuest } from "@/services/inviteeService";
 import { formatDateTime } from "@/utils/dateTime";
-import { DELIVERY_LABEL, howAdded, restoreErrorMessage, restoreOutcome, stateExplanation } from "@/utils/inviteeLists";
+import { DELIVERY_LABEL, listDisplayName, restoreErrorMessage, restoreOutcome, stateExplanation } from "@/utils/inviteeLists";
 
 type Tab = "lists" | "aside";
 
@@ -15,7 +15,16 @@ interface Props {
   onClose: () => void;
 }
 
-const pill = (cls: string, text: string, title?: string) => <span title={title} className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}`}>{text}</span>;
+// Shown only once every guest in the list has been sent their invitation: one time when they all went together, otherwise the first and the latest
+const allSentLine = (s: { total: number; sent: number; firstSentAt?: string | null; lastSentAt?: string | null }): string | null => {
+  if (s.total === 0 || s.sent < s.total) return null;
+  if (!s.firstSentAt || !s.lastSentAt) return null;
+  const first = formatDateTime(s.firstSentAt, "");
+  const last = formatDateTime(s.lastSentAt, "");
+  if (!first || !last) return null;
+  return first === last ? first : `${first} – ${last}`;
+};
+const pill = (cls: string, text: string, title?: string, icon?: React.ReactNode) => <span title={title} className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${cls}`}>{icon}{text}</span>;
 const Lock = () => <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11V8a5 5 0 0110 0v3M6 11h12v9H6z" /></svg>;
 
 // The same shell as the Delivery History dialog: centred modal, title bar with close, table body.
@@ -109,7 +118,7 @@ export default function InviteeListsModal({ eventId, initialTab = "lists", onRes
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="lists-title">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[88vh] flex flex-col shadow-2xl">
         <div className="px-6 py-4 border-b border-[#E5E5E5] flex items-center justify-between">
-          <h2 id="lists-title" className="text-base font-medium text-gray-900">Invitee Lists</h2>
+          <h2 id="lists-title" className="text-base font-medium text-gray-900">Uploaded Lists</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
         </div>
         <div role="tablist" className="px-6 border-b border-[#E5E5E5] flex gap-2">
@@ -135,7 +144,6 @@ export default function InviteeListsModal({ eventId, initialTab = "lists", onRes
                   <thead className="text-[#828282] border-b border-[#D3D3D3]">
                     <tr>
                       <th className="py-2 pr-3 font-medium">List</th>
-                      <th className="py-2 pr-3 font-medium">Uploaded</th>
                       <th className="py-2 pr-3 font-medium">Guests</th>
                       <th className="py-2 pr-3 font-medium">Delivery of invitations</th>
                       <th className="py-2 pr-3 font-medium">Set aside</th>
@@ -147,20 +155,19 @@ export default function InviteeListsModal({ eventId, initialTab = "lists", onRes
                       <React.Fragment key={s.id}>
                         <tr className="align-top">
                           <td className="py-3 pr-3 max-w-[220px]">
-                            <button type="button" onClick={() => toggleSet(s.id)} aria-expanded={open === s.id} className="text-left text-gray-900 font-medium hover:text-[#FF651D] cursor-pointer break-words" title={s.name}>{s.name}</button>
-                            <span className="block text-xs text-[#828282]">{howAdded(s)}</span>
+                            <button type="button" onClick={() => toggleSet(s.id)} aria-expanded={open === s.id} className="text-left text-gray-900 font-medium hover:text-[#FF651D] cursor-pointer break-words" title={s.name}>{listDisplayName(s.name)}</button>
+                            {s.createdAt && <span className="block text-xs text-[#828282]">{s.source === "MANUAL" ? "Added" : "Uploaded"} {formatDateTime(s.createdAt, "")}{s.uploadedBy ? ` · by ${s.uploadedBy.name}` : ""}</span>}
                             <span className="sm:hidden mt-1 inline-block">{s.locked ? pill("bg-[#EDEDED] text-[#4B4F52]", "Locked") : pill("border border-[#1A9242] text-[#1A9242] bg-white", "Open")}</span>
                           </td>
-                          <td className="py-3 pr-3 text-xs whitespace-nowrap">{s.createdAt ? formatDateTime(s.createdAt, "—") : "—"}{s.uploadedBy ? <span className="block text-[#828282]">by {s.uploadedBy.name}</span> : null}</td>
                           <td className="py-3 pr-3 whitespace-nowrap">{s.total}{s.importedCount !== null ? <span className="block text-xs text-[#828282]">{s.importedCount} added by this upload</span> : null}</td>
                           <td className="py-3 pr-3 text-xs space-y-0.5">
+                            {allSentLine(s) && <span className="block mb-1"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E6F6EC] text-[#1A9242] font-medium">Invitations sent</span><span className="block text-[#828282] mt-0.5">{allSentLine(s)}</span></span>}
                             <span className="block">Sent <b className="text-[#1A9242]">{s.sent}</b> · Not sent <b>{s.notSent}</b></span>
                             <span className="block">Failed <b className={s.failed ? "text-rose-600" : ""}>{s.failed}</b> · Unknown <b className={s.unknown ? "text-amber-700" : ""} title="Delivery was attempted but the outcome was never settled. The guest may have received it.">{s.unknown}</b></span>
                           </td>
                           <td className="py-3 pr-3">{s.setAside}</td>
                           <td className="py-3">
-                            {s.locked ? pill("bg-[#EDEDED] text-[#4B4F52]", "Locked", "Invitations were sent, a guest answered, or a guest checked in. This list is kept as it is.") : pill("border border-[#1A9242] text-[#1A9242] bg-white", "Open", "No invitation has been sent successfully from this list.")}
-                            {s.locked && <Lock />}
+                            {s.locked ? pill("bg-[#EDEDED] text-[#4B4F52]", "Locked", "Invitations were sent, a guest answered, or a guest checked in. This list is kept as it is.", <Lock />) : pill("border border-[#1A9242] text-[#1A9242] bg-white", "Open", "No invitation has been sent successfully from this list.")}
                           </td>
                         </tr>
                         {open === s.id && (
@@ -211,7 +218,7 @@ export default function InviteeListsModal({ eventId, initialTab = "lists", onRes
                         <td className="py-3 pr-3 text-gray-900">{g.name}<span className="block text-xs text-[#828282] break-all">{g.email || g.mobile || "—"}</span></td>
                         <td className="py-3 pr-3 max-w-[180px] break-words">{g.fromSet.name}</td>
                         <td className="py-3 pr-3 text-xs whitespace-nowrap">{formatDateTime(g.setAsideAt, "—")}{g.setAsideBy ? <span className="block text-[#828282]">by {g.setAsideBy.name}</span> : null}</td>
-                        <td className="py-3 pr-3 text-xs">{g.reasonText || "Reason not recorded"}{g.replacedBy ? <span className="block text-[#828282]">by “{g.replacedBy.name}”</span> : null}</td>
+                        <td className="py-3 pr-3 text-xs">{g.reasonText || "Reason not recorded"}{g.replacedBy ? <span className="block text-[#828282]">by “{listDisplayName(g.replacedBy.name)}”</span> : null}</td>
                         <td className="py-3 text-right"><button type="button" disabled={!aside.restorable} onClick={() => { setOutcome(null); setConfirm([g.id]); }} aria-label={`Restore ${g.name}`} className="px-3 py-1.5 border border-[#FF651D] text-[#FF651D] hover:bg-[#FFF3EC] rounded-md text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Restore</button></td>
                       </tr>
                     ))}

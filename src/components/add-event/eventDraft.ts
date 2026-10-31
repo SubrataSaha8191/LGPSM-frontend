@@ -3,7 +3,7 @@
 
 import { addHours, isAfter, isValidIso, nextWholeHourIso, parseIso } from "@/utils/dateTime";
 import { resolveImageUrl } from "@/utils/mediaUrl";
-import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH } from "@/utils/eventLimits.mjs";
+import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH, EVENT_LOCATION_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import type { CreateEventRequest, UpdateEventRequest } from "@/services/eventService";
 import type { SessionRequest } from "@/services/sessionService";
 
@@ -196,6 +196,7 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
   if (!contactDigits) errors.contactNumber = "Contact number is required.";
   else if (contactDigits.length < 7 || contactDigits.length > 15) errors.contactNumber = "Enter a valid contact number.";
   if (!draft.venue.trim()) errors.venue = "Event location is required.";
+  else if (draft.venue.trim().length > EVENT_LOCATION_MAX_LENGTH) errors.venue = `Event location cannot exceed ${EVENT_LOCATION_MAX_LENGTH} characters.`;
   if (!isValidIso(draft.start)) errors.start = "Choose a start date and time.";
   if (!isValidIso(draft.end)) errors.end = "Choose an end date and time.";
   else if (!isAfter(draft.end, draft.start)) errors.end = "End must be after the start.";

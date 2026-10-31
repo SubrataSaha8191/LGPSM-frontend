@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import InviteesPreviewModal from "@/components/add-event/modals/InviteesPreviewModal";
+import InviteeListPreviewModal from "@/components/invitees/InviteeListPreviewModal";
 import EditInviteeModal from "@/components/add-event/modals/EditInviteeModal";
 import DeleteInviteeModal from "@/components/add-event/modals/DeleteInviteeModal";
 import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChooserModal";
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import SendWarningModal from "@/components/invitees/SendWarningModal";
+import InfoTip from "@/components/common/InfoTip";
 import PageHeader from "@/components/common/PageHeader";
 import ButtonIcon from "@/components/common/ButtonIcons";
 import CustomDropdown from "@/components/common/CustomDropdown";
@@ -113,13 +115,13 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onReplace, onRevoke
             <button type="button" role="menuitem" onClick={run(onEdit)} className={item}><Icon name="events/edit" width={16} height={16} />Edit</button>
             {onResend && <button type="button" role="menuitem" onClick={run(onResend)} className={item}><Icon name="events/send" width={16} height={16} />Resend Invitation</button>}
             {onReplace
-              ? <button type="button" role="menuitem" onClick={run(onReplace)} className={item}>Replace Access Pass</button>
-              : <span role="menuitem" aria-disabled="true" title={replaceNote} className={off}>Replace Access Pass</span>}
+              ? <button type="button" role="menuitem" onClick={run(onReplace)} className={item}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/><path d="M21 21v-5h-5"/></svg>Replace Access Pass</button>
+              : <span role="menuitem" aria-disabled="true" title={replaceNote} className={off}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/><path d="M21 21v-5h-5"/></svg>Replace Access Pass</span>}
             {onRevoke
-              ? <button type="button" role="menuitem" onClick={run(onRevoke)} className={item}>Revoke Access Pass</button>
-              : <span role="menuitem" aria-disabled="true" title={revokeNote} className={off}>Revoke Access Pass</span>}
-            <button type="button" role="menuitem" onClick={run(onPreview)} className={item}>Card</button>
-            <button type="button" role="menuitem" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}>Remove</button>
+              ? <button type="button" role="menuitem" onClick={run(onRevoke)} className={item}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Revoke Access Pass</button>
+              : <span role="menuitem" aria-disabled="true" title={revokeNote} className={off}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Revoke Access Pass</span>}
+            <button type="button" role="menuitem" onClick={run(onPreview)} className={item}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/></svg>Card</button>
+            <button type="button" role="menuitem" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>Remove</button>
           </div>
         </div>,
         document.body
@@ -422,7 +424,7 @@ export default function InviteesManagementPage() {
     const parts = [`${d.imported} added`];
     if (d.updated) parts.push(`${d.updated} already on the list`);
     if (d.alreadyInvited) parts.push(`${d.alreadyInvited} already invited (not imported again)`);
-    if (d.archived) parts.push(`${d.archived} never-invited guest(s) of the earlier list set aside (see Invitee Lists > Set-aside guests)`);
+    if (d.archived) parts.push(`${d.archived} never-invited guest(s) of the earlier list set aside (see Uploaded Lists > Set-aside guests)`);
     if (d.preservedSets) parts.push(`${d.preservedSets} previously sent list(s) preserved`);
     if (d.failedKept) parts.push(`${d.failedKept} guest(s) with failed sends kept (they can be retried)`);
     if (d.unknownKept) parts.push(`${d.unknownKept} guest(s) with an unresolved delivery kept`);
@@ -648,10 +650,13 @@ export default function InviteesManagementPage() {
                 Preview List
               </button>
               {canManageInviteeLists(user?.role) && (
-                <button type="button" onClick={() => setListsTab("lists")} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
-                  <ButtonIcon name="history" />
-                  Invitee Lists
-                </button>
+                <span className="inline-flex items-center gap-1.5">
+                  <button type="button" onClick={() => setListsTab("lists")} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
+                    <ButtonIcon name="history" />
+                    Uploaded Lists
+                  </button>
+                  <InfoTip label="About Uploaded Lists" text="Every Excel file you upload becomes a list. Open this to see each file, how many guests came from it and whether invitations were sent. You can replace a list that has not been sent yet, or bring back guests that were set aside." align="left" />
+                </span>
               )}
               {(notInvited.length > 0 || !lifecycleStarted) && (
                 <button
@@ -840,13 +845,7 @@ export default function InviteesManagementPage() {
         />
       )}
       {showListPreview && (
-        <InviteesPreviewModal
-          title="Invitees List"
-          subtitle={event?.title}
-          rows={invitees.map((i, idx) => ({ id: String(idx + 1), name: i.name, email: i.email || "", phone: i.mobile || "", company: i.companyName || i.company || "" }))}
-          showCompany={showCompany}
-          onClose={() => setShowListPreview(false)}
-        />
+        <InviteeListPreviewModal eventId={eventId} subtitle={event?.title} showCompany={showCompany} onClose={() => setShowListPreview(false)} />
       )}
       {confirmFirstSend && (
         <SendWarningModal

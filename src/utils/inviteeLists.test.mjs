@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canManageInviteeLists, howAdded, stateExplanation, restoreOutcome, previewLines, previewDiscrepancy } from "./inviteeLists.ts";
+import { canManageInviteeLists, howAdded, stateExplanation, restoreOutcome, previewLines, previewDiscrepancy, alreadyUploadedAndSent, listDisplayName } from "./inviteeLists.ts";
 
 test("only organizers and admins manage invitee lists; System Users and anyone else do not", () => {
   assert.equal(canManageInviteeLists("ORGANIZER"), true);
@@ -76,4 +76,18 @@ test("a result that matches the preview raises no warning; one that differs is e
   assert.match(d, /changed while you were deciding/);
   assert.match(d, /1 guest added \(previewed 2\)/);
   assert.match(d, /3 guests set aside \(previewed 4\)/);
+});
+
+test("the same list uploaded again after it was sent is recognised; unsent or partly new files are not", () => {
+  assert.equal(alreadyUploadedAndSent({ validNew: 0, matchedExistingGuests: 5, alreadyInvited: 5 }), true);
+  assert.equal(alreadyUploadedAndSent({ validNew: 0, matchedExistingGuests: 5, alreadyInvited: 3 }), false);
+  assert.equal(alreadyUploadedAndSent({ validNew: 2, matchedExistingGuests: 5, alreadyInvited: 5 }), false);
+  assert.equal(alreadyUploadedAndSent({ validNew: 0, matchedExistingGuests: 0, alreadyInvited: 0 }), false);
+  assert.equal(alreadyUploadedAndSent(null), false);
+});
+
+test("a list is shown by its file name without the spreadsheet extension", () => {
+  assert.equal(listDisplayName("Guests May.xlsx"), "Guests May");
+  assert.equal(listDisplayName("a.b.XLS"), "a.b");
+  assert.equal(listDisplayName("Earlier invitees"), "Earlier invitees");
 });

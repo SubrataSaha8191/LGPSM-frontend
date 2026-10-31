@@ -15,6 +15,8 @@ interface CategoryFieldsProps {
   // Admins can create categories/subcategories inline; the action sits inside each dropdown list
   canManage?: boolean;
   required?: boolean;
+  /** The subcategory stays optional even when the category is required (events) */
+  subcategoryOptional?: boolean;
   categoryLabel?: string;
   subcategoryLabel?: string;
   categoryError?: string;
@@ -32,6 +34,7 @@ export default function CategoryFields({
   onChange,
   canManage = false,
   required = false,
+  subcategoryOptional = false,
   categoryLabel = "Category",
   subcategoryLabel = "Subcategory",
   categoryError,
@@ -44,7 +47,7 @@ export default function CategoryFields({
   const starMark = <span className="text-[#FF651D] ml-0.5">*</span>;
   const star = required ? starMark : null;
   // A subcategory can only be required once the chosen category has some; before that (or when it has none) the star would promise a rule that cannot apply
-  const subStar = required && (!categoryId || subOptions.length > 0) ? starMark : null;
+  const subStar = required && !subcategoryOptional && (!categoryId || subOptions.length > 0) ? starMark : null;
 
   return (
     <>
@@ -69,6 +72,7 @@ export default function CategoryFields({
           <label className={labelClassName}>
             {subcategoryLabel}
             {subStar}
+            {subcategoryOptional && <span className="font-normal text-[#828282]"> (optional)</span>}
           </label>
           <CustomDropdown
             value={subcategoryId}

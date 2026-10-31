@@ -55,6 +55,9 @@ export interface InviteeSetInfo {
   createdAt: string | null;
   uploadedBy: { id: string; name: string; role: string } | null;
   importedCount: number | null;
+  /** When the first and the latest invitation from this list were handed over (null when none was sent) */
+  firstSentAt?: string | null;
+  lastSentAt?: string | null;
   /** Active guests now in the list */
   total: number;
   sent: number;
@@ -80,6 +83,7 @@ export interface InviteeSetMember {
   name: string;
   email: string | null;
   mobile: string | null;
+  company?: string | null;
   delivery: DeliveryState;
   rsvpStatus: "PENDING" | "ACCEPTED" | "DECLINED";
   checkedIn: boolean;
@@ -118,6 +122,8 @@ export interface ImportPreview {
   validNew: number;
   duplicateRows: number;
   matchedExistingGuests: number;
+  /** Of the matched guests, how many were already invited (or sit in a list that was sent) */
+  alreadyInvited?: number;
   existingActive: number;
   lockedGuestsKept: number;
   failedKept: number;
@@ -216,8 +222,9 @@ export const inviteeService = {
     return apiClient(`/api/v1/events/${eventId}/invitees/sets`, { method: "GET" }, true);
   },
 
-  async getSetMembers(eventId: string, setId: string, page = 1): Promise<ApiResponse<{ members: InviteeSetMember[]; total: number; page: number; limit: number }>> {
-    return apiClient(`/api/v1/events/${eventId}/invitees/sets/${setId}/members?page=${page}`, { method: "GET" }, true);
+  /** One page (50) of the guests in a list; setId "all" covers every list. `q` searches name, email, mobile and company on the server. */
+  async getSetMembers(eventId: string, setId: string, page = 1, q = ""): Promise<ApiResponse<{ members: InviteeSetMember[]; total: number; page: number; limit: number }>> {
+    return apiClient(`/api/v1/events/${eventId}/invitees/sets/${setId}/members?page=${page}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`, { method: "GET" }, true);
   },
 
   async getSetAside(eventId: string, opts: { q?: string; page?: number } = {}): Promise<ApiResponse<{ guests: SetAsideGuest[]; total: number; page: number; limit: number; restorable: boolean; notRestorableReason: string | null }>> {

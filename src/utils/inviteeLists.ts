@@ -89,3 +89,11 @@ export function previewDiscrepancy(p: PreviewLike | null | undefined, actual: { 
   if ((actual.archived ?? 0) !== p.wouldSetAside) diffs.push(`${guests(actual.archived ?? 0)} set aside (previewed ${p.wouldSetAside})`);
   return diffs.length ? `The list changed while you were deciding, so the result differs from the preview: ${diffs.join("; ")}. Guests who were invited in the meantime are always kept.` : null;
 }
+
+/** True when the file holds nobody new and every guest in it has already been invited: the same list uploaded again after it was sent */
+export function alreadyUploadedAndSent(p: Pick<PreviewLike, "validNew" | "matchedExistingGuests"> & { alreadyInvited?: number } | null | undefined): boolean {
+  return !!p && p.validNew === 0 && p.matchedExistingGuests > 0 && (p.alreadyInvited ?? 0) >= p.matchedExistingGuests;
+}
+
+/** A list is named after the file it came from; show that name without the spreadsheet extension */
+export const listDisplayName = (name: string): string => name.replace(/\.(xlsx|xls|csv)$/i, "").trim() || name;

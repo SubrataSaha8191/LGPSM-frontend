@@ -8,7 +8,7 @@ import ImageUploadField from "@/components/common/ImageUploadField";
 import { CategoriesApi } from "@/hooks/useCategories";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
-import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
+import { EVENT_DESCRIPTION_MAX_LENGTH, EVENT_LOCATION_MAX_LENGTH, EVENT_TITLE_MAX_LENGTH } from "@/utils/eventLimits.mjs";
 import InfoTip from "@/components/common/InfoTip";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
@@ -378,8 +378,8 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
             </div>
             {draft.rsvpEnabled && (
               <div>
-                <span className={`block ${labelClass} mb-1.5`}>Acceptance Last Date</span>
-                <DateButton label="RSVP acceptance last date" value={draft.rsvpDeadline} placeholder="Optional — last date to respond" onClick={() => onOpenDatePicker("rsvpDeadline")} error={errors.rsvpDeadline} />
+                <span className={`block ${labelClass} mb-1.5`}>Acceptance Last Date <span className="font-normal text-[#828282]">(optional)</span></span>
+                <DateButton label="RSVP acceptance last date" value={draft.rsvpDeadline} placeholder="Select last date to respond" onClick={() => onOpenDatePicker("rsvpDeadline")} error={errors.rsvpDeadline} />
                 <Err msg={errors.rsvpDeadline} />
               </div>
             )}
@@ -401,22 +401,23 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
       </div>
 
       <div>
-        <label htmlFor="event-location" className={`block ${labelClass} mb-1.5`}>Event Location<Req /></label>
+        <span className="flex items-center gap-1.5 mb-1.5"><label htmlFor="event-location" className={`block ${labelClass}`}>Event Location<Req /></label><InfoTip label="About Event Location" text="A short place name, such as a venue or city. It is printed on the invitation card design. Put the full street address in the Address field below." align="left" /></span>
         <input
           id="event-location"
           type="text"
           value={draft.venue}
-          maxLength={300}
+          maxLength={EVENT_LOCATION_MAX_LENGTH}
           onChange={(e) => onChange({ venue: e.target.value })}
           placeholder="Where is it? (shown on the invitation card)"
           aria-invalid={!!errors.venue}
           className={`${inputClass} ${border(errors.venue)}`}
         />
+        <p className="mt-1 text-xs text-[#828282] text-right">{EVENT_LOCATION_MAX_LENGTH - draft.venue.length} Chars remaining</p>
         <Err msg={errors.venue} />
       </div>
 
       <div>
-        <label htmlFor="event-address-details" className={`block ${labelClass} mb-1.5`}>Address <span className="font-normal text-[#828282]">(optional)</span></label>
+        <span className="flex items-center gap-1.5 mb-1.5"><label htmlFor="event-address-details" className={`block ${labelClass}`}>Address <span className="font-normal text-[#828282]">(optional)</span></label><InfoTip label="About Address" text="The full address, landmark or directions. It is shown to guests on their invitation page, not on the card design. Leave it empty if the Event Location is enough." align="left" /></span>
         <textarea
           id="event-address-details"
           rows={2}
@@ -424,7 +425,7 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           maxLength={300}
           onChange={(e) => onChange({ addressDetails: e.target.value })}
           placeholder="Full address, landmark or directions"
-          className={`${inputClass} leading-relaxed`}
+          className={`${inputClass} ${border()} leading-relaxed`}
         />
       </div>
 
