@@ -8,6 +8,8 @@ export interface InviteeFieldConfig {
   company?: boolean;
   /** Professional identity chosen for the invitation card */
   identity?: boolean;
+  /** The organizer's own title for that detail (e.g. "Designation"); the standard title is used when empty */
+  identityLabel?: string;
   /** Kept for callers; the food choice is never a column or a form field: the guest makes it on the invitation page */
   dietary?: boolean;
 }
@@ -29,13 +31,14 @@ export const EXCEL_EXAMPLE: Record<InviteeFieldKey, string> = {
   identity: "Employee ID: 4521",
 };
 
-interface CardInfoLike { primary?: string | null; secondary?: string | null }
+interface CardInfoLike { primary?: string | null; secondary?: string | null; identityLabel?: string | null }
 
 export function inviteeConfigFor(opts: { cardInfo?: CardInfoLike | null; dietaryEnabled?: boolean; corporate?: boolean }): InviteeFieldConfig {
   const chosen = [opts.cardInfo?.primary, opts.cardInfo?.secondary];
   return {
     company: Boolean(opts.corporate) || chosen.includes("COMPANY_NAME"),
     identity: chosen.includes("PROFESSIONAL_IDENTITY"),
+    identityLabel: chosen.includes("PROFESSIONAL_IDENTITY") ? (opts.cardInfo?.identityLabel || "").trim() || undefined : undefined,
     dietary: Boolean(opts.dietaryEnabled),
   };
 }
@@ -43,20 +46,22 @@ export function inviteeConfigFor(opts: { cardInfo?: CardInfoLike | null; dietary
 export function inviteeFieldsFor(config: InviteeFieldConfig): InviteeFieldKey[] {
   return [
     "name", "email", "mobile",
-    "company", // always offered, optional unless the event needs it (see expectedColumnsFor)
+    ...(config.company ? (["company"] as const) : []),
     ...(config.identity ? (["identity"] as const) : []),
   ];
 }
 
-export const excelColumnsFor = (config: InviteeFieldConfig): string[] => inviteeFieldsFor(config).map((k) => EXCEL_HEADER[k]);
+/** The Excel column heading / form label for a field in this event: the organizer's own title for the custom detail, otherwise the standard one */
+export const headerFor = (key: InviteeFieldKey, config: InviteeFieldConfig = {}): string => (key === "identity" && config.identityLabel?.trim() ? config.identityLabel.trim() : EXCEL_HEADER[key]);
+
+export const excelColumnsFor = (config: InviteeFieldConfig): string[] => inviteeFieldsFor(config).map((k) => headerFor(k, config));
 
 /** One example row for the Excel sample: a cell for every column, in the same order */
 export function templateRow(config: InviteeFieldConfig = {}): Record<string, string> {
-  return Object.fromEntries(inviteeFieldsFor(config).map((k) => [EXCEL_HEADER[k], EXCEL_EXAMPLE[k]]));
+  return Object.fromEntries(inviteeFieldsFor(config).map((k) => [headerFor(k, config), EXCEL_EXAMPLE[k]]));
 }
 
 export interface ExpectedColumn { key: InviteeFieldKey; header: string }
 
-/** The columns an uploaded sheet must have for this event: the sample Excel's columns, except Company Name, which is only demanded when the event shows it (corporate, or chosen for the card) */
-export const expectedColumnsFor = (config: InviteeFieldConfig): ExpectedColumn[] =>
-  inviteeFieldsFor(config).filter((key) => key !== "company" || config.company).map((key) => ({ key, header: EXCEL_HEADER[key] }));
+/** The columns an uploaded sheet must have for this event: the same list as the sample Excel */
+export const expectedColumnsFor = (config: InviteeFieldConfig): ExpectedColumn[] => inviteeFieldsFor(config).map((key) => ({ key, header: headerFor(key, config) }));

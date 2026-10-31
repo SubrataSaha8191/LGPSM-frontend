@@ -45,11 +45,13 @@ export type CardInfoField = "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDEN
 export interface CardInfo {
   primary: CardInfoField | null;
   secondary: CardInfoField | null;
+  /** The organizer's own title for the custom detail ("Designation"); empty uses the standard title */
+  identityLabel?: string | null;
 }
 export const CARD_INFO_OPTIONS: { value: CardInfoField; label: string }[] = [
   { value: "INVITEE_NAME", label: "Invitee Name" },
   { value: "COMPANY_NAME", label: "Company Name" },
-  { value: "PROFESSIONAL_IDENTITY", label: "Professional Identity (e.g. Employee ID)" },
+  { value: "PROFESSIONAL_IDENTITY", label: "Custom detail (add your own title)" },
 ];
 
 export interface EventDraft {
@@ -313,7 +315,7 @@ export interface ServerEvent {
   attendeeSettings?: { thresholdLimit?: number };
   dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] };
   templateId?: string | { _id: string; name: string; previewImageKey?: string } | null;
-  cardInfo?: { primary?: CardInfoField | null; secondary?: CardInfoField | null };
+  cardInfo?: { primary?: CardInfoField | null; secondary?: CardInfoField | null; identityLabel?: string | null };
   media?: { logoKey?: string };
   updatedAt?: string;
 }
@@ -378,7 +380,7 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     dietaryEnabled: event?.dietaryPreference?.enabled ?? false,
     preferenceCategories,
     cardInfo: event?.cardInfo && (event.cardInfo.primary !== undefined || event.cardInfo.secondary !== undefined)
-      ? { primary: event.cardInfo.primary ?? null, secondary: event.cardInfo.secondary ?? null }
+      ? { primary: event.cardInfo.primary ?? null, secondary: event.cardInfo.secondary ?? null, identityLabel: event.cardInfo.identityLabel ?? null }
       : null,
     template,
     logoKey: event?.media?.logoKey || null,

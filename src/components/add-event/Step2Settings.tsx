@@ -1,6 +1,6 @@
 "use client";
 
-import { CARD_INFO_OPTIONS } from "./eventDraft";
+import { CARD_INFO_OPTIONS, type CardInfo, type CardInfoField } from "./eventDraft";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CheckInPolicy, POLICY_FLAGS, POLICY_LABEL, policyOf, policyOptions } from "@/utils/checkInPolicy";
 import React, { useEffect, useRef } from "react";
@@ -15,13 +15,15 @@ interface Step2SettingsProps {
   // Options the platform administrator switched off are not offered
   features: EventFeatureSettings;
   /** Opens the card-information dialog (Additional Information lives in this step now) */
-  onCustomizeCardInfo?: () => void;
   onNext: () => void;
   onBack: () => void;
 }
 
 // Controlled step: values live in the wizard draft owned by the page
-export default function Step2Settings({ draft, onChange, errors, features, onCustomizeCardInfo, onNext, onBack }: Step2SettingsProps) {
+export default function Step2Settings({ draft, onChange, errors, features, onNext, onBack }: Step2SettingsProps) {
+  // Until the organizer touches it, the card keeps its long-standing lines (guest name, then company); the first change makes the choice explicit
+  const cardInfo: CardInfo = draft.cardInfo ?? { primary: "INVITEE_NAME", secondary: "COMPANY_NAME" };
+  const setCardInfo = (next: CardInfo) => onChange({ cardInfo: next });
   const categories = draft.preferenceCategories;
   const setCategories = (next: PreferenceCategory[]) => onChange({ preferenceCategories: next });
   const updateCategory = (id: string, patch: Partial<PreferenceCategory>) => setCategories(categories.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -62,22 +64,58 @@ export default function Step2Settings({ draft, onChange, errors, features, onCus
         </div>
       )}
 
-      {onCustomizeCardInfo && (
-        <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-900">Additional Information</span>
-            <InfoTip label="About additional information" text="Choose which guest details are printed under each guest's name on their invitation card. This also decides the extra columns in the invitee sample sheet." align="left" />
-          </div>
-          <p className="text-sm text-[#4B4F52]">
-            {draft.cardInfo
-              ? [draft.cardInfo.primary, draft.cardInfo.secondary].map((f, i) => (f ? `Line ${i + 1}: ${CARD_INFO_OPTIONS.find((o) => o.value === f)?.label ?? f}` : null)).filter(Boolean).join(" · ") || "No extra guest details on the card."
-              : "Not set: the card shows the guest's name, then their company."}
-          </p>
-          <button type="button" onClick={onCustomizeCardInfo} className="px-4 py-2 border border-[#FF651D] text-[#E5520F] hover:bg-orange-50 text-sm font-medium rounded-md cursor-pointer">
-            {draft.cardInfo ? "Edit additional information" : "Add additional information"}
-          </button>
+      {/* Additional Information: the two guest details printed on the card, set right here (the card preview updates as you choose) */}
+      <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-900">Additional Information</span>
+          <InfoTip label="About additional information" text="Choose which guest details are printed under the event name on each guest's card. A guest without that detail gets an empty line. This also decides the extra columns in the invitee Excel sample." />
         </div>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(["primary", "secondary"] as const).map((slot) => {
+            const info = cardInfo;
+            const on = info[slot] !== null;
+            const label = slot === "primary" ? "Primary additional information" : "Secondary additional information";
+            return (
+              <div key={slot} className="border border-[#E0E0E0] rounded-md p-4 flex flex-col gap-3">
+                <label htmlFor={`card-info-${slot}`} className="inline-flex items-center gap-2.5 text-sm font-medium text-[#15191C] cursor-pointer">
+                  <input
+                    id={`card-info-${slot}`}
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => setCardInfo({ ...info, [slot]: e.target.checked ? (slot === "primary" ? "INVITEE_NAME" : "COMPANY_NAME") : null })}
+                    className="size-[18px] accent-[#1A9242] cursor-pointer"
+                  />
+                  {label}
+                </label>
+                <div className={on ? "" : "opacity-50 pointer-events-none"} aria-disabled={!on}>
+                  <CustomDropdown
+                    value={info[slot] ?? ""}
+                    onChange={(v) => setCardInfo({ ...info, [slot]: v as CardInfoField })}
+                    options={CARD_INFO_OPTIONS}
+                    placeholder="Choose a detail"
+                    ariaLabel={label}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {(cardInfo.primary === "PROFESSIONAL_IDENTITY" || cardInfo.secondary === "PROFESSIONAL_IDENTITY") && (
+          <div className="max-w-md">
+            <label htmlFor="card-info-title" className="block text-sm font-medium text-gray-900 mb-1.5">Title for the custom detail <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span></label>
+            <input
+              id="card-info-title"
+              type="text"
+              value={cardInfo.identityLabel ?? ""}
+              maxLength={40}
+              onChange={(e) => setCardInfo({ ...cardInfo, identityLabel: e.target.value })}
+              placeholder="e.g. Designation, Employee ID, Badge No."
+              className="w-full px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 placeholder:text-[#828282] focus:outline-none focus:border-[#FF651D]"
+            />
+            <p className="mt-1 text-xs text-[#828282]">This becomes the column title in the Excel sample and the field name when adding an invitee. Without one it is called Professional Identity.</p>
+          </div>
+        )}
+      </div>
 
       {features.askFoodPreference && (
         <div className={`p-4 border rounded-md bg-white space-y-4 ${errors.dietaryPreference ? "border-rose-400" : "border-[#E0E0E0]"}`}>

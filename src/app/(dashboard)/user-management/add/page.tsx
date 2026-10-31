@@ -7,6 +7,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { userService } from "@/services/userService";
 import { UserData } from "@/services/tokenStorage";
 import { TableSkeleton } from "@/components/common/Skeleton";
+import CustomDropdown from "@/components/common/CustomDropdown";
+import { useAuth } from "@/context/AuthContext";
+import { eventService } from "@/services/eventService";
+import { assignmentService } from "@/services/assignmentService";
 
 // "Add User" buttons elsewhere (User Management, an event's system-user tab) link here with ?new=1 so the form is already open,
 // instead of landing on this list and needing a second click.
@@ -20,7 +24,15 @@ export default function AddUserPage() {
 
 function AddUserContent() {
   const router = useRouter();
-  const openedByLink = useSearchParams().get("new") === "1";
+  const search = useSearchParams();
+  const openedByLink = search.get("new") === "1";
+  // Opened from an event's Assign System Users tab: the new account goes straight onto that event
+  const fromEventId = search.get("event");
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  // An admin works on one organizer's staff at a time
+  const [organizers, setOrganizers] = useState<UserData[]>([]);
+  const [organizerId, setOrganizerId] = useState("");
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(openedByLink);
   // Cancelling a form that was opened from another page goes back to that page rather than stranding the person on this list
   const cancelModal = () => {
@@ -42,10 +54,29 @@ function AddUserContent() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    let live = true;
+    (async () => {
+      const [orgs, ev] = await Promise.all([
+        userService.getUsers("ORGANIZER"),
+        fromEventId ? eventService.getEvent(fromEventId) : Promise.resolve(null),
+      ]);
+      if (!live) return;
+      if (orgs.success && Array.isArray(orgs.data)) setOrganizers(orgs.data.filter((u) => u.role === "ORGANIZER"));
+      const owner = ev && ev.success && ev.data ? (ev.data as { organizerId?: string | { _id?: string } }).organizerId : undefined;
+      const ownerId = typeof owner === "string" ? owner : owner?._id;
+      if (ownerId) setOrganizerId(ownerId);
+    })();
+    return () => { live = false; };
+  }, [isAdmin, fromEventId]);
+
   const loadSystemUsers = useCallback(async () => {
+    // an admin sees nothing until an organizer is chosen
+    if (isAdmin && !organizerId) { setSystemUsers([]); setLoadingUsers(false); return; }
     setLoadingUsers(true);
     setLoadError(null);
-    const res = await userService.getUsers("SYSTEM_USER");
+    const res = await userService.getUsers("SYSTEM_USER", isAdmin ? organizerId : undefined);
     if (res.success && Array.isArray(res.data)) {
       setSystemUsers(res.data.filter((u) => u.role === "SYSTEM_USER"));
     } else {
@@ -53,7 +84,7 @@ function AddUserContent() {
       setLoadError(res.message || "Failed to load system users.");
     }
     setLoadingUsers(false);
-  }, []);
+  }, [isAdmin, organizerId]);
 
   useEffect(() => {
     loadSystemUsers();
@@ -62,6 +93,7 @@ function AddUserContent() {
   const handleAddUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.userName.trim()) return;
+    if (isAdmin && !organizerId) { setFormError("Choose the organizer this user is being added for."); return; }
 
     setIsSubmitting(true);
     setFormError(null);
@@ -71,7 +103,14 @@ function AddUserContent() {
       phone: formData.contactNo.trim() || undefined,
       password: formData.password,
       role: "SYSTEM_USER",
+      ...(isAdmin ? { organizerId } : {}),
     });
+    // From an event's tab: put the new user on that event (all sessions) so it shows there straight away
+    let assignNote: string | null = null;
+    if (res.success && fromEventId && res.data?._id) {
+      const assigned = await assignmentService.saveAssignment(fromEventId, res.data._id, []);
+      if (!assigned.success) assignNote = assigned.message || "The user was added but could not be assigned to the event.";
+    }
     setIsSubmitting(false);
 
     if (!res.success) {
@@ -83,7 +122,8 @@ function AddUserContent() {
     setIsAddUserModalOpen(false);
     setFormData({ userName: "", contactNo: "", email: "", password: "" });
     // Opened from another page: go back to it, where the new user now shows in the list
-    if (openedByLink) router.back();
+    if (assignNote) setFormError(assignNote);
+    else if (openedByLink) router.back();
     await loadSystemUsers();
   };
 
@@ -102,6 +142,20 @@ function AddUserContent() {
 
         {/* Page Content */}
         <main className="px-4 sm:px-6 pt-[30px] pb-8 w-full space-y-8 flex-1 flex flex-col">
+          {isAdmin && (
+            <div className="max-w-sm space-y-1.5">
+              <label className="block text-sm font-medium text-[#15191C]">Organizer</label>
+              <CustomDropdown
+                value={organizerId}
+                onChange={(v) => setOrganizerId(v)}
+                options={organizers.map((o) => ({ value: o._id, label: `${o.fullName}${(o.profile?.organizationName as string) ? ` · ${o.profile?.organizationName as string}` : ""}` }))}
+                placeholder="Select an organizer"
+                ariaLabel="Organizer whose system users to show"
+                disabled={!!fromEventId}
+              />
+              <p className="text-xs text-[#828282]">{fromEventId ? "This event's organizer." : "System users shown and added here belong to the selected organizer."}</p>
+            </div>
+          )}
           <ListControls label="System Users" searchId="add-user-search" placeholder="Search..." value={searchQuery} onChange={setSearchQuery}>
             <button type="button" onClick={() => setIsAddUserModalOpen(true)} className={`${addButtonClass} cursor-pointer`}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

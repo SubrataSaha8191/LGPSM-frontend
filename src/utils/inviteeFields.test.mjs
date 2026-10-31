@@ -27,10 +27,11 @@ test("Professional Identity appears only when the card uses it, in both the samp
   assert.ok("Professional Identity" in templateRow(cfg));
 });
 
-test("Company Name is always offered, but a sheet is only required to have it when the event shows it", () => {
-  assert.ok(inviteeFieldsFor({}).includes("company"));
-  assert.ok("Company Name" in templateRow({}));
+test("Company Name is offered, and required in a sheet, only for corporate events or when chosen for the card", () => {
+  assert.ok(!inviteeFieldsFor({}).includes("company"));
+  assert.ok(!("Company Name" in templateRow({})));
   assert.ok(!expectedColumnsFor({}).some((c) => c.key === "company"));
+  assert.ok(inviteeFieldsFor({ company: true }).includes("company"));
   assert.ok(expectedColumnsFor({ company: true }).some((c) => c.key === "company"));
 });
 
@@ -50,4 +51,15 @@ test("the food choice is never a column or a form field, even when the event ask
 
 test("name, email and mobile are always the first three columns", () => {
   assert.deepEqual(excelColumnsFor({ company: true, identity: true, dietary: true }).slice(0, 3), ["Name", "Email", "Mobile"]);
+});
+
+test("the organizer's own title for the custom detail becomes its column title and form label", () => {
+  const cfg = inviteeConfigFor({ cardInfo: { primary: "INVITEE_NAME", secondary: "PROFESSIONAL_IDENTITY", identityLabel: "  Designation " } });
+  assert.equal(cfg.identityLabel, "Designation");
+  assert.deepEqual(excelColumnsFor(cfg), ["Name", "Email", "Mobile", "Designation"]);
+  assert.ok("Designation" in templateRow(cfg));
+  assert.deepEqual(expectedColumnsFor(cfg).map((c) => c.header), ["Name", "Email", "Mobile", "Designation"]);
+  // without a title, or when the detail is not on the card, the standard title applies
+  assert.deepEqual(excelColumnsFor(inviteeConfigFor({ cardInfo: { primary: "INVITEE_NAME", secondary: "PROFESSIONAL_IDENTITY" } })).slice(-1), ["Professional Identity"]);
+  assert.equal(inviteeConfigFor({ cardInfo: { primary: "INVITEE_NAME", secondary: null, identityLabel: "Designation" } }).identityLabel, undefined);
 });

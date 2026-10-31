@@ -117,6 +117,7 @@ export default function PublicInvitationPage() {
       if (res.success) {
         setSubmitSuccessMsg("Thank you! Your answers have been saved.");
         setDietaryChoices(Object.fromEntries(selections.map((s, i) => [String(i), s.value])));
+        setInvitationData((cur) => (cur ? { ...cur, invitee: { ...cur.invitee, dietarySelections: selections } } : cur));
       } else {
         setError(res.message || "Could not save your answers. Please try again.");
       }
@@ -233,6 +234,12 @@ export default function PublicInvitationPage() {
   // No RSVP for this event but guests are asked for food: the choice is made here, on the access card (the first option is pre-selected)
   const foodOnly = !rsvpEnabled && dietaryPrompts.length > 0 && !eventCancelled;
   const foodChoice = (index: number) => dietaryChoices[String(index)] || dietaryPrompts[index]?.options[0] || "";
+  // What is already saved for this guest, to keep "Save" off until something is changed
+  const storedChoices = restoreDietaryChoices(dietaryPrompts, invitee.dietarySelections, invitee.dietaryPreference);
+  const storedKey = dietaryPrompts.length > 0 && dietaryPrompts.every((_, i) => storedChoices[String(i)]) ? JSON.stringify(dietaryPrompts.map((_, i) => storedChoices[String(i)])) : null;
+  const foodSaved = storedKey !== null && storedKey === JSON.stringify(dietaryPrompts.map((_, i) => foodChoice(i)));
+  const rsvpSaved = (invitee.rsvpStatus === "ACCEPTED" || invitee.rsvpStatus === "DECLINED") && invitee.rsvpStatus === selectedRsvp
+    && (selectedRsvp === "DECLINED" || dietaryPrompts.length === 0 || storedKey === JSON.stringify(dietaryPrompts.map((_, i) => dietaryChoices[String(i)] || "")));
   const startDate = event.schedule?.start ? new Date(event.schedule.start) : null;
   const endDate = event.schedule?.end ? new Date(event.schedule.end) : null;
   const formatDateTime = (d: Date | null) =>
@@ -428,7 +435,7 @@ export default function PublicInvitationPage() {
               </div>
             )}
 
-            {submitSuccessMsg && (
+            {submitSuccessMsg && rsvpSaved && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
                 {submitSuccessMsg}
               </div>
@@ -500,7 +507,7 @@ export default function PublicInvitationPage() {
 
             <button
               type="submit"
-              disabled={submitting || !selectedRsvp}
+              disabled={submitting || !selectedRsvp || rsvpSaved}
               className="w-full py-3 px-4 bg-[color:var(--inv-primary)] hover:brightness-90 text-[color:var(--inv-on-primary)] text-xs font-bold rounded-xl transition cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (
@@ -520,7 +527,7 @@ export default function PublicInvitationPage() {
               <p className="mt-1 text-xs text-slate-500">Please answer the questions below. You can change your answers later from this page.</p>
             </div>
             {error && <div role="alert" aria-live="assertive" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">{error}</div>}
-            {submitSuccessMsg && <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">{submitSuccessMsg}</div>}
+            {submitSuccessMsg && foodSaved && <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">{submitSuccessMsg}</div>}
             <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
               {dietaryPrompts.map((prompt, index) => (
                 <div key={`${index}-${prompt.title}`} className="space-y-1.5">
@@ -537,8 +544,8 @@ export default function PublicInvitationPage() {
                 </div>
               ))}
             </fieldset>
-            <button type="submit" disabled={submitting} className="w-full py-3 px-4 bg-[color:var(--inv-primary)] hover:brightness-90 text-[color:var(--inv-on-primary)] text-xs font-bold rounded-xl transition cursor-pointer shadow-md disabled:opacity-60">
-              {submitting ? "Saving..." : "Save"}
+            <button type="submit" disabled={submitting || foodSaved} className="w-full py-3 px-4 bg-[color:var(--inv-primary)] hover:brightness-90 text-[color:var(--inv-on-primary)] text-xs font-bold rounded-xl transition cursor-pointer shadow-md disabled:opacity-60">
+              {submitting ? "Saving..." : foodSaved ? "Saved" : "Save"}
             </button>
           </form>
           ) : (

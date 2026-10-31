@@ -60,6 +60,8 @@ export const userService = {
     role?: "ADMIN" | "ORGANIZER" | "SYSTEM_USER";
     phone?: string;
     profile?: { organizationName?: string };
+    /** Admin only: the organizer the new staff account is added for */
+    organizerId?: string;
   }): Promise<ApiResponse<UserData>> {
     return apiClient<UserData>(
       "/api/users/",
@@ -71,8 +73,12 @@ export const userService = {
     );
   },
 
-  async getUsers(role?: string): Promise<ApiResponse<UserData[]>> {
-    const url = role ? `/api/users?role=${role}` : "/api/users/";
+  /** `organizerId` (admin only) narrows the list to the staff of that one organizer */
+  async getUsers(role?: string, organizerId?: string): Promise<ApiResponse<UserData[]>> {
+    const params = new URLSearchParams();
+    if (role) params.set("role", role);
+    if (organizerId) params.set("organizerId", organizerId);
+    const url = params.toString() ? `/api/users?${params.toString()}` : "/api/users/";
     return apiClient<UserData[]>(url, { method: "GET" }, true);
   },
 

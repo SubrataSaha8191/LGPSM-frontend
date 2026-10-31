@@ -10,7 +10,6 @@ import EditInviteeModal from "@/components/add-event/modals/EditInviteeModal";
 import DeleteInviteeModal from "@/components/add-event/modals/DeleteInviteeModal";
 import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChooserModal";
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
-import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import SendWarningModal from "@/components/invitees/SendWarningModal";
 import InfoTip from "@/components/common/InfoTip";
 import PageHeader from "@/components/common/PageHeader";
@@ -78,7 +77,7 @@ function InviteeStatusPill({ invitationStatus, rsvpStatus }: { invitationStatus:
 }
 
 // "⋯" row menu (Figma 217:20587: dark panel with a pointer). Edit and Resend as designed; card preview and remove kept.
-function InviteeRowMenu({ name, onPreview, onEdit, onResend, onReplace, onRevoke, replaceNote, revokeNote, onRemove }: { name: string; onPreview: () => void; onEdit: () => void; onResend?: () => void; onReplace?: () => void; onRevoke?: () => void; replaceNote?: string; revokeNote?: string; onRemove: () => void }) {
+function InviteeRowMenu({ name, onEdit, onResend, onReplace, onRevoke, replaceNote, revokeNote, onRemove }: { name: string; onEdit: () => void; onResend?: () => void; onReplace?: () => void; onRevoke?: () => void; replaceNote?: string; revokeNote?: string; onRemove: () => void }) {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,7 +94,7 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onReplace, onRevoke
     if (position) { setPosition(null); return; }
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const height = 8 + 24 + (onResend ? 6 : 5) * 28;
+    const height = 8 + 24 + (onResend ? 5 : 4) * 28;
     const below = rect.bottom + height + 8 <= window.innerHeight;
     setPosition({ top: below ? rect.bottom + 4 : Math.max(8, rect.top - height - 4), left: Math.max(8, Math.min(rect.left + rect.width / 2 - MENU_WIDTH / 2, window.innerWidth - MENU_WIDTH - 8)) });
   };
@@ -120,7 +119,6 @@ function InviteeRowMenu({ name, onPreview, onEdit, onResend, onReplace, onRevoke
             {onRevoke
               ? <button type="button" role="menuitem" onClick={run(onRevoke)} className={item}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Revoke Access Pass</button>
               : <span role="menuitem" aria-disabled="true" title={revokeNote} className={off}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Revoke Access Pass</span>}
-            <button type="button" role="menuitem" onClick={run(onPreview)} className={item}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2M15 10h3M15 14h3"/></svg>Card</button>
             <button type="button" role="menuitem" onClick={run(onRemove)} className={`${base} text-rose-300 hover:text-rose-200`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>Remove</button>
           </div>
         </div>,
@@ -174,7 +172,6 @@ export default function InviteesManagementPage() {
   const [passHistoryError, setPassHistoryError] = useState<string | null>(null);
   const [ackDuplicate, setAckDuplicate] = useState(false);
   const [retryingNotices, setRetryingNotices] = useState(false);
-  const [cardFor, setCardFor] = useState<Invitee | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showChooser, setShowChooser] = useState(false);
@@ -492,7 +489,7 @@ export default function InviteesManagementPage() {
   return (
     <div className="w-full min-h-full bg-white">
       <PageHeader title={user?.role === "ORGANIZER" ? "Invitees Management" : sidebarFlow ? "Add Invitees" : "Event"} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-5 pb-24">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 w-full space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={invitees.length} />}
 
         {feedback && (
@@ -791,7 +788,6 @@ export default function InviteesManagementPage() {
                           <td className="py-3 px-2.5 text-right">
                             <InviteeRowMenu
                               name={i.name}
-                              onPreview={() => setCardFor(i)}
                               onEdit={() => setEditing({ id: i._id, name: i.name, email: i.email || "", phone: i.mobile || "" })}
                               onResend={sentRecord?._id && i.invitationStatus !== "PENDING" ? () => handleResend([sentRecord]) : undefined}
                               onReplace={replaceAvailability(i, event?.status).allowed ? () => setPassAction({ action: "REPLACE", invitee: i, needsReview: replaceAvailability(i, event?.status).needsReview }) : undefined}
@@ -859,7 +855,6 @@ export default function InviteesManagementPage() {
           onConfirm={() => { setConfirmFirstSend(false); handleSend(); }}
         />
       )}
-      {cardFor && <CardPreviewModal eventId={eventId} inviteeId={cardFor._id} inviteeName={cardFor.name} onClose={() => setCardFor(null)} />}
       {passAction && (
         <PassActionModal
           key={`${passAction.action}-${passAction.invitee._id}`}
@@ -883,6 +878,7 @@ export default function InviteesManagementPage() {
         eventId={eventId}
         existingInvitees={invitees}
         fields={inviteeFieldsFor(fieldConfig)}
+        identityLabel={fieldConfig.identityLabel}
         onClose={() => setShowManualAdd(false)}
         onSaved={async () => { await load(); notifyDbUpdate(); }}
       />

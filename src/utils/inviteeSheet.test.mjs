@@ -43,3 +43,11 @@ test("a sheet is checked against the columns the event's settings ask for", asyn
   assert.equal((await parseInviteeSheet(noHeader, [], expectedColumnsFor(plain))).missingColumns.length, 3);
   assert.deepEqual((await parseInviteeSheet(noHeader)).missingColumns, []);
 });
+
+test("a sheet with the organizer's own title for the custom detail is read into that detail", async () => {
+  const expected = expectedColumnsFor({ identity: true, identityLabel: "Badge Code" });
+  const parsed = await parseInviteeSheet(fileOf([["Name", "Email", "Mobile", "Badge Code"], ["Pia Roy", "pia@x.com", "", "BC-9"]]), [], expected);
+  assert.deepEqual(parsed.missingColumns, []);
+  assert.equal(parsed.rows[0].identity, "BC-9");
+  assert.deepEqual((await parseInviteeSheet(fileOf([["Name", "Email", "Mobile"], ["Pia Roy", "pia@x.com", ""]]), [], expected)).missingColumns, ["Badge Code"]);
+});

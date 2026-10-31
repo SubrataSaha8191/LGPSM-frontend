@@ -110,6 +110,12 @@ export default function EventSessionsPage() {
   const [sampleColumns, setSampleColumns] = useState<TemplateColumns>({});
   const [uploadedFileName, setUploadedFileName] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // "Keep same invitees as": the new session shares another session's guest list instead of getting its own
+  const [copyOn, setCopyOn] = useState(false);
+  const [copySourceId, setCopySourceId] = useState("");
+  const copyOptions = sessions
+    .filter((x) => x.inviteeSource !== "COPY_SESSION")
+    .map((x, i) => ({ value: String(x._id || x.id), label: x.name || `Session ${i + 1}` }));
 
   useEffect(() => {
     if (!eventId) return;
@@ -171,11 +177,12 @@ export default function EventSessionsPage() {
         name: sessionName.trim(),
         schedule: { start: startTime, end: endTime },
         accessControl,
+        ...(copyOn && copySourceId ? { inviteeSource: "COPY_SESSION" as const, sourceSessionId: copySourceId } : {}),
       });
 
       if (res.success) {
         // Invitees from the uploaded sheet are imported into this event through the backend
-        if (uploadedFile) {
+        if (uploadedFile && !copyOn) {
           const importRes = await inviteeService.importExcel(eventId, uploadedFile, undefined, "APPEND");
           if (!importRes.success) {
             alert(`Session created, but the invitee file could not be imported: ${importRes.message || "unknown error"}`);
@@ -186,6 +193,8 @@ export default function EventSessionsPage() {
         setSessionName("");
         setUploadedFileName("");
         setUploadedFile(null);
+        setCopyOn(false);
+        setCopySourceId("");
         setIsAddModalOpen(false);
         await fetchSessions();
       } else {
@@ -392,6 +401,37 @@ export default function EventSessionsPage() {
                   </div>
                 </div>
 
+                {copyOptions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label htmlFor="session-copy" className="inline-flex items-center gap-2.5 cursor-pointer select-none text-sm text-[#4B4F52]">
+                      <input
+                        id="session-copy"
+                        type="checkbox"
+                        checked={copyOn}
+                        onChange={(e) => {
+                          setCopyOn(e.target.checked);
+                          setCopySourceId(e.target.checked ? copyOptions[0].value : "");
+                          if (e.target.checked) { setUploadedFile(null); setUploadedFileName(""); }
+                        }}
+                        className="size-4 rounded border-gray-300 accent-[#16A34A] cursor-pointer"
+                      />
+                      Keep same invitees as
+                    </label>
+                    <div className="w-48">
+                      <CustomDropdown
+                        value={copyOn ? copySourceId : ""}
+                        onChange={(v) => setCopySourceId(v)}
+                        options={copyOptions}
+                        disabled={!copyOn}
+                        placeholder={copyOptions[0]?.label || "Session"}
+                        ariaLabel="Session to copy invitees from"
+                        portal
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {!copyOn && (
                 <div>
                   <label className="block text-sm font-medium text-[#15191C] mb-1.5">Add Invitees List</label>
                   <div className="border border-[#E0E0E0] rounded-md flex items-center bg-[#FAFAFA] overflow-hidden min-h-[47px]">
@@ -411,6 +451,7 @@ export default function EventSessionsPage() {
                     <InfoTip label="About the Excel sample" text="Download the sample template from the link and enter your invitees in the same format. There are three main columns - Name, Email and Mobile. Name and Mobile are mandatory fields. All numbers must be with country code, for e.g. +91xxxxxxxxxx, without any space in between." />
                   </div>
                 </div>
+                )}
               </div>
 
               {formError && (

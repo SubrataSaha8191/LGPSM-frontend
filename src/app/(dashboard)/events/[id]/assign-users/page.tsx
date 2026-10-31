@@ -326,7 +326,7 @@ export default function EventAssignUsersPage() {
                 { value: ALL_SYSTEM_USERS, label: "All system users" },
               ]}
             />
-            <Link href="/user-management/add?new=1" className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
+            <Link href={`/user-management/add?new=1&event=${eventId}`} className="inline-flex items-center gap-2 px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] text-white text-base font-semibold rounded-lg">
               <Icon name="events/add-white" width={24} height={24} />
               Add User
             </Link>
@@ -369,7 +369,7 @@ export default function EventAssignUsersPage() {
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500 text-sm">
                     {users.length === 0 ? (
-                      <span>No SYSTEM_USER accounts found. <Link href="/user-management/add?new=1" className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
+                      <span>No SYSTEM_USER accounts found. <Link href={`/user-management/add?new=1&event=${eventId}`} className="font-semibold text-[#E5520F] underline">Add User</Link>.</span>
                     ) : userFilter !== USERS_ON_EVENT && userFilter !== ALL_SYSTEM_USERS && !searchQuery.trim() ? (
                       <span>No system users are assigned to this session yet. <button type="button" onClick={() => setUserFilter(ALL_SYSTEM_USERS)} className="font-semibold text-[#E5520F] underline cursor-pointer">Show all system users</button> to assign someone.</span>
                     ) : userFilter === USERS_ON_EVENT && !searchQuery.trim() ? (
@@ -547,6 +547,12 @@ export default function EventAssignUsersPage() {
                     : `${alreadyOnEvent} of the ${selectedRows.length} selected ${alreadyOnEvent === 1 ? "is" : "are"} already assigned to this event. Their sessions are replaced by what you pick here; the others are newly assigned.`}
                 </p>
               )}
+              <div>
+                <label htmlFor="assign-event" className="block text-xs font-medium text-[#15191C] mb-1.5">Event</label>
+                <select id="assign-event" disabled aria-readonly value={eventId} className="w-full h-[46px] px-3.5 bg-[#F4F4F4] border border-[#E0E0E0] rounded-md text-sm text-[#4B4F52] cursor-not-allowed appearance-none">
+                  <option value={eventId}>{eventTitle || "This event"}</option>
+                </select>
+              </div>
               <SessionScopePicker
                 sessions={sessions.map((sess, idx) => ({ id: String(sess._id || sess.id), name: sess.name || `Session ${idx + 1}` }))}
                 value={sessionScope}

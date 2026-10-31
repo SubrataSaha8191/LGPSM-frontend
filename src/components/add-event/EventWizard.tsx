@@ -21,7 +21,6 @@ import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { DraftErrors, EventDraft, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
 import { DraftStatus } from "@/hooks/useFormDraft";
 import { useAlert } from "@/context/AlertContext";
-import CustomizeInfoModal from "./modals/CustomizeInfoModal";
 import type { TemplatePreviewPayload } from "@/services/templateService";
 
 type PickerTarget =
@@ -86,7 +85,6 @@ export default function EventWizard({
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   // Set while "Customize Information" is open: the payload the card preview was rendering
-  const [infoPreviewPayload, setInfoPreviewPayload] = useState<TemplatePreviewPayload | null>(null);
   const [sessionFiles, setSessionFiles] = useState<Record<string, SessionInviteeFile | undefined>>({});
   const [previewKey, setPreviewKey] = useState<string | null>(null);
 
@@ -341,7 +339,7 @@ export default function EventWizard({
                   onCancel={onCancel}
                 />
               ) : currentStep === 2 ? (
-                <Step2Settings draft={draft} onChange={patch} errors={visibleErrors} features={features} onCustomizeCardInfo={() => setInfoPreviewPayload({ title: draft.title.trim() || undefined, startIso: draft.start || undefined, endIso: draft.end || undefined, venue: draft.venue.trim() || undefined, categoryName: categories.categoryName(draft.categoryId) || undefined, subcategoryName: categories.subcategoryName(draft.categoryId, draft.subcategoryId) || undefined, logoKey: draft.logoKey && /^media:[0-9a-fA-F]{24}$/.test(draft.logoKey) ? draft.logoKey : undefined })} onNext={() => handleStepChange(3)} onBack={() => setCurrentStep(1)} />
+                <Step2Settings draft={draft} onChange={patch} errors={visibleErrors} features={features} onNext={() => handleStepChange(3)} onBack={() => setCurrentStep(1)} />
               ) : (
                 <Step3Sessions
                   sessions={draft.sessions}
@@ -384,16 +382,6 @@ export default function EventWizard({
           </div>
         </div>
       </div>
-
-      <CustomizeInfoModal
-        key={infoPreviewPayload ? "info-open" : "info-closed"}
-        isOpen={!!infoPreviewPayload}
-        value={draft.cardInfo ?? null}
-        templateId={draft.template?.id ?? null}
-        previewPayload={infoPreviewPayload ?? {}}
-        onClose={() => setInfoPreviewPayload(null)}
-        onSave={(cardInfo) => { patch({ cardInfo }); setInfoPreviewPayload(null); }}
-      />
 
       <SelectTemplateModal
         key={isTemplateModalOpen ? "template-open" : "template-closed"}

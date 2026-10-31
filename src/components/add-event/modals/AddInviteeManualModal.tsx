@@ -12,6 +12,8 @@ interface AddInviteeManualModalProps {
   existingInvitees?: Array<{ name: string; email?: string; mobile?: string }>;
   /** The fields this event collects: the same list the Excel sample is built from (utils/inviteeFields) */
   fields?: InviteeFieldKey[];
+  /** The organizer's own title for the custom detail; with one, the field is a plain box carrying that title */
+  identityLabel?: string;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -34,6 +36,7 @@ export default function AddInviteeManualModal({
   eventId,
   existingInvitees = [],
   fields = ["name", "email", "mobile"],
+  identityLabel,
   onClose,
   onSaved,
 }: AddInviteeManualModalProps) {
@@ -109,7 +112,9 @@ export default function AddInviteeManualModal({
       ...(mobile.trim() && { mobile: mobile.trim() }),
       ...(companyName.trim() && { companyName: companyName.trim() }),
       // Stored on the guest and printable on the card via "Additional Info" (the API never accepted `designation`)
-      ...(identityType && identityValue.trim() && { professionalIdentity: `${identityType}: ${identityValue.trim()}` }),
+      ...(identityLabel
+        ? identityValue.trim() && { professionalIdentity: identityValue.trim() }
+        : identityType && identityValue.trim() && { professionalIdentity: `${identityType}: ${identityValue.trim()}` }),
     };
 
     setSubmitting(true);
@@ -215,7 +220,7 @@ export default function AddInviteeManualModal({
               />
             </div>
 
-            {/* Company: always offered, never required */}
+            {/* Company: corporate events only (or when chosen for the card); never required */}
             {has("company") && (
               <div>
                 <label htmlFor="ai-company" className={labelClass}>
@@ -235,6 +240,14 @@ export default function AddInviteeManualModal({
 
             {/* Professional identity: only when the event's card uses it (same condition as the Excel sample) */}
             {has("identity") && (
+            identityLabel ? (
+            <div>
+              <label htmlFor="ai-identity" className={labelClass}>
+                {identityLabel} <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
+              </label>
+              <input id="ai-identity" type="text" value={identityValue} maxLength={100} onChange={(e) => setIdentityValue(e.target.value)} placeholder={`Enter ${identityLabel.toLowerCase()}`} className={inputClass} autoComplete="off" />
+            </div>
+            ) : (
             <div>
               <label className={labelClass}>
                 Professional Identity <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
@@ -258,6 +271,7 @@ export default function AddInviteeManualModal({
                 />
               )}
             </div>
+            )
             )}
 
             {/* Error */}

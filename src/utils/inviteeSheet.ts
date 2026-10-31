@@ -37,11 +37,12 @@ export async function parseInviteeSheet(file: File, sessionNames: string[] = [],
   let nameIdx = -1, emailIdx = -1, mobileIdx = -1, companyIdx = -1, identityIdx = -1;
   const sessionColumns = new Map<number, string>();
   const header = nonBlank[0].map((c) => clean(c).toLowerCase());
+  const customIdentity = (expected?.find((c) => c.key === "identity")?.header || "").toLowerCase();
   const hasHeader = header.some((c) => c.includes("name") || c.includes("email") || c.includes("mobile") || c.includes("phone") || c.includes("company"));
   if (hasHeader) {
     header.forEach((c, i) => {
       if (!c) return;
-      if (c.includes("identity") || c.includes("designation")) identityIdx = i;
+      if (c.includes("identity") || c.includes("designation") || (customIdentity && c === customIdentity)) identityIdx = i;
       else if (c.includes("company") || c.includes("organization") || c.includes("organisation")) companyIdx = i;
       else if (c.includes("name")) nameIdx = i;
       else if (c.includes("email") || c.includes("mail")) emailIdx = i;

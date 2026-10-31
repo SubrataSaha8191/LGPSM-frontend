@@ -18,11 +18,8 @@ import PageHeader from "@/components/common/PageHeader";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import EventSubNav from "@/components/EventSubNav";
 import EventCleanupModal from "@/components/events/EventCleanupModal";
-import EventCloseModal from "@/components/events/EventCloseModal";
 import EventCancelModal from "@/components/events/EventCancelModal";
 import CancellationNoticesPanel from "@/components/events/CancellationNoticesPanel";
-import AdmissionWindowModal from "@/components/events/AdmissionWindowModal";
-import { effectiveAdmissionIso } from "@/utils/admissionWindow";
 import CardPreviewModal from "@/components/invitees/CardPreviewModal";
 import HorizontalScroll from "@/components/common/HorizontalScroll";
 import { usePageTitle, usePageTitleContext } from "@/context/PageTitleContext";
@@ -151,9 +148,7 @@ export default function EventDetailsPage() {
   const [analysisSession, setAnalysisSession] = useState("");
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
-  const [closeOpen, setCloseOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [admissionOpen, setAdmissionOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
@@ -236,8 +231,9 @@ export default function EventDetailsPage() {
   const delivery = report?.deliverySummary || { SENT: 0, PENDING: 0, FAILED: 0 };
   const invitationLifecycleStarted = delivery.SENT > 0 || delivery.FAILED > 0;
   // The API refuses edits once invitations went out and for closed or cancelled events
+  // An event is over once its end time has passed (or it was closed earlier): nobody has to close it
+  const eventOver = event.status === "COMPLETED" || (event.status === "PUBLISHED" && !!event.schedule?.end && new Date(event.schedule.end).getTime() <= Date.now());
   const editLocked = invitationLifecycleStarted || event.status === "COMPLETED" || event.status === "CANCELLED";
-  const admissionWindow = effectiveAdmissionIso({ start: event.schedule?.start || "", end: event.schedule?.end || "", opens: event.admission?.opensAt || null, closes: event.admission?.closesAt || null });
   const totalInvitees = report?.totalInvitees ?? 0;
   const timeStatus = event.status === "CANCELLED" ? "Cancelled" : event.status === "COMPLETED" ? "Completed" : getDynamicEventStatus(event.schedule?.start, event.schedule?.end, "Upcoming");
   const status = timeStatus === "Upcoming" && delivery.SENT === 0 && delivery.FAILED === 0 ? "Invitation not send" : timeStatus;
@@ -256,7 +252,7 @@ export default function EventDetailsPage() {
   return (
     <div className="w-full min-h-full bg-white">
       <PageHeader title={pageTitle} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-[1240px] w-full mx-auto space-y-6 pb-24">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 w-full space-y-6 pb-24">
         {notice && (
           <div role="status" className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800 flex justify-between gap-3">
             <span>{notice}</span>
@@ -286,19 +282,13 @@ export default function EventDetailsPage() {
               <span className="text-[#828282]">{formatEventId(event._id)}</span>
               {organizer && <span><span className="font-medium text-gray-900">Organized by:</span> {organizer}</span>}
               <span className="text-[#D3D3D3] hidden sm:inline">|</span>
-              <span><span className="font-medium text-gray-900">Start:</span> {formatDateTime(event.schedule?.start, "—")}</span>
-              <span className="text-[#D3D3D3] hidden sm:inline">|</span>
-              <span><span className="font-medium text-gray-900">End:</span> {formatDateTime(event.schedule?.end, "—")}</span>
+              <span className="whitespace-nowrap">
+                <span className="font-medium text-gray-900">Start:</span> {formatDateTime(event.schedule?.start, "—")}
+                <span className="mx-2 text-[#D3D3D3]">|</span>
+                <span className="font-medium text-gray-900">End:</span> {formatDateTime(event.schedule?.end, "—")}
+              </span>
             </div>
             {venue && <p className="mt-2 text-xs text-[#828282] break-words">{venue}</p>}
-            {admissionWindow.opensAt && admissionWindow.closesAt && (
-              <p className="mt-2 text-xs text-[#4B4F52] flex flex-wrap items-center gap-x-2">
-                <span><span className="font-medium text-gray-900">Check-in:</span> {formatDateTime(admissionWindow.opensAt, "—")} – {formatDateTime(admissionWindow.closesAt, "—")}{admissionWindow.opensIsDefault && admissionWindow.closesIsDefault ? " (same as the event)" : ""}</span>
-                {event.status === "PUBLISHED" && (
-                  <button type="button" onClick={() => setAdmissionOpen(true)} className="text-[#FF651D] underline cursor-pointer">Change</button>
-                )}
-              </p>
-            )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {(event.status === "PUBLISHED" || event.status === "DRAFT") && (
@@ -306,12 +296,7 @@ export default function EventDetailsPage() {
                 Cancel Event
               </button>
             )}
-            {event.status === "PUBLISHED" && (
-              <button type="button" onClick={() => setCloseOpen(true)} className="px-4 py-2 border border-gray-400 text-gray-800 hover:bg-gray-50 text-sm font-medium rounded-md cursor-pointer">
-                Close Event
-              </button>
-            )}
-            {user?.role === "ADMIN" && event.status === "COMPLETED" && !event.operationalDataCleared && (
+            {user?.role === "ADMIN" && eventOver && !event.operationalDataCleared && (
               <button type="button" onClick={() => setCleanupOpen(true)} className="px-4 py-2 border border-red-600 text-red-700 hover:bg-red-50 text-sm font-medium rounded-md cursor-pointer">
                 Delete Data Permanently
               </button>
@@ -498,22 +483,6 @@ export default function EventDetailsPage() {
       </div>
 
       {cardExpanded && <CardPreviewModal eventId={eventId} onClose={() => setCardExpanded(false)} />}
-      {admissionOpen && (
-        <AdmissionWindowModal
-          isOpen
-          onClose={() => setAdmissionOpen(false)}
-          eventId={eventId}
-          start={event.schedule?.start || ""}
-          end={event.schedule?.end || ""}
-          opens={event.admission?.opensAt || null}
-          closes={event.admission?.closesAt || null}
-          onSaved={async () => {
-            setAdmissionOpen(false);
-            setNotice("Check-in window updated.");
-            await load();
-          }}
-        />
-      )}
       <EventCancelModal
         isOpen={cancelOpen}
         onClose={() => setCancelOpen(false)}
@@ -523,17 +492,6 @@ export default function EventDetailsPage() {
           setCancelOpen(false);
           const n = result.notices?.eligible ?? 0;
           setNotice(n > 0 ? `Event cancelled. ${n} invited ${n === 1 ? "guest is" : "guests are"} being notified; see Cancellation notices below.` : "Event cancelled. No invitations had been sent, so nobody needed to be notified.");
-          await load();
-        }}
-      />
-      <EventCloseModal
-        isOpen={closeOpen}
-        onClose={() => setCloseOpen(false)}
-        eventId={eventId}
-        eventTitle={event.title}
-        onClosed={async () => {
-          setCloseOpen(false);
-          setNotice("Event closed. All guests, invitations, check-ins and reports have been kept.");
           await load();
         }}
       />
