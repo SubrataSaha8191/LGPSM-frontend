@@ -117,8 +117,9 @@ export default function DashboardPage() {
         {/* Top Section: Single Stats Card Container with dividers (Left) + Revenue Overview Chart (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Metrics Single Card Container with Dividers */}
-          <div className="lg:col-span-4 bg-white border border-gray-200 rounded-md divide-y divide-gray-200 shadow-2xs flex flex-col justify-between">
-            {/* Row 1: Total Revenue */}
+          <div className={`bg-white border border-gray-200 rounded-md shadow-2xs ${isAdmin ? "lg:col-span-4 divide-y divide-gray-200 flex flex-col justify-between" : "lg:col-span-12 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-200"}`}>
+            {/* Row 1: Total Revenue: only administrators see revenue */}
+            {isAdmin && (
             <div className="p-5 flex items-center gap-4 flex-1">
               <div className="w-12 h-12 rounded-full bg-orange-100/70 text-[#FF5B22] flex items-center justify-center shrink-0">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,6 +131,7 @@ export default function DashboardPage() {
                 <p className="text-xs font-medium text-gray-500 mt-0.5">Total Revenue (payments not configured)</p>
               </div>
             </div>
+            )}
 
             {/* Row 2: Total Events */}
             <div className="p-5 flex items-center gap-4 flex-1">
@@ -173,7 +175,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Right Revenue Overview Chart Card Container */}
+          {/* Right: Revenue Overview chart (administrators only) */}
+          {isAdmin && (
           <div className="lg:col-span-8 bg-white border border-gray-200 rounded-md p-6 shadow-2xs flex flex-col justify-between">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Revenue Overview</h3>
@@ -185,6 +188,7 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
+          )}
         </div>
 
         {/* Bottom Section: Top Organizers Table Card Container */}

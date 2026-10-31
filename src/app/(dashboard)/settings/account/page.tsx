@@ -1,5 +1,6 @@
 "use client";
 
+import OrganisationDetailsForm from "@/components/settings/OrganisationDetailsForm";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -25,36 +26,20 @@ export default function AccountSettingsPage() {
   const [avatarNotice, setAvatarNotice] = useState(false);
   const [editing, setEditing] = useState(false);
   const isOrganizer = user?.role === "ORGANIZER";
-  const org = (user as any)?.profile?.organization || {};
-  const [orgName, setOrgName] = useState((user as any)?.profile?.organizationName || "");
-  const [orgPhone, setOrgPhone] = useState(org.phone || "");
-  const [orgEmail, setOrgEmail] = useState(org.email || "");
-  const [orgAddress, setOrgAddress] = useState(org.address || "");
-  const [orgWebsite, setOrgWebsite] = useState(org.website || "");
   const field = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-[13px] text-[#15191C] focus:outline-none focus:border-[#FF651D]";
 
   useEffect(() => {
     if (user?.fullName) setFullName(user.fullName);
     if (user?.email) setEmail(user.email);
     if ((user as any)?.avatarUrl) setAvatarUrl((user as any).avatarUrl);
-    const o = (user as any)?.profile?.organization || {};
-    setOrgName((user as any)?.profile?.organizationName || "");
-    setOrgPhone(o.phone || ""); setOrgEmail(o.email || ""); setOrgAddress(o.address || ""); setOrgWebsite(o.website || "");
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
     // Only the name is editable through the profile API; email changes are not supported there
-    if (isOrganizer && !orgName.trim()) {
-      setErrorMessage("Organisation name is required.");
-      return;
-    }
     const res = await updateProfile({
       fullName: fullName.trim(),
-      ...(isOrganizer && {
-        organization: { name: orgName.trim(), phone: orgPhone.trim(), email: orgEmail.trim(), address: orgAddress.trim(), website: orgWebsite.trim() },
-      }),
     });
     if (!res.success) {
       setErrorMessage(res.message || "Failed to update profile.");
@@ -155,33 +140,6 @@ export default function AccountSettingsPage() {
                   </div>
                 </div>
               </div>
-              {isOrganizer && (
-                <fieldset className="pt-2">
-                  <legend className="text-sm font-semibold text-[#15191C] mb-3">Organisation details</legend>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
-                    <div>
-                      <label htmlFor="org-name" className="block text-sm font-medium text-[#15191C] mb-2">Organisation name *</label>
-                      <input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} maxLength={150} className={field} />
-                    </div>
-                    <div>
-                      <label htmlFor="org-phone" className="block text-sm font-medium text-[#15191C] mb-2">Organisation phone</label>
-                      <input id="org-phone" value={orgPhone} onChange={(e) => setOrgPhone(e.target.value)} maxLength={30} className={field} />
-                    </div>
-                    <div>
-                      <label htmlFor="org-email" className="block text-sm font-medium text-[#15191C] mb-2">Organisation email</label>
-                      <input id="org-email" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} maxLength={150} className={field} />
-                    </div>
-                    <div>
-                      <label htmlFor="org-website" className="block text-sm font-medium text-[#15191C] mb-2">Website</label>
-                      <input id="org-website" value={orgWebsite} onChange={(e) => setOrgWebsite(e.target.value)} placeholder="https://" maxLength={200} className={field} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label htmlFor="org-address" className="block text-sm font-medium text-[#15191C] mb-2">Address</label>
-                      <input id="org-address" value={orgAddress} onChange={(e) => setOrgAddress(e.target.value)} maxLength={300} className={field} />
-                    </div>
-                  </div>
-                </fieldset>
-              )}
               <div className="flex gap-3 pt-1">
                 <button type="submit" className="px-6 py-[11px] bg-[#FF651D] hover:bg-[#E5520F] rounded-lg text-base font-semibold text-white cursor-pointer">Save</button>
                 <button type="button" onClick={() => { setEditing(false); setFullName(user?.fullName || ""); }} className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 rounded-lg text-base font-semibold text-[#15191C] cursor-pointer">Cancel</button>
@@ -190,31 +148,7 @@ export default function AccountSettingsPage() {
           </form>
         )}
 
-        {isOrganizer && !editing && (
-          <section className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-lg p-8" aria-label="Organisation details">
-            <div className="flex items-center justify-between gap-4 mb-5">
-              <h3 className="text-xl font-medium text-black">Organisation Details</h3>
-              <button type="button" onClick={() => setEditing(true)} className="text-sm font-semibold text-[#FF651D] hover:underline cursor-pointer">Edit</button>
-            </div>
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
-              {[
-                ["Organisation name", orgName],
-                ["Phone", orgPhone],
-                ["Email", orgEmail],
-                ["Website", orgWebsite],
-              ].map(([label, value]) => (
-                <div key={label} className="min-w-0">
-                  <dt className="text-sm text-[#828282]">{label}</dt>
-                  <dd className="mt-1 text-base text-[#15191C] break-words">{value || <span className="text-[#828282]">Not added</span>}</dd>
-                </div>
-              ))}
-              <div className="md:col-span-2 min-w-0">
-                <dt className="text-sm text-[#828282]">Address</dt>
-                <dd className="mt-1 text-base text-[#15191C] break-words">{orgAddress || <span className="text-[#828282]">Not added</span>}</dd>
-              </div>
-            </dl>
-          </section>
-        )}
+        {isOrganizer && !editing && <OrganisationDetailsForm />}
       </div>
 
       <ChangePasswordModal

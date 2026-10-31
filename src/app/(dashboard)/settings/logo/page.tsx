@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { mediaService } from "@/services/mediaService";
 import { resolveImageUrl } from "@/utils/mediaUrl";
 import Icon from "@/components/icons/Icon";
+import OrganisationDetailsForm from "@/components/settings/OrganisationDetailsForm";
 
 // The design allows JPG and PNG only (Figma 222:34175: "Only JPG & PNG allowed")
 const ACCEPTED = "image/png,image/jpeg";
@@ -131,6 +132,8 @@ export default function LogoSettingsPage() {
             </button>
           </div>
         </section>
+
+        <OrganisationDetailsForm />
       </div>
 
       {previewOpen && shownUrl && (

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
 interface DateTimePickerModalProps {
@@ -16,81 +16,43 @@ const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));     // "00"–"59"
 const AMPM    = ["AM", "PM"];
 
-const ITEM_H  = 44; // px — height of each drum row
-const VISIBLE = 5;  // rows shown per column
-
 // ---------------------------------------------------------------------------
-// DrumColumn — a single scrollable column of the time picker
+// TimeStepper — hour, minute and AM/PM, each moved with its own up / down buttons (no scrolling)
 // ---------------------------------------------------------------------------
-interface DrumColProps {
-  items: string[];
-  selectedIndex: number;
-  onChange: (i: number) => void;
-  wrap?: boolean;
-  colWidth?: string;
+interface StepColProps {
+  label: string;
+  value: string;
+  onUp: () => void;
+  onDown: () => void;
 }
 
-function DrumColumn({ items, selectedIndex, onChange, wrap = true, colWidth = "w-14" }: DrumColProps) {
-  const n = items.length;
+const chevron = (up: boolean) => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={up ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+  </svg>
+);
 
-  const shift = useCallback((delta: number) => {
-    if (wrap) {
-      onChange(((selectedIndex + delta) % n + n) % n);
-    } else {
-      const next = selectedIndex + delta;
-      if (next >= 0 && next < n) onChange(next);
-    }
-  }, [selectedIndex, n, onChange, wrap]);
-
-  // Five visible slots: offsets -2 -1 0 +1 +2
-  const slots = [-2, -1, 0, 1, 2].map((offset) => {
-    const idx = wrap
-      ? ((selectedIndex + offset) % n + n) % n
-      : selectedIndex + offset;
-    const inRange = idx >= 0 && idx < n;
-    return { label: inRange ? items[idx] : "", offset, inRange };
-  });
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    shift(e.deltaY > 0 ? 1 : -1);
-  }, [shift]);
-
+function StepColumn({ label, value, onUp, onDown }: StepColProps) {
+  const btn = "w-full h-9 flex items-center justify-center rounded-md text-[#FF5B22] hover:bg-[#FF5B22]/10 cursor-pointer transition-colors";
   return (
     <div
-      className={`relative flex flex-col items-center ${colWidth} select-none`}
-      style={{ height: ITEM_H * VISIBLE }}
-      onWheel={handleWheel}
+      role="group"
+      aria-label={label}
+      className="flex flex-col items-center w-14 select-none"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowUp") { e.preventDefault(); onUp(); }
+        if (e.key === "ArrowDown") { e.preventDefault(); onDown(); }
+      }}
     >
-      {slots.map(({ label, offset, inRange }) => {
-        const isCenter = offset === 0;
-        const dist = Math.abs(offset);
-        return (
-          <button
-            key={offset}
-            type="button"
-            onClick={() => inRange && offset !== 0 && shift(offset)}
-            style={{ height: ITEM_H }}
-            className={[
-              "w-full flex items-center justify-center font-semibold transition-all duration-150 relative z-10",
-              isCenter ? "text-[17px] text-gray-900 font-bold" : "",
-              dist === 1 ? "text-[14px] text-gray-400" : "",
-              dist === 2 ? "text-[12px] text-gray-300" : "",
-              !isCenter && inRange ? "cursor-pointer hover:text-gray-600" : "cursor-default",
-            ].join(" ")}
-          >
-            {label}
-          </button>
-        );
-      })}
+      <button type="button" aria-label={`Increase ${label}`} onClick={onUp} className={btn}>{chevron(true)}</button>
+      <span aria-live="polite" className="w-full py-2 text-center text-xl font-bold text-gray-900 bg-white border border-gray-200 rounded-lg">{value}</span>
+      <button type="button" aria-label={`Decrease ${label}`} onClick={onDown} className={btn}>{chevron(false)}</button>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// DrumTimePicker — three columns with a shared selection rail
-// ---------------------------------------------------------------------------
-interface DrumTimePickerProps {
+interface TimeStepperProps {
   hourIdx: number;   // 0–11 → hours "01"–"12"
   minuteIdx: number; // 0–59
   ampmIdx: number;   // 0=AM 1=PM
@@ -99,18 +61,14 @@ interface DrumTimePickerProps {
   onAmpm: (i: number) => void;
 }
 
-function DrumTimePicker({ hourIdx, minuteIdx, ampmIdx, onHour, onMinute, onAmpm }: DrumTimePickerProps) {
+function TimeStepper({ hourIdx, minuteIdx, ampmIdx, onHour, onMinute, onAmpm }: TimeStepperProps) {
+  const wrap = (i: number, n: number) => ((i % n) + n) % n;
   return (
-    <div className="relative flex items-center justify-center gap-1 py-1">
-      {/* Shared highlight rail at the centre row */}
-      <div
-        className="absolute inset-x-0 bg-gray-100 rounded-xl pointer-events-none"
-        style={{ top: ITEM_H * 2, height: ITEM_H }}
-      />
-      <DrumColumn items={HOURS}   selectedIndex={hourIdx}   onChange={onHour}   wrap />
-      <span className="relative z-10 text-lg font-bold text-gray-400 pb-1">:</span>
-      <DrumColumn items={MINUTES} selectedIndex={minuteIdx} onChange={onMinute} wrap />
-      <DrumColumn items={AMPM}    selectedIndex={ampmIdx}   onChange={onAmpm}   wrap={false} colWidth="w-12" />
+    <div className="flex items-center justify-center gap-1.5">
+      <StepColumn label="hour" value={HOURS[hourIdx]} onUp={() => onHour(wrap(hourIdx + 1, 12))} onDown={() => onHour(wrap(hourIdx - 1, 12))} />
+      <span className="text-xl font-bold text-gray-400 pb-0.5" aria-hidden>:</span>
+      <StepColumn label="minute" value={MINUTES[minuteIdx]} onUp={() => onMinute(wrap(minuteIdx + 1, 60))} onDown={() => onMinute(wrap(minuteIdx - 1, 60))} />
+      <StepColumn label="AM or PM" value={AMPM[ampmIdx]} onUp={() => onAmpm(ampmIdx === 0 ? 1 : 0)} onDown={() => onAmpm(ampmIdx === 0 ? 1 : 0)} />
     </div>
   );
 }
@@ -217,7 +175,7 @@ export default function DateTimePickerModal({ isOpen, onClose, onSave, value, ti
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col my-auto"
+        className="bg-white rounded-md border border-gray-200 shadow-2xl max-w-xl w-full overflow-hidden flex flex-col my-auto"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -230,7 +188,7 @@ export default function DateTimePickerModal({ isOpen, onClose, onSave, value, ti
         </div>
 
         {/* Body */}
-        <div className="p-6 grid grid-cols-1 sm:grid-cols-12 gap-6 items-start">
+        <div className="p-5 grid grid-cols-1 sm:grid-cols-12 gap-5 items-stretch">
           {/* Calendar */}
           <div className="sm:col-span-7 bg-[#F4F5F8] p-4 rounded-md border border-gray-200">
             <div className="flex items-center justify-between mb-3 px-1">
@@ -247,7 +205,7 @@ export default function DateTimePickerModal({ isOpen, onClose, onSave, value, ti
           </div>
 
           {/* Time picker */}
-          <div className="sm:col-span-5 flex flex-col gap-5">
+          <div className="sm:col-span-5 flex flex-col gap-3 justify-between">
             {/* Selected date summary */}
             <div className="bg-[#FF5B22]/5 border border-[#FF5B22]/20 rounded-lg p-3 text-center">
               <p className="text-[11px] text-gray-500 font-medium mb-0.5">Selected Date</p>
@@ -256,17 +214,15 @@ export default function DateTimePickerModal({ isOpen, onClose, onSave, value, ti
               </p>
             </div>
 
-            {/* Drum picker */}
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-gray-700">Time</p>
-              <div className="bg-[#F4F5F8] rounded-xl px-2 py-1 overflow-hidden">
-                <DrumTimePicker
-                  hourIdx={hourIdx}   onHour={setHourIdx}
-                  minuteIdx={minuteIdx} onMinute={setMinuteIdx}
-                  ampmIdx={ampmIdx}   onAmpm={setAmpmIdx}
-                />
-              </div>
-              <p className="text-center text-xs font-semibold text-gray-400 pt-0.5">{displayTime}</p>
+            {/* Time: hour, minute and AM/PM move with their up and down buttons */}
+            <div className="flex-1 flex flex-col justify-center gap-2 bg-[#F4F5F8] rounded-xl px-2 py-3 border border-gray-200">
+              <p className="text-xs font-bold text-gray-700 text-center">Time</p>
+              <TimeStepper
+                hourIdx={hourIdx}   onHour={setHourIdx}
+                minuteIdx={minuteIdx} onMinute={setMinuteIdx}
+                ampmIdx={ampmIdx}   onAmpm={setAmpmIdx}
+              />
+              <p className="text-center text-xs font-semibold text-gray-500">{displayTime}</p>
             </div>
           </div>
         </div>
