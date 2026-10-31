@@ -5,7 +5,8 @@ import CustomDropdown from "@/components/common/CustomDropdown";
 import { AccessControl, DraftErrors, DraftSession, createSessionDraft } from "./eventDraft";
 import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate, type TemplateColumns } from "@/utils/inviteeTemplate";
-import { InviteeSheetRow, parseInviteeSheet } from "@/utils/inviteeSheet";
+import { expectedColumnsFor } from "@/utils/inviteeFields";
+import { InviteeSheetRow, missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
 import InfoTip from "@/components/common/InfoTip";
 
 // Invitee sheets stay in memory only (they hold guest contact details and a File object)
@@ -106,7 +107,11 @@ export default function Step3Sessions({
   const handleFile = async (session: DraftSession, file: File) => {
     setFileError((prev) => ({ ...prev, [session.key]: undefined }));
     try {
-      const parsed = await parseInviteeSheet(file);
+      const parsed = await parseInviteeSheet(file, [], expectedColumnsFor(templateColumns ?? {}));
+      if (parsed.missingColumns.length > 0) {
+        setFileError((prev) => ({ ...prev, [session.key]: missingColumnsMessage(parsed.missingColumns) }));
+        return;
+      }
       if (parsed.rows.length === 0) {
         setFileError((prev) => ({ ...prev, [session.key]: "The sheet has no invitee rows." }));
         return;

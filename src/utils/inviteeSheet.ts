@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import type { ExpectedColumn, InviteeFieldKey } from "@/utils/inviteeFields";
 
 // Parses an invitee sheet with the same header rules as the backend import
 // (Backend/src/services/invitee.service.ts processExcelImport), so the preview shows what will be imported.
@@ -17,16 +18,21 @@ export interface ParsedInviteeSheet {
   rows: InviteeSheetRow[];
   // Rows the backend will reject, with the reason (same checks as the import)
   problems: { row: string; error: string }[];
+  /** Columns this event expects (from its settings) that the sheet does not have; empty when it matches or no settings were given */
+  missingColumns: string[];
 }
+
+export const missingColumnsMessage = (missing: string[]): string =>
+  `The Excel you uploaded doesn't match the required fields (missing: ${missing.join(", ")}). Download the sample Excel and use its column names exactly when setting up this event's invitees.`;
 
 const clean = (v: unknown) => (v === null || v === undefined ? "" : String(v).trim());
 
-export async function parseInviteeSheet(file: File, sessionNames: string[] = []): Promise<ParsedInviteeSheet> {
+export async function parseInviteeSheet(file: File, sessionNames: string[] = [], expected?: ExpectedColumn[]): Promise<ParsedInviteeSheet> {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const raw = sheet ? XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) : [];
   const nonBlank = raw.filter((r) => Array.isArray(r) && r.some((c) => clean(c) !== ""));
-  if (nonBlank.length === 0) return { rows: [], problems: [] };
+  if (nonBlank.length === 0) return { rows: [], problems: [], missingColumns: [] };
 
   let nameIdx = -1, emailIdx = -1, mobileIdx = -1, companyIdx = -1, identityIdx = -1;
   const sessionColumns = new Map<number, string>();
@@ -59,7 +65,10 @@ export async function parseInviteeSheet(file: File, sessionNames: string[] = [])
     if (problem) problems.push({ row: rowNo, error: problem });
     rows.push(row);
   });
-  return { rows, problems };
+  // The sheet needs a heading for every column the event's settings ask for (the sample Excel has exactly these)
+  const found: Record<InviteeFieldKey, boolean> = { name: nameIdx >= 0, email: emailIdx >= 0, mobile: mobileIdx >= 0, company: companyIdx >= 0, identity: identityIdx >= 0 };
+  const missingColumns = expected ? expected.filter((c) => !hasHeader || !found[c.key]).map((c) => c.header) : [];
+  return { rows, problems, missingColumns };
 }
 
 export function rowProblem(row: Pick<InviteeSheetRow, "name" | "email" | "phone">): string | null {

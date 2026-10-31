@@ -12,6 +12,8 @@ import PageHeader from "@/components/common/PageHeader";
 import { addHours, formatCompactDateTime, formatDateTime, formatTime, isAfter, nextWholeHourIso } from "@/utils/dateTime";
 
 const sameDay = (a?: string, b?: string) => !!a && !!b && new Date(a).toDateString() === new Date(b).toDateString();
+import { expectedColumnsFor } from "@/utils/inviteeFields";
+import { missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
 import { downloadInviteeTemplate, templateColumnsFor, type TemplateColumns } from "@/utils/inviteeTemplate";
 import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerModal";
 import EventSubNav from "@/components/EventSubNav";
@@ -135,11 +137,24 @@ export default function EventSessionsPage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFileName(e.target.files[0].name);
-      setUploadedFile(e.target.files[0]);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFormError(null);
+    try {
+      const parsed = await parseInviteeSheet(file, [], expectedColumnsFor(sampleColumns));
+      if (parsed.missingColumns.length > 0) {
+        setUploadedFileName("");
+        setUploadedFile(null);
+        setFormError(missingColumnsMessage(parsed.missingColumns));
+        return;
+      }
+    } catch {
+      // an unreadable file is reported by the import itself
     }
+    setUploadedFileName(file.name);
+    setUploadedFile(file);
   };
 
   const handleCreateSession = async (e: React.FormEvent) => {

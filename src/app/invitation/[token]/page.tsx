@@ -100,6 +100,33 @@ export default function PublicInvitationPage() {
     fetchInvitation();
   }, [token]);
 
+  const handleSubmitFood = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    const prompts = getDietaryPrompts(invitationData?.event.dietaryPreference);
+    const selections: DietarySelection[] = prompts.map((prompt, index) => ({ title: prompt.title, value: dietaryChoices[String(index)] || prompt.options[0] || "" }));
+    if (selections.some((s) => !s.value)) {
+      setError("Please choose an option for every question.");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      setSubmitSuccessMsg(null);
+      setError(null);
+      const res = await invitationService.submitFood(token, selections);
+      if (res.success) {
+        setSubmitSuccessMsg("Thank you! Your answers have been saved.");
+        setDietaryChoices(Object.fromEntries(selections.map((s, i) => [String(i), s.value])));
+      } else {
+        setError(res.message || "Could not save your answers. Please try again.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Could not save your answers.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -112,6 +139,10 @@ export default function PublicInvitationPage() {
     const selections: DietarySelection[] = selectedRsvp === "ACCEPTED"
       ? prompts.flatMap((prompt, index) => dietaryChoices[String(index)] ? [{ title: prompt.title, value: dietaryChoices[String(index)] }] : [])
       : [];
+    if (selectedRsvp === "ACCEPTED" && selections.length < prompts.length) {
+      setError("Please choose an option for every question.");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -199,6 +230,9 @@ export default function PublicInvitationPage() {
   const rsvpClosed = !!closesAt && !Number.isNaN(closesAt.getTime()) && closesAt.getTime() < Date.now();
   const eventCancelled = event.status?.toUpperCase() === "CANCELLED";
   const canRespond = rsvpEnabled && !rsvpClosed && !eventCancelled;
+  // No RSVP for this event but guests are asked for food: the choice is made here, on the access card (the first option is pre-selected)
+  const foodOnly = !rsvpEnabled && dietaryPrompts.length > 0 && !eventCancelled;
+  const foodChoice = (index: number) => dietaryChoices[String(index)] || dietaryPrompts[index]?.options[0] || "";
   const startDate = event.schedule?.start ? new Date(event.schedule.start) : null;
   const endDate = event.schedule?.end ? new Date(event.schedule.end) : null;
   const formatDateTime = (d: Date | null) =>
@@ -441,15 +475,14 @@ export default function PublicInvitationPage() {
 
             {selectedRsvp === "ACCEPTED" && dietaryPrompts.length > 0 && (
               <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
-                <legend className="px-1 text-xs font-semibold text-[color:var(--inv-ink)]">Event preferences <span className="font-normal text-slate-500">(optional)</span></legend>
                 {dietaryPrompts.map((prompt, index) => (
                   <div key={`${index}-${prompt.title}`} className="space-y-1.5">
-                    <label className="text-xs font-medium text-[color:var(--inv-ink)]">{prompt.title}</label>
+                    <label className="text-xs font-medium text-[color:var(--inv-ink)]">{prompt.title} <span className="text-rose-600">*</span></label>
                     <CustomDropdown
                       value={dietaryChoices[String(index)] || ""}
                       onChange={(value) => setDietaryChoices((current) => ({ ...current, [String(index)]: value }))}
                       options={prompt.options.map((value) => ({ value, label: value }))}
-                      placeholder="Choose an option (optional)"
+                      placeholder="Choose an option"
                       ariaLabel={prompt.title}
                       portal
                       portalPlacement="top"
@@ -478,6 +511,34 @@ export default function PublicInvitationPage() {
               ) : (
                 <span>Submit Response</span>
               )}
+            </button>
+          </form>
+          ) : foodOnly ? (
+          <form onSubmit={handleSubmitFood} className="space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-[color:var(--inv-ink)]">Your preferences</h3>
+              <p className="mt-1 text-xs text-slate-500">Please answer the questions below. You can change your answers later from this page.</p>
+            </div>
+            {error && <div role="alert" aria-live="assertive" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">{error}</div>}
+            {submitSuccessMsg && <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">{submitSuccessMsg}</div>}
+            <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
+              {dietaryPrompts.map((prompt, index) => (
+                <div key={`${index}-${prompt.title}`} className="space-y-1.5">
+                  <label className="text-xs font-medium text-[color:var(--inv-ink)]">{prompt.title} <span className="text-rose-600">*</span></label>
+                  <CustomDropdown
+                    value={foodChoice(index)}
+                    onChange={(value) => setDietaryChoices((current) => ({ ...current, [String(index)]: value }))}
+                    options={prompt.options.map((value) => ({ value, label: value }))}
+                    placeholder="Choose an option"
+                    ariaLabel={prompt.title}
+                    portal
+                    portalPlacement="top"
+                  />
+                </div>
+              ))}
+            </fieldset>
+            <button type="submit" disabled={submitting} className="w-full py-3 px-4 bg-[color:var(--inv-primary)] hover:brightness-90 text-[color:var(--inv-on-primary)] text-xs font-bold rounded-xl transition cursor-pointer shadow-md disabled:opacity-60">
+              {submitting ? "Saving..." : "Save"}
             </button>
           </form>
           ) : (

@@ -25,11 +25,11 @@ import { useAlert } from "@/context/AlertContext";
 import { formatPhoneNumber } from "@/utils/eventUtils";
 import { formatDateTime } from "@/utils/dateTime";
 import { downloadInviteeTemplate } from "@/utils/inviteeTemplate";
-import { InviteeSheetRow, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
+import { InviteeSheetRow, missingColumnsMessage, parseInviteeSheet, rowsToSheetFile } from "@/utils/inviteeSheet";
 import ImportModeDialog from "@/components/invitees/ImportModeDialog";
 import InviteeListsModal from "@/components/invitees/InviteeListsModal";
 import { canManageInviteeLists, previewDiscrepancy } from "@/utils/inviteeLists";
-import { inviteeConfigFor, inviteeFieldsFor } from "@/utils/inviteeFields";
+import { expectedColumnsFor, inviteeConfigFor, inviteeFieldsFor } from "@/utils/inviteeFields";
 import { summarizeDelivery, type DeliveryOutcome } from "@/utils/deliverySummary.mjs";
 import { TableSkeleton } from "@/components/common/Skeleton";
 import Icon from "@/components/icons/Icon";
@@ -359,7 +359,11 @@ export default function InviteesManagementPage() {
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const parsed = await parseInviteeSheet(file, ownListSessions.map((session) => session.name));
+      const parsed = await parseInviteeSheet(file, ownListSessions.map((session) => session.name), expectedColumnsFor(fieldConfig));
+      if (parsed.missingColumns.length > 0) {
+        setFeedback({ type: "error", message: missingColumnsMessage(parsed.missingColumns) });
+        return;
+      }
       if (parsed.rows.length === 0) {
         setFeedback({ type: "error", message: "The sheet has no invitee rows." });
         return;

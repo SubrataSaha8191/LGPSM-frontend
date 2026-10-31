@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 import { parseInviteeSheet, rowsToSheetFile } from "./inviteeSheet.ts";
+import { expectedColumnsFor } from "./inviteeFields.ts";
 
 const fileOf = (rows) => {
   const wb = XLSX.utils.book_new();
@@ -25,4 +26,20 @@ test("an edited preview row keeps its Professional Identity when it is turned ba
 test("a sheet without the column still parses, with no identity", async () => {
   const parsed = await parseInviteeSheet(fileOf([["Name", "Email"], ["Pia Roy", "pia@x.com"]]));
   assert.equal(parsed.rows[0].identity, "");
+});
+
+test("a sheet is checked against the columns the event's settings ask for", async () => {
+  const plain = { };
+  const withExtras = { company: true, identity: true, dietary: true };
+  const full = fileOf([["Name", "Email", "Mobile", "Company Name", "Professional Identity"], ["Pia Roy", "pia@x.com", "", "Acme", "ID 1"]]);
+  assert.deepEqual((await parseInviteeSheet(full, [], expectedColumnsFor(withExtras))).missingColumns, []);
+  // only the chosen Additional Information (Professional Identity) is asked for on top of the basics
+  const basic = fileOf([["Name", "Email", "Mobile"], ["Pia Roy", "pia@x.com", ""]]);
+  assert.deepEqual((await parseInviteeSheet(basic, [], expectedColumnsFor(plain))).missingColumns, []);
+  assert.deepEqual((await parseInviteeSheet(basic, [], expectedColumnsFor({ identity: true }))).missingColumns, ["Professional Identity"]);
+  assert.deepEqual((await parseInviteeSheet(basic, [], expectedColumnsFor(withExtras))).missingColumns, ["Company Name", "Professional Identity"]);
+  // no heading row at all: every column counts as missing; with no settings given nothing is checked
+  const noHeader = fileOf([["Pia Roy", "pia@x.com", "98765"]]);
+  assert.equal((await parseInviteeSheet(noHeader, [], expectedColumnsFor(plain))).missingColumns.length, 3);
+  assert.deepEqual((await parseInviteeSheet(noHeader)).missingColumns, []);
 });

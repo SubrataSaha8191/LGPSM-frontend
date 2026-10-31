@@ -47,7 +47,7 @@ export default function AccountSettingsPage() {
     setErrorMessage("");
     // Only the name is editable through the profile API; email changes are not supported there
     if (isOrganizer && !orgName.trim()) {
-      setErrorMessage("Organization name is required.");
+      setErrorMessage("Organisation name is required.");
       return;
     }
     const res = await updateProfile({
@@ -157,18 +157,18 @@ export default function AccountSettingsPage() {
               </div>
               {isOrganizer && (
                 <fieldset className="pt-2">
-                  <legend className="text-sm font-semibold text-[#15191C] mb-3">Organization details</legend>
+                  <legend className="text-sm font-semibold text-[#15191C] mb-3">Organisation details</legend>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                     <div>
-                      <label htmlFor="org-name" className="block text-sm font-medium text-[#15191C] mb-2">Organization name *</label>
+                      <label htmlFor="org-name" className="block text-sm font-medium text-[#15191C] mb-2">Organisation name *</label>
                       <input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} maxLength={150} className={field} />
                     </div>
                     <div>
-                      <label htmlFor="org-phone" className="block text-sm font-medium text-[#15191C] mb-2">Organization phone</label>
+                      <label htmlFor="org-phone" className="block text-sm font-medium text-[#15191C] mb-2">Organisation phone</label>
                       <input id="org-phone" value={orgPhone} onChange={(e) => setOrgPhone(e.target.value)} maxLength={30} className={field} />
                     </div>
                     <div>
-                      <label htmlFor="org-email" className="block text-sm font-medium text-[#15191C] mb-2">Organization email</label>
+                      <label htmlFor="org-email" className="block text-sm font-medium text-[#15191C] mb-2">Organisation email</label>
                       <input id="org-email" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} maxLength={150} className={field} />
                     </div>
                     <div>
@@ -188,6 +188,32 @@ export default function AccountSettingsPage() {
               </div>
             </div>
           </form>
+        )}
+
+        {isOrganizer && !editing && (
+          <section className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-lg p-8" aria-label="Organisation details">
+            <div className="flex items-center justify-between gap-4 mb-5">
+              <h3 className="text-xl font-medium text-black">Organisation Details</h3>
+              <button type="button" onClick={() => setEditing(true)} className="text-sm font-semibold text-[#FF651D] hover:underline cursor-pointer">Edit</button>
+            </div>
+            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-5">
+              {[
+                ["Organisation name", orgName],
+                ["Phone", orgPhone],
+                ["Email", orgEmail],
+                ["Website", orgWebsite],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-0">
+                  <dt className="text-sm text-[#828282]">{label}</dt>
+                  <dd className="mt-1 text-base text-[#15191C] break-words">{value || <span className="text-[#828282]">Not added</span>}</dd>
+                </div>
+              ))}
+              <div className="md:col-span-2 min-w-0">
+                <dt className="text-sm text-[#828282]">Address</dt>
+                <dd className="mt-1 text-base text-[#15191C] break-words">{orgAddress || <span className="text-[#828282]">Not added</span>}</dd>
+              </div>
+            </dl>
+          </section>
         )}
       </div>
 

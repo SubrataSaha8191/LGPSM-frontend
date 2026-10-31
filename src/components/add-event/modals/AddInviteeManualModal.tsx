@@ -47,7 +47,6 @@ export default function AddInviteeManualModal({
   const [companyName, setCompanyName] = useState("");
   const [identityType, setIdentityType] = useState("");
   const [identityValue, setIdentityValue] = useState("");
-  const [dietaryPreference, setDietaryPreference] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitInFlight = useRef(false);
@@ -59,7 +58,6 @@ export default function AddInviteeManualModal({
     setCompanyName("");
     setIdentityType("");
     setIdentityValue("");
-    setDietaryPreference("");
     setError(null);
     onClose();
   };
@@ -112,7 +110,6 @@ export default function AddInviteeManualModal({
       ...(companyName.trim() && { companyName: companyName.trim() }),
       // Stored on the guest and printable on the card via "Additional Info" (the API never accepted `designation`)
       ...(identityType && identityValue.trim() && { professionalIdentity: `${identityType}: ${identityValue.trim()}` }),
-      ...(dietaryPreference.trim() && { dietaryPreference: dietaryPreference.trim() }),
     };
 
     setSubmitting(true);
@@ -218,11 +215,11 @@ export default function AddInviteeManualModal({
               />
             </div>
 
-            {/* Company – shown for corporate events or always as optional */}
+            {/* Company: always offered, never required */}
             {has("company") && (
               <div>
                 <label htmlFor="ai-company" className={labelClass}>
-                  Company Name
+                  Company Name <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
                 </label>
                 <input
                   id="ai-company"
@@ -260,24 +257,6 @@ export default function AddInviteeManualModal({
                   aria-label={`${identityType} value`}
                 />
               )}
-            </div>
-            )}
-
-            {/* Dietary preference: only when the event asks for it */}
-            {has("dietary") && (
-            <div>
-              <label htmlFor="ai-dietary-preference" className={labelClass}>
-                Dietary Preference <span className="text-[#828282] font-normal text-xs ml-1">(optional)</span>
-              </label>
-              <input
-                id="ai-dietary-preference"
-                type="text"
-                value={dietaryPreference}
-                onChange={(e) => setDietaryPreference(e.target.value)}
-                placeholder="e.g. Vegetarian, Vegan, or No preference"
-                className={inputClass}
-                autoComplete="off"
-              />
             </div>
             )}
 

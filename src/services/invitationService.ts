@@ -205,6 +205,14 @@ export const invitationService = {
    * Submit RSVP for public invitation token (Unauthenticated)
    * POST /api/v1/public/invitations/:token/rsvp
    */
+  /** Food choice for an event without RSVP (every question is required) */
+  async submitFood(token: string, dietarySelections: DietarySelection[]): Promise<ApiResponse> {
+    return apiClient(`/api/v1/public/invitations/${token}/food`, {
+      method: "POST",
+      body: JSON.stringify({ dietarySelections }),
+    }, false);
+  },
+
   async submitRsvp(token: string, payload: RsvpPayload): Promise<ApiResponse> {
     return apiClient(`/api/v1/public/invitations/${token}/rsvp`, {
       method: "POST",

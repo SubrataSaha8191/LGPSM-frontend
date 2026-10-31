@@ -1,7 +1,7 @@
 // Run with: npm test
 import test from "node:test";
 import assert from "node:assert/strict";
-import { excelColumnsFor, inviteeConfigFor, inviteeFieldsFor, templateRow, EXCEL_HEADER } from "./inviteeFields.ts";
+import { expectedColumnsFor, excelColumnsFor, inviteeConfigFor, inviteeFieldsFor, templateRow, EXCEL_HEADER } from "./inviteeFields.ts";
 
 const configs = [
   {},
@@ -27,12 +27,25 @@ test("Professional Identity appears only when the card uses it, in both the samp
   assert.ok("Professional Identity" in templateRow(cfg));
 });
 
-test("company shows for corporate events or when chosen for the card; dietary only when the event collects it", () => {
+test("Company Name is always offered, but a sheet is only required to have it when the event shows it", () => {
+  assert.ok(inviteeFieldsFor({}).includes("company"));
+  assert.ok("Company Name" in templateRow({}));
+  assert.ok(!expectedColumnsFor({}).some((c) => c.key === "company"));
+  assert.ok(expectedColumnsFor({ company: true }).some((c) => c.key === "company"));
+});
+
+test("company is required for corporate events or when chosen for the card; dietary is no column", () => {
   assert.ok(inviteeConfigFor({ corporate: true }).company);
   assert.ok(inviteeConfigFor({ cardInfo: { primary: "COMPANY_NAME", secondary: null } }).company);
   assert.ok(!inviteeConfigFor({ cardInfo: { primary: "INVITEE_NAME", secondary: null } }).company);
   assert.ok(!inviteeConfigFor({}).dietary);
   assert.ok(inviteeConfigFor({ dietaryEnabled: true }).dietary);
+});
+
+test("the food choice is never a column or a form field, even when the event asks guests for one", () => {
+  const cfg = inviteeConfigFor({ dietaryEnabled: true });
+  assert.ok(!excelColumnsFor(cfg).some((h) => /diet|food/i.test(h)));
+  assert.ok(!("Dietary Preference" in templateRow(cfg)));
 });
 
 test("name, email and mobile are always the first three columns", () => {
