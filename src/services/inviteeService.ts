@@ -91,6 +91,9 @@ export interface InviteeSetMember {
   delivery: DeliveryState;
   rsvpStatus: "PENDING" | "ACCEPTED" | "DECLINED";
   checkedIn: boolean;
+  /** the uploaded list the guest belongs to */
+  setId?: string;
+  setName?: string;
 }
 
 export interface SetAsideGuest {
@@ -238,8 +241,8 @@ export const inviteeService = {
   },
 
   /** One page (50) of the guests in a list; setId "all" covers every list. `q` searches name, email, mobile and company on the server. */
-  async getSetMembers(eventId: string, setId: string, page = 1, q = ""): Promise<ApiResponse<{ members: InviteeSetMember[]; total: number; page: number; limit: number }>> {
-    return apiClient(`/api/v1/events/${eventId}/invitees/sets/${setId}/members?page=${page}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`, { method: "GET" }, true);
+  async getSetMembers(eventId: string, setId: string, page = 1, q = "", limit?: number): Promise<ApiResponse<{ members: InviteeSetMember[]; total: number; page: number; limit: number }>> {
+    return apiClient(`/api/v1/events/${eventId}/invitees/sets/${setId}/members?page=${page}${limit ? `&limit=${limit}` : ""}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`, { method: "GET" }, true);
   },
 
   async getSetAside(eventId: string, opts: { q?: string; page?: number } = {}): Promise<ApiResponse<{ guests: SetAsideGuest[]; total: number; page: number; limit: number; restorable: boolean; notRestorableReason: string | null }>> {

@@ -9,8 +9,8 @@ import { sessionService, SessionData } from "@/services/sessionService";
 import { assignmentService } from "@/services/assignmentService";
 import { reportService, EventReportData } from "@/services/reportService";
 import { checkInService } from "@/services/checkInService";
-import { AccessLogRow, EXIT_NOT_RECORDED, toAccessLogRow } from "@/utils/accessLogRows";
-import { formatCompactDateTime, formatDateTime, formatTime } from "@/utils/dateTime";
+import { AccessLogRow, toAccessLogRow } from "@/utils/accessLogRows";
+import { formatCompactDateTime, formatDateTime } from "@/utils/dateTime";
 import EventCardPreview from "@/components/events/EventCardPreview";
 import { getDynamicEventStatus } from "@/utils/eventUtils";
 import PageHeader from "@/components/common/PageHeader";
@@ -53,7 +53,7 @@ function ArrowLink({ href, label, stretch = false }: { href: string; label: stri
       href={href}
       aria-label={label}
       title={label}
-      className={`p-1.5 -m-1.5 rounded-full text-gray-900 hover:text-[#A83800] hover:bg-[#FFF3EC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF651D] ${stretch ? "after:absolute after:inset-0 after:rounded-lg after:content-['']" : ""}`}
+      className={`p-1.5 -m-1.5 rounded-full text-gray-900 hover:text-[#A83800] hover:bg-[#FFF3EC] focus:outline-none focus-visible:ring-2 focus-visible:ring-black ${stretch ? "after:absolute after:inset-0 after:rounded-lg after:content-['']" : ""}`}
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H9M17 7v8" />
@@ -314,16 +314,19 @@ export default function EventDetailsPage() {
                 <span className="mx-2 text-[#D3D3D3]">|</span>
                 <span className="font-medium text-gray-900">End:</span> {formatDateTime(event.schedule?.end, "—")}
               </span>
+              {venue && (
+                <>
+                  <span className="text-[#D3D3D3] hidden sm:inline">|</span>
+                  <span className="inline-flex items-start gap-1.5 min-w-0">
+                    <svg className="w-4 h-4 shrink-0 text-[#C44200]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" role="img" aria-label="Location">
+                      <path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z" />
+                      <circle cx="12" cy="9.5" r="2.5" />
+                    </svg>
+                    <span className="min-w-0 break-words text-[#6B6B6B]">{venue}</span>
+                  </span>
+                </>
+              )}
             </div>
-            {venue && (
-              <p className="mt-2 flex items-start gap-1.5 text-xs text-[#6B6B6B]">
-                <svg className="w-4 h-4 shrink-0 text-[#C44200]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" role="img" aria-label="Location">
-                  <path d="M12 21s7-6.2 7-11.5A7 7 0 005 9.5C5 14.8 12 21 12 21z" />
-                  <circle cx="12" cy="9.5" r="2.5" />
-                </svg>
-                <span className="min-w-0 break-words">{venue}</span>
-              </p>
-            )}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {eventEnded && (
@@ -402,7 +405,8 @@ export default function EventDetailsPage() {
                         <tr>
                           <th className="py-2 pr-2 font-medium">#</th>
                           <th className="py-2 pr-3 font-medium">Session Name</th>
-                          <th className="py-2 pr-3 font-medium">Date &amp; Time</th>
+                          <th className="py-2 pr-3 font-medium">Start Date &amp; Time</th>
+                          <th className="py-2 pr-3 font-medium">End Date &amp; Time</th>
                           <th className="py-2 pr-3 font-medium">No. of Guests</th>
                           <th className="py-2 font-medium">Checked in</th>
                         </tr>
@@ -414,7 +418,8 @@ export default function EventDetailsPage() {
                             <tr key={s._id}>
                               <td className="py-2.5 pr-3 align-top">{i + 1}</td>
                               <td className="py-2.5 pr-4 text-gray-900 break-words align-top">{s.name}</td>
-                              <td className="py-2.5 pr-4">{formatCompactDateTime(s.schedule?.start, "—")}{s.schedule?.end ? ` to ${formatTime(s.schedule.end)}` : ""}</td>
+                              <td className="py-2.5 pr-4">{formatCompactDateTime(s.schedule?.start, "—")}</td>
+                              <td className="py-2.5 pr-4">{formatCompactDateTime(s.schedule?.end, "—")}</td>
                               <td className="py-2.5 pr-4">{reportLoaded ? r?.invitedCount ?? 0 : <span role="status" aria-label="Loading" className="inline-block h-3 w-6 rounded bg-gray-200 animate-pulse align-middle" />}</td>
                               <td className="py-2.5">{reportLoaded ? r?.attendeeCount ?? 0 : <span role="status" aria-label="Loading" className="inline-block h-3 w-6 rounded bg-gray-200 animate-pulse align-middle" />}</td>
                             </tr>
@@ -437,7 +442,15 @@ export default function EventDetailsPage() {
                 </svg>
               </button>
             </div>
-            <div className="rounded-md overflow-hidden border border-[#EEEEEE] xl:flex-1 xl:min-h-0 xl:flex">
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Open the card preview"
+              title="Click to enlarge"
+              onClick={(e) => { if (!(e.target as HTMLElement).closest("button")) setCardExpanded(true); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) setCardExpanded(true); }}
+              className="rounded-md overflow-hidden border border-[#EEEEEE] xl:flex-1 xl:min-h-0 xl:flex cursor-zoom-in focus-visible:outline-2 focus-visible:outline-black"
+            >
               <EventCardPreview
                 heightClassName="h-52 sm:h-60 xl:h-auto xl:flex-1 xl:min-h-[160px]"
                 eventId={eventId}
@@ -497,20 +510,19 @@ export default function EventDetailsPage() {
             <div className="border border-[#E0E0E0] rounded-lg p-4 min-w-0">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Access Logs</h4>
               <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable table">
-                <table className="w-full text-left text-sm min-w-[520px]">
+                <table className="w-full text-left text-sm min-w-[440px]">
                   <thead className="text-[#6B6B6B] border-b border-[#D3D3D3]">
-                    <tr><th className="py-2 pr-3 font-medium">Guest</th><th className="py-2 pr-3 font-medium">Session</th><th className="py-2 pr-3 font-medium">Entry Time</th><th className="py-2 pr-3 font-medium">Exit Time</th><th className="py-2 font-medium">Staff</th></tr>
+                    <tr><th className="py-2 pr-3 font-medium">Guest</th><th className="py-2 pr-3 font-medium">Mobile</th><th className="py-2 pr-3 font-medium">Entry Time</th><th className="py-2 font-medium">Staff</th></tr>
                   </thead>
                   <tbody className="divide-y divide-[#EEEEEE] text-[#4B4F52]">
                     {accessLogs.length === 0 ? (
-                      <tr><td colSpan={5} className="py-6 text-center text-[#6B6B6B]">No guests have entered yet.</td></tr>
+                      <tr><td colSpan={4} className="py-6 text-center text-[#6B6B6B]">No guests have entered yet.</td></tr>
                     ) : (
                       accessLogs.map((log) => (
                         <tr key={log.id}>
                           <td className="py-2 pr-3 max-w-[160px] truncate" title={log.guest}>{log.guest}</td>
-                          <td className="py-2 pr-3 whitespace-nowrap">{log.session}</td>
+                          <td className="py-2 pr-3 whitespace-nowrap">{log.mobile}</td>
                           <td className="py-2 pr-3 whitespace-nowrap">{formatDateTime(log.entryAt)}</td>
-                          <td className="py-2 pr-3 whitespace-nowrap">{log.exitAt ? formatDateTime(log.exitAt) : <span title={EXIT_NOT_RECORDED} aria-label="No exit time recorded">—</span>}</td>
                           <td className="py-2 max-w-[140px] truncate" title={log.staff}>{log.staff}</td>
                         </tr>
                       ))

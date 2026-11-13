@@ -71,7 +71,7 @@ export default function EditTemplateModal({ template, categories, onClose, onSav
                 maxLength={100}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900"
+                className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black text-gray-900"
               />
             </div>
             <CategoryFields api={categories} categoryId={cat.categoryId} subcategoryId={cat.subcategoryId} onChange={setCat} canManage required />

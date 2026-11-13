@@ -34,7 +34,7 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
   return (
     <div
       onClick={handleOpen}
-      className={`rounded-md border border-[#E0E0E0] px-5 pt-[22px] pb-5 flex gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5B22]/40 ${
+      className={`rounded-md border border-[#E0E0E0] px-5 pt-[22px] pb-5 flex gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40 ${
         unread ? "bg-white cursor-pointer hover:border-[#FFB08A]" : "bg-[#F8F8F8]"
       }`}
     >

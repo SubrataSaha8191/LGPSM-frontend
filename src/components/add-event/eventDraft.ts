@@ -33,11 +33,16 @@ export interface PreferenceCategory {
   options: string[];
 }
 
+/** A template the organizer uploaded as the finished card (the admin's uploads draw the event's details instead) */
+export const isStaticTemplate = (data?: { uploaded?: boolean; dynamicDetails?: boolean } | null): boolean => data?.uploaded === true && data?.dynamicDetails !== true;
+
 export interface SelectedTemplate {
   id: string;
   name: string;
   // Stored image reference of the template (resolve with utils/mediaUrl.ts when rendering)
   previewKey?: string | null;
+  /** An organizer's own uploaded design: the picture is the card, so no card data or additional information is chosen for it */
+  staticCard?: boolean;
 }
 
 // "Additional Info" (Figma Event_Add event-5): guest details printed on the card's two guest lines
@@ -49,6 +54,9 @@ export interface CardInfo {
   identityLabel?: string | null;
   /** The same for a second custom detail, when both lines carry one */
   secondaryIdentityLabel?: string | null;
+  /** Print the custom detail's title in front of its value on the card ("Designation: Manager") */
+  showIdentityLabel?: boolean;
+  showSecondaryIdentityLabel?: boolean;
 }
 export const CUSTOM_DETAIL = "CUSTOM";
 /** Employee ID is the custom-detail field with the fixed title "Employee ID" (its Excel column is "Employee ID" too). */
@@ -71,14 +79,14 @@ export const CARD_INFO_OPTIONS: { value: string; label: string }[] = [
  * choice decides whether the name is ticked, and the name is taken out of the two lines.
  */
 export function splitInviteeName(
-  info: { primary?: string | null; secondary?: string | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null } | null | undefined,
+  info: { primary?: string | null; secondary?: string | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null; showIdentityLabel?: boolean; showSecondaryIdentityLabel?: boolean } | null | undefined,
   savedName?: boolean | null,
 ): { cardInfo: CardInfo | null; inviteeName: boolean } {
   const configured = !!info && (info.primary != null || info.secondary != null);
   const hadName = info?.primary === "INVITEE_NAME" || info?.secondary === "INVITEE_NAME";
   const clean = (f?: string | null): CardInfoField | null => (f && f !== "INVITEE_NAME" ? (f as CardInfoField) : null);
   return {
-    cardInfo: configured ? { primary: clean(info!.primary), secondary: clean(info!.secondary), identityLabel: info!.identityLabel ?? null, secondaryIdentityLabel: info!.secondaryIdentityLabel ?? null } : null,
+    cardInfo: configured ? { primary: clean(info!.primary), secondary: clean(info!.secondary), identityLabel: info!.identityLabel ?? null, secondaryIdentityLabel: info!.secondaryIdentityLabel ?? null, showIdentityLabel: info!.showIdentityLabel === true, showSecondaryIdentityLabel: info!.showSecondaryIdentityLabel === true } : null,
     inviteeName: savedName ?? (!configured || hadName),
   };
 }
@@ -89,6 +97,7 @@ const RESERVED_TITLES = ["name", "email", "mobile", "company name", "invitee nam
 export const isCustomDetail = (f: CardInfoField | null | undefined): boolean => f === "PROFESSIONAL_IDENTITY" || f === "SECONDARY_IDENTITY";
 /** Each card line that carries a custom detail keeps its own field, title and Excel column */
 export const customFieldFor = (other: CardInfoField | null): CardInfoField => (other === "PROFESSIONAL_IDENTITY" ? "SECONDARY_IDENTITY" : "PROFESSIONAL_IDENTITY");
+export const customShowKey = (f: CardInfoField | null | undefined): "showIdentityLabel" | "showSecondaryIdentityLabel" => (f === "SECONDARY_IDENTITY" ? "showSecondaryIdentityLabel" : "showIdentityLabel");
 export const customTitleKey = (f: CardInfoField | null | undefined): "identityLabel" | "secondaryIdentityLabel" => (f === "SECONDARY_IDENTITY" ? "secondaryIdentityLabel" : "identityLabel");
 
 /** Which of the event's own details every guest's card prints. Everything is on until the organizer unticks it. */
@@ -215,7 +224,7 @@ export function normalizeEventDraft(raw: EventDraft): EventDraft {
   // Older drafts stored a resolved preview URL under `previewUrl`
   const legacyTemplate = raw?.template as (SelectedTemplate & { previewUrl?: string | null }) | null | undefined;
   const template = legacyTemplate
-    ? { id: legacyTemplate.id, name: legacyTemplate.name, previewKey: legacyTemplate.previewKey ?? legacyTemplate.previewUrl ?? null }
+    ? { id: legacyTemplate.id, name: legacyTemplate.name, previewKey: legacyTemplate.previewKey ?? legacyTemplate.previewUrl ?? null, staticCard: legacyTemplate.staticCard === true }
     : null;
   const organizerIds = Array.isArray(raw?.organizerIds) ? raw.organizerIds.slice(0, 1) : [];
   return { ...base, ...raw, organizerIds, template, logoKey: raw?.logoKey ?? null, sessions };
@@ -289,7 +298,7 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
     else if (hasBlankOption) errors.dietaryPreference = "Fill in or remove each empty option before continuing.";
   }
 
-  if (draft.cardInfo) {
+  if (draft.cardInfo && !draft.template?.staticCard) {
     const titles = [draft.cardInfo.primary, draft.cardInfo.secondary].filter(isCustomDetail).map((f) => (draft.cardInfo![customTitleKey(f)] || "").trim());
     if (titles.some((t) => !t)) errors.cardInfo = "Enter a title for each custom detail.";
     else if (titles.some((t) => RESERVED_TITLES.includes(t.toLowerCase()))) errors.cardInfo = "That title is already a column in the invitee Excel (Name, Email, Mobile or Company Name). Choose another title.";
@@ -402,7 +411,7 @@ export interface ServerEvent {
   rsvp?: { enabled?: boolean; acceptanceLastDate?: string; allowAllInvited?: boolean; allowNotResponded?: boolean; allowDeclined?: boolean };
   attendeeSettings?: { thresholdLimit?: number };
   dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] };
-  templateId?: string | { _id: string; name: string; previewImageKey?: string } | null;
+  templateId?: string | { _id: string; name: string; previewImageKey?: string; templateData?: { uploaded?: boolean; dynamicDetails?: boolean } } | null;
   cardDisplay?: Partial<CardDisplay>;
   cardInfo?: { primary?: CardInfoField | null; secondary?: CardInfoField | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null };
   media?: { logoKey?: string };
@@ -445,7 +454,7 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     : [{ id: newClientKey("pref"), title: event?.dietaryPreference?.title || "Dietary Preference", options: rawOptions.length ? rawOptions.map(String) : [""] }];
 
   const template = event?.templateId && typeof event.templateId === "object"
-    ? { id: event.templateId._id, name: event.templateId.name, previewKey: event.templateId.previewImageKey || null }
+    ? { id: event.templateId._id, name: event.templateId.name, previewKey: event.templateId.previewImageKey || null, staticCard: isStaticTemplate(event.templateId.templateData) }
     : event?.templateId
       ? { id: String(event.templateId), name: "Selected template", previewKey: null }
       : null;

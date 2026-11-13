@@ -48,7 +48,7 @@ export default function InfoTip({ text, label = "More information", align = "rig
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-        className="inline-flex size-4 items-center justify-center rounded-full cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF651D]"
+        className="inline-flex size-4 items-center justify-center rounded-full cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-black"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
           <circle cx="8" cy="8" r="8" fill="#A5A5A5" />

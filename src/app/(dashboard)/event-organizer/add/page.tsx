@@ -126,7 +126,7 @@ export default function AddEventOrganizerPage() {
                   placeholder={formData.organizationType === "ORGANIZATION" ? "Type Organisation Name" : "Type the organizer's name"}
                   value={formData.organizationName}
                   onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
-                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black transition-colors"
                 />
               </div>
 
@@ -141,7 +141,7 @@ export default function AddEventOrganizerPage() {
                   placeholder="Type Email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black transition-colors"
                 />
               </div>
 
@@ -155,7 +155,7 @@ export default function AddEventOrganizerPage() {
                   placeholder="Type Phone Number"
                   value={formData.phone}
                   onValueChange={(v) => setFormData({ ...formData, phone: v })}
-                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black transition-colors"
                 />
               </div>
             </div>
@@ -173,7 +173,7 @@ export default function AddEventOrganizerPage() {
                   placeholder="At least 8 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                  className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black transition-colors"
                 />
               </div>
 

@@ -20,6 +20,7 @@ import { Skeleton, SkeletonRegion, TableSkeletonRows } from "@/components/common
 import CustomDropdown from "@/components/common/CustomDropdown";
 import Icon from "@/components/icons/Icon";
 import { userService } from "@/services/userService";
+import { matchesEventFilters } from "@/utils/eventFilters";
 
 type RowStatus = "Upcoming" | "Ongoing" | "Past" | "Invitation not sent" | "Cancelled";
 
@@ -88,7 +89,7 @@ function toRow(e: RawEvent): EventRow {
     displayId: formatEventId(id),
     name: e.title || "Untitled event",
     organizer: org?.profile?.organizationName || "Organisation not set",
-    categoryId: cat?._id || "",
+    categoryId: cat?._id || (typeof e.categoryId === "string" ? e.categoryId : ""),
     category: cat?.name || "—",
     createdAt: e.createdAt,
     start: e.schedule?.start,
@@ -102,6 +103,9 @@ function toRow(e: RawEvent): EventRow {
     phase: e.status === "CANCELLED" ? "Cancelled" : (timeStatus === "Past" || timeStatus === "Ongoing" ? timeStatus : "Upcoming"),
   };
 }
+
+// Event Status filter: where the event is in time (what its card badge says), plus "Invitation not sent" for events still to come
+const STATUS_FILTERS: RowStatus[] = ["Upcoming", "Ongoing", "Past", "Invitation not sent", "Cancelled"];
 
 function RowActions({ row, onDelete }: { row: EventRow; onDelete: (row: EventRow) => void }) {
   const [open, setOpen] = useState(false);
@@ -266,7 +270,7 @@ export default function EventListingPage() {
   const [organizerError, setOrganizerError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({ eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" });
   const [draftFilters, setDraftFilters] = useState(filters);
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
   const [applyingFilters, setApplyingFilters] = useState(false);
@@ -324,51 +328,18 @@ export default function EventListingPage() {
 
   const selectOrganizer = (organizerId: string) => {
     setSelectedOrganizerId(organizerId);
-    setFilters((current) => ({ ...current, eventId: "", organizer: "" }));
-    setDraftFilters((current) => ({ ...current, eventId: "", organizer: "" }));
+    setFilters((current) => ({ ...current, organizer: "" }));
+    setDraftFilters((current) => ({ ...current, organizer: "" }));
   };
 
   const term = search.trim().toLowerCase();
-  const fromDate = filters.from ? new Date(`${filters.from}T00:00:00`) : null;
-  const toDate = filters.to ? new Date(`${filters.to}T23:59:59.999`) : null;
-  const visible = rows.filter((r) => {
-    if (filters.eventId && r.id !== filters.eventId) return false;
-    if (filters.name && !r.name.toLowerCase().includes(filters.name.trim().toLowerCase())) return false;
-    if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
-    if (filters.organizer && !r.organizer.toLowerCase().includes(filters.organizer.trim().toLowerCase())) return false;
-    if (filters.category && r.categoryId !== filters.category) return false;
-    if (filters.status && r.status !== filters.status) return false;
-    const count = sessionCounts[r.id] ?? r.sessionsCount;
-    if (filters.sessions && count !== undefined) {
-      if (filters.sessions === "0" && count !== 0) return false;
-      if (filters.sessions === "1" && count !== 1) return false;
-      if (filters.sessions === "2-5" && (count < 2 || count > 5)) return false;
-      if (filters.sessions === "6+" && count < 6) return false;
-    }
-    const start = r.start ? new Date(r.start) : null;
-    if (fromDate && (!start || start < fromDate)) return false;
-    if (toDate && (!start || start > toDate)) return false;
-    return true;
-  });
+  const visible = rows.filter((r) => matchesEventFilters(r, filters, term, sessionCounts[r.id]));
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const applyFilters = async () => {
     setFilterApplyError(null);
     if (draftFilters.sessions) {
-      const draftFrom = draftFilters.from ? new Date(`${draftFilters.from}T00:00:00`) : null;
-      const draftTo = draftFilters.to ? new Date(`${draftFilters.to}T23:59:59.999`) : null;
-      const candidates = rows.filter((r) => {
-        if (draftFilters.eventId && r.id !== draftFilters.eventId) return false;
-        if (term && ![r.name, r.organizer, r.displayId, r.category].some((v) => v.toLowerCase().includes(term))) return false;
-        if (draftFilters.name && !r.name.toLowerCase().includes(draftFilters.name.trim().toLowerCase())) return false;
-        if (draftFilters.organizer && !r.organizer.toLowerCase().includes(draftFilters.organizer.trim().toLowerCase())) return false;
-        if (draftFilters.category && r.categoryId !== draftFilters.category) return false;
-        if (draftFilters.status && r.status !== draftFilters.status) return false;
-        const start = r.start ? new Date(r.start) : null;
-        if (draftFrom && (!start || start < draftFrom)) return false;
-        if (draftTo && (!start || start > draftTo)) return false;
-        return true;
-      });
+      const candidates = rows.filter((r) => matchesEventFilters(r, { ...draftFilters, sessions: "" }, term));
       const missing = candidates.filter((r) => r.sessionsCount === undefined && sessionCounts[r.id] === undefined);
       if (missing.length) {
         setApplyingFilters(true);
@@ -420,12 +391,12 @@ export default function EventListingPage() {
       ));
 
   const clearFilters = () => {
-    const empty = { eventId: "", name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" };
+    const empty = { name: "", organizer: "", category: "", sessions: "", status: "", from: "", to: "" };
     setDraftFilters(empty);
     setFilters(empty);
     setFilterOpen(false);
   };
-  const drawerField = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-xs font-medium text-[#15191C] focus:outline-none focus:border-[#FF651D]";
+  const drawerField = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-xs font-medium text-[#15191C] focus:outline-none focus:border-black";
 
   // Filter drawer (Organiser 217:22772, Super Admin 422:12324): same panel, each role's own fields
   const filterDrawer = filterOpen && (
@@ -443,9 +414,7 @@ export default function EventListingPage() {
               </div>
               <div className="flex-1 overflow-y-auto pt-8 flex flex-col gap-[13px]">
                 <div className="flex flex-col gap-2">
-                  {isOrganizer ? (
-                    <FilterSelect value={draftFilters.eventId} onChange={(v) => setDraftFilters((f) => ({ ...f, eventId: v }))} options={[{ value: "", label: "Select Event" }, ...rows.map((r) => ({ value: r.id, label: r.name }))]} ariaLabel="Select Event" compact />
-                  ) : (
+                  {!isOrganizer && (
                     <>
                       <input aria-label="Event Name" type="text" value={draftFilters.name} onChange={(e) => setDraftFilters((f) => ({ ...f, name: e.target.value }))} placeholder="Event Name" className={`${drawerField} placeholder:text-[#6B6B6B]`} />
                       <input aria-label="Event Organizer" type="text" value={draftFilters.organizer} onChange={(e) => setDraftFilters((f) => ({ ...f, organizer: e.target.value }))} placeholder="Event Organizer" className={`${drawerField} placeholder:text-[#6B6B6B]`} />
@@ -458,7 +427,7 @@ export default function EventListingPage() {
                   <FilterSelect
                     value={draftFilters.status}
                     onChange={(v) => setDraftFilters((f) => ({ ...f, status: v }))}
-                    options={[{ value: "", label: "Event Status" }, ...(Object.keys(STATUS_STYLE) as RowStatus[]).map((st) => ({ value: st, label: st }))]}
+                    options={[{ value: "", label: "Event Status" }, ...STATUS_FILTERS.map((st) => ({ value: st, label: st }))]}
                     ariaLabel="Event Status"
                     compact
                   />
@@ -469,17 +438,22 @@ export default function EventListingPage() {
                     {/* Shows the Figma "From" / "To" placeholder until focused, then the native date picker */}
                     {(["from", "to"] as const).map((key) => (
                       <div key={key} className="relative">
+                      {/* always a date field (switching its type while it has focus made the value impossible to clear); the
+                          "From" / "To" label stands in for the empty mm/dd/yyyy until the field is used */}
                       <input
-                        type={draftFilters[key] ? "date" : "text"}
-                        onFocus={(e) => { e.currentTarget.type = "date"; }}
-                        onBlur={(e) => { if (!e.currentTarget.value) e.currentTarget.type = "text"; }}
-                        placeholder={key === "from" ? "From" : "To"}
+                        type="date"
                         value={draftFilters[key]}
                         onChange={(e) => setDraftFilters((f) => ({ ...f, [key]: e.target.value }))}
                         aria-label={key === "from" ? "From" : "To"}
-                        className={`${drawerField} placeholder:text-[#6B6B6B]`}
+                        className={`peer ${drawerField} pr-14 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:w-12 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${draftFilters[key] ? "" : "!text-transparent focus:!text-[#15191C]"}`}
                       />
-                      {!draftFilters[key] && <Icon name="events/calendar" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />}
+                      {!draftFilters[key] && <span aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xs font-medium text-[#6B6B6B] peer-focus:hidden">{key === "from" ? "From" : "To"}</span>}
+                      {draftFilters[key] ? (
+                        <button type="button" onClick={() => setDraftFilters((f) => ({ ...f, [key]: "" }))} aria-label={`Clear ${key === "from" ? "From" : "To"} date`} className="absolute right-11 top-1/2 -translate-y-1/2 size-5 flex items-center justify-center rounded-full text-[#4B4F52] hover:bg-gray-200 cursor-pointer">
+                          <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      ) : null}
+                      <Icon name="events/calendar" width={20} height={21} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" />
                       </div>
                     ))}
                   </div>
@@ -512,10 +486,10 @@ export default function EventListingPage() {
                 <input
                   id="event-search"
                   type="search"
-                  placeholder="Search"
+                  placeholder="Search event names ... "
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
                 />
               </div>
             </div>
@@ -593,7 +567,7 @@ export default function EventListingPage() {
               placeholder="Search event.."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-[47px] pl-11 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+              className="w-full h-[47px] pl-11 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
             />
           </div>
           <div className="flex items-center gap-3 shrink-0 w-fit">

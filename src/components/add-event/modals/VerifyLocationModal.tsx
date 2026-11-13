@@ -154,7 +154,6 @@ export default function VerifyLocationModal({ address, pin, onConfirm, onClose }
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0]">
-          <button type="button" onClick={onClose} className="px-6 py-[11px] text-base font-semibold text-[#15191C] bg-white border border-[#E0E0E0] rounded-lg hover:bg-gray-50 cursor-pointer">Cancel</button>
           <button
             type="button"
             disabled={!point}

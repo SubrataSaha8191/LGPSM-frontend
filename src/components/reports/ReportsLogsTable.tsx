@@ -134,7 +134,7 @@ export default function ReportsLogsTable({
       <div className="p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 max-w-lg">
-            <label className="bg-[#FAFAFA] border border-[#E0E0E0] rounded-md h-[47px] px-4 flex flex-1 items-center gap-2.5 focus-within:border-[#FF651D] transition-colors">
+            <label className="bg-[#FAFAFA] border border-[#E0E0E0] rounded-md h-[47px] px-4 flex flex-1 items-center gap-2.5 focus-within:border-black transition-colors">
               <span className="size-[22px] flex items-center justify-center shrink-0 text-[#6B6B6B]">
                 <Icon name="reports/search" width={18.4} height={18.4} />
               </span>

@@ -29,7 +29,7 @@ export default function AccountSettingsPage() {
   const [avatarNotice, setAvatarNotice] = useState(false);
   const [editing, setEditing] = useState(false);
   const isOrganizer = user?.role === "ORGANIZER";
-  const field = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-[13px] text-[#15191C] focus:outline-none focus:border-[#FF651D]";
+  const field = "w-full h-[47px] px-4 bg-white border border-[#E0E0E0] rounded-md text-[13px] text-[#15191C] focus:outline-none focus:border-black";
 
   useEffect(() => {
     if (user?.fullName) setFullName(user.fullName);

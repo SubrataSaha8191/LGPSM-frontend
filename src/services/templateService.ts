@@ -71,7 +71,7 @@ export interface TemplatePreviewPayload {
   /** an uploaded image only ("media:<id>") */
   logoKey?: string;
   /** "Additional Info": which guest details fill the card's two guest lines (sample labels in previews) */
-  cardInfo?: { primary: "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDENTITY" | "SECONDARY_IDENTITY" | null; secondary: "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDENTITY" | "SECONDARY_IDENTITY" | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null };
+  cardInfo?: { primary: "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDENTITY" | "SECONDARY_IDENTITY" | null; secondary: "INVITEE_NAME" | "COMPANY_NAME" | "PROFESSIONAL_IDENTITY" | "SECONDARY_IDENTITY" | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null; showIdentityLabel?: boolean; showSecondaryIdentityLabel?: boolean };
 }
 
 export const templateService = {
@@ -174,7 +174,7 @@ export const templateService = {
   },
 
   /** "Upload your own template": an image the person uploaded as a TEMPLATE becomes a private template of theirs */
-  async uploadOwnTemplate(payload: { name: string; imageKey: string; categoryId?: string; subcategoryId?: string }): Promise<ApiResponse<Template>> {
+  async uploadOwnTemplate(payload: { name?: string; imageKey: string; categoryId?: string; subcategoryId?: string }): Promise<ApiResponse<Template>> {
     return apiClient<Template>("/api/v1/templates/upload", { method: "POST", body: JSON.stringify(payload) }, true);
   },
 

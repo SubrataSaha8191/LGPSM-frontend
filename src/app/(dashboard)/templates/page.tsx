@@ -216,7 +216,7 @@ function TemplatesPageContent() {
                 title={`${t.name} · ${labelFor(t)}${t.isCustom && !t.isMine && !t.isUploaded ? " · AI design shared with all organizers" : t.isMine ? " · Yours" : ""}`}
                 aria-label={`Preview template ${t.name}`}
                 onClick={() => { setLivePreview(null); setPreview(t); }}
-                className="group relative text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] focus-visible:border-[#FF651D] focus:outline-none transition-colors cursor-pointer"
+                className="group relative text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] focus-visible:border-black focus:outline-none transition-colors cursor-pointer"
               >
                 <TemplateThumb imageKey={t.imageKey} name={t.name} className="aspect-[2/3]!" />
                 <span aria-hidden className="absolute top-2 right-2 size-6 rounded bg-black/55 text-white flex items-center justify-center">

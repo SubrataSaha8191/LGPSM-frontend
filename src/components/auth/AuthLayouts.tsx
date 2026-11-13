@@ -154,7 +154,7 @@ export function AuthAlert({ tone, children }: { tone: "error" | "success" | "inf
 }
 
 export const authInputClass =
-  "w-full h-[47px] px-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-[13px] text-[#15191C] placeholder:text-xs placeholder:text-[#6E6E6E] focus:outline-none focus:border-[#FF651D] transition-colors disabled:opacity-60";
+  "w-full h-[47px] px-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-lg text-[13px] text-[#15191C] placeholder:text-xs placeholder:text-[#6E6E6E] focus:outline-none focus:border-black transition-colors disabled:opacity-60";
 
 export const authLabelClass = "block text-sm leading-5 font-medium text-[#15191C] mb-2";
 

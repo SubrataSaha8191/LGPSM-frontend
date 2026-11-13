@@ -434,7 +434,7 @@ export default function PublicInvitationPage() {
                 className={`group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 px-3 py-3.5 text-sm font-bold transition-all duration-200 active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-200 ${
                   selectedRsvp === "DECLINED"
                     ? "border-rose-600 bg-gradient-to-br from-rose-500 to-rose-600 text-white shadow-lg shadow-rose-600/25"
-                    : "border-rose-200 bg-white text-rose-700 hover:border-rose-400 hover:bg-rose-50"
+                    : "border-rose-200 bg-white text-rose-700 hover:!border-rose-500 hover:bg-rose-50"
                 }`}
               >
                 <span className={`flex size-9 items-center justify-center rounded-full transition-colors ${selectedRsvp === "DECLINED" ? "bg-white/25" : "bg-rose-100 group-hover:bg-rose-200"}`}>

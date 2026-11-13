@@ -1,10 +1,12 @@
 "use client";
 
 import { useAlert } from "@/context/AlertContext";
+import { sessionTimeProblem } from "@/utils/sessionWindow";
+import ChoiceModal from "@/components/common/ChoiceModal";
 import { isHistoricalEvent } from "@/utils/eventUtils";
 import ClosedEventNotice from "@/components/events/ClosedEventNotice";
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { reportService } from "@/services/reportService";
 import { inviteeService } from "@/services/inviteeService";
@@ -45,6 +47,7 @@ const ACCESS_LABELS: Record<string, string> = { NO_RESTRICTION: "No Restrictions
 
 export default function EventSessionsPage() {
   const params = useParams();
+  const router = useRouter();
   const eventId = (params?.id as string) || "";
   const { user } = useAuth();
   const { confirm, showAlert } = useAlert();
@@ -216,6 +219,14 @@ export default function EventSessionsPage() {
   };
 
   const handleSaveDatePicker = (val: string) => {
+    // a session has to fall within its event: say so right away instead of accepting a time that cannot be saved
+    const problem = eventWindow.current
+      ? sessionTimeProblem({ field: activeDateField, value: val, start: startTime, end: endTime, eventStart: eventWindow.current.start, eventEnd: eventWindow.current.end })
+      : null;
+    if (problem) {
+      setTimeConflict({ message: `${problem} Do you want to change the event time or the session time?`, field: activeDateField });
+      return;
+    }
     if (activeDateField === "start") {
       setStartTime(val);
     } else {
@@ -252,6 +263,8 @@ export default function EventSessionsPage() {
 
   // One save at a time: a double click (or Enter pressed twice) must not send the request twice (see utils/singleFlight.ts)
   const [savingSession, setSavingSession] = useState(false);
+  // a session time that does not fit the event: change the event's dates (its edit page) or the session's own times
+  const [timeConflict, setTimeConflict] = useState<{ message: string; field: "start" | "end" | null } | null>(null);
   const saveFlight = useRef(createSingleFlight());
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +280,12 @@ export default function EventSessionsPage() {
     if (!sessionName.trim()) return;
     setFormError(null);
     if (!isAfter(endTime, startTime)) {
-      setFormError("Session end must be after its start.");
+      showAlert("The session end must be after its start. Please choose a later end time.", "warning", "Check the session times");
+      return;
+    }
+    const outside = eventWindow.current && (sessionTimeProblem({ field: "start", value: startTime, eventStart: eventWindow.current.start, eventEnd: eventWindow.current.end }) || sessionTimeProblem({ field: "end", value: endTime, start: startTime, eventStart: eventWindow.current.start, eventEnd: eventWindow.current.end }));
+    if (outside) {
+      setTimeConflict({ message: `${outside} Do you want to change the event time or the session time?`, field: null });
       return;
     }
 
@@ -371,7 +389,7 @@ export default function EventSessionsPage() {
                   placeholder="Search sessions"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+                  className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
                 />
               </div>
             </div>
@@ -518,7 +536,7 @@ export default function EventSessionsPage() {
                     value={sessionName}
                     onChange={(e) => setSessionName(e.target.value)}
                     required
-                    className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+                    className="w-full h-[47px] px-3.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
                   />
                 </div>
 
@@ -648,6 +666,15 @@ export default function EventSessionsPage() {
         />
       )}
 
+      {timeConflict && (
+        <ChoiceModal
+          title="Session time is outside the event"
+          message={timeConflict.message}
+          onClose={() => setTimeConflict(null)}
+          first={{ label: "Change event time", onClick: () => { setTimeConflict(null); router.push(`/events/${eventId}/edit`); } }}
+          second={{ label: "Change session time", onClick: () => { const f = timeConflict.field; setTimeConflict(null); if (f) { setActiveDateField(f); setIsDatePickerOpen(true); } } }}
+        />
+      )}
       {/* DateTime Picker Modal */}
       <DateTimePickerModal
         key={isDatePickerOpen ? `picker-${activeDateField}-${activeDateField === "start" ? startTime : endTime}` : "picker-closed"}

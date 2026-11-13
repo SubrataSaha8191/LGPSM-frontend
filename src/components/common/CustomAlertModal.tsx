@@ -20,7 +20,7 @@ export default function CustomAlertModal({
   title,
   message,
   type = "info",
-  buttonText = "Okay",
+  buttonText,
 }: CustomAlertModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -59,6 +59,9 @@ export default function CustomAlertModal({
         ref={modalRef}
         className="bg-white rounded-xl border border-gray-100 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 overflow-y-auto relative max-h-[calc(100dvh-2rem)]"
       >
+        <button type="button" onClick={onClose} aria-label="Close" title="Close" className="absolute right-3 top-3 size-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer">
+          <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
         {/* Top Icon Badge */}
         {type === "success" && (
           <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-2xs">
@@ -103,7 +106,8 @@ export default function CustomAlertModal({
         {/* Message */}
         <p className="text-xs text-gray-600 leading-relaxed font-medium px-2">{message}</p>
 
-        {/* Action Button */}
+        {/* An action button only when the message asks for one (the close icon dismisses it) */}
+        {buttonText && (
         <div className="pt-2">
           <button
             type="button"
@@ -119,6 +123,7 @@ export default function CustomAlertModal({
             {buttonText}
           </button>
         </div>
+        )}
       </div>
     </div>
   );

@@ -36,7 +36,7 @@ const PROMPT_EXAMPLES: Record<TemplateKind, string[]> = {
   POSTER: ["Bold modern poster for a two-day technology summit", "Festive poster for a charity fundraiser dinner", "Minimal poster for an alumni meet-up"],
 };
 
-const inputClass = "w-full rounded-md border border-[#D9D9D9] bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-[#FF651D] focus:outline-none focus:ring-1 focus:ring-[#FF651D]";
+const inputClass = "w-full rounded-md border border-[#D9D9D9] bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-black focus:outline-none focus:ring-1 focus:ring-black";
 
 type Busy = null | "starting" | "saving" | "discarding";
 

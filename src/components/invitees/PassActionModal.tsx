@@ -49,7 +49,7 @@ export default function PassActionModal({ action, invitee, needsReview, onClose,
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-[490px] overflow-y-auto max-h-[calc(100dvh-2rem)]">
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#E5E5E5]">
           <h2 id="pass-action-title" className="text-base font-medium text-[#15191C]">{revoke ? "Revoke Access Pass" : "Replace Access Pass"}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[#15191C] cursor-pointer">✕</button>
+          <button type="button" onClick={onClose} disabled={busy} aria-label="Close" title="Close" className="size-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer disabled:opacity-40"><svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
         <div className="p-6 space-y-4">
           <p className="text-sm text-[#4B4F52]">
@@ -92,7 +92,7 @@ export default function PassActionModal({ action, invitee, needsReview, onClose,
               onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
               rows={4}
               placeholder="Type"
-              className={`w-full px-3 py-2 bg-[#FAFAFA] border rounded-md text-sm focus:outline-none focus:border-[#FF651D] resize-none ${touched && errors.note ? "border-rose-400" : "border-[#E0E0E0]"}`}
+              className={`w-full px-3 py-2 bg-[#FAFAFA] border rounded-md text-sm focus:outline-none focus:border-black resize-none ${touched && errors.note ? "!border-rose-500" : "border-[#E0E0E0]"}`}
             />
             <div className="flex justify-between text-xs">
               <span role="alert" className="text-rose-600">{touched ? errors.note : ""}</span>
@@ -102,7 +102,6 @@ export default function PassActionModal({ action, invitee, needsReview, onClose,
           {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E5E5E5]">
-          <button type="button" onClick={onClose} disabled={busy} className="px-6 py-2.5 bg-white border border-[#DDD] rounded-md text-base font-semibold text-black cursor-pointer disabled:opacity-50">Cancel</button>
           <button type="button" onClick={submit} disabled={busy || (touched && !!blocked)} className="px-6 py-2.5 bg-[#C65318] hover:bg-[#A83800] rounded-md text-base font-semibold text-white cursor-pointer disabled:opacity-50">
             {busy ? (revoke ? "Revoking…" : "Replacing…") : revoke ? "Revoke" : "Replace"}
           </button>

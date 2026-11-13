@@ -8,6 +8,7 @@ import Step1EventDetails, { EventDateField } from "./Step1EventDetails";
 import Step2Settings from "./Step2Settings";
 import Step3Sessions, { SessionInviteeFile } from "./Step3Sessions";
 import MobileCardPreview from "./MobileCardPreview";
+import ChoiceModal from "@/components/common/ChoiceModal";
 import SelectTemplateModal from "./modals/SelectTemplateModal";
 import DateTimePickerModal from "./modals/DateTimePickerModal";
 import ListResetWarningModal from "./modals/ListResetWarningModal";
@@ -21,9 +22,11 @@ import { suggestTemplate, SuggestableTemplate } from "@/utils/templateSuggestion
 import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { excelColumnsFor, headerFor } from "@/utils/inviteeFields";
 import { inviteeService, type InviteeSetInfo } from "@/services/inviteeService";
-import { CARD_DISPLAY_DEFAULTS, DraftErrors, EventDraft, SelectedTemplate, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
+import { CARD_DISPLAY_DEFAULTS, isStaticTemplate, DraftErrors, EventDraft, SelectedTemplate, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
 import { DraftStatus } from "@/hooks/useFormDraft";
 import { useAlert } from "@/context/AlertContext";
+import { sessionTimeProblem, sessionsOutsideEvent } from "@/utils/sessionWindow";
+import { formatDateTime } from "@/utils/dateTime";
 
 type PickerTarget =
   | { kind: "event"; field: EventDateField }
@@ -84,7 +87,7 @@ export default function EventWizard({
   onSubmit,
   onCancel,
 }: EventWizardProps) {
-  const { confirm } = useAlert();
+  const { confirm, showAlert } = useAlert();
   const { user } = useAuth();
   const categories = useCategories(extraCategory);
   const stepContentRef = useRef<HTMLDivElement>(null);
@@ -97,6 +100,8 @@ export default function EventWizard({
   const [featuresError, setFeaturesError] = useState<string | null>(null);
   const [featuresLoading, setFeaturesLoading] = useState(true);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
+  // a session time that does not fit the event: change the event's dates (step 1) or the session's own times (step 3)
+  const [timeConflict, setTimeConflict] = useState<{ title: string; message: string; eventStep: number; target: PickerTarget | null } | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   // Set while "Customize Information" is open: the payload the card preview was rendering
   // The columns of the Excel sample when it was last downloaded here: changing a custom title afterwards earns a warning
@@ -206,7 +211,7 @@ export default function EventWizard({
       const subcategory = "subcategoryId" in p ? p.subcategoryId || "" : draft.subcategoryId;
       const suggestion = suggestTemplate(availableTemplates.current, category, subcategory);
       autoTemplateId.current = suggestion ? suggestion._id : null;
-      templatePatch = { template: suggestion ? { id: suggestion._id, name: suggestion.name, previewKey: suggestion.previewImageKey || null } : null };
+      templatePatch = { template: suggestion ? { id: suggestion._id, name: suggestion.name, previewKey: suggestion.previewImageKey || null, staticCard: isStaticTemplate((suggestion as { templateData?: { uploaded?: boolean; dynamicDetails?: boolean } }).templateData) } : null };
     }
     setDraft((prev) => ({ ...prev, ...p, ...templatePatch }));
   };
@@ -220,8 +225,16 @@ export default function EventWizard({
     setDraft((prev) => ({
       ...prev,
       template,
+      // an uploaded design is the whole card: nothing about the card's data is chosen for it
+      ...(template?.staticCard ? { cardInfo: null, cardDisplay: { ...CARD_DISPLAY_DEFAULTS } } : {}),
       // the template's event type fills the category and subcategory; a general template leaves what is there
-      ...(suggested?.categoryId ? { categoryId: suggested.categoryId, subcategoryId: suggested.subcategoryId } : {}),
+      ...(suggested?.categoryId
+        ? {
+            categoryId: suggested.categoryId,
+            // a category with a single subcategory has it selected for them
+            subcategoryId: suggested.subcategoryId || (categories.subcategoryOptionsFor(suggested.categoryId).length === 1 ? categories.subcategoryOptionsFor(suggested.categoryId)[0].value : ""),
+          }
+        : {}),
     }));
   };
 
@@ -299,8 +312,22 @@ export default function EventWizard({
     if (target.kind === "event") {
       if (target.field === "rsvpDeadline") patch({ rsvpDeadline: iso });
       // choosing the start sets the end to the same time the next day; the end can still be changed afterwards
-      else if (target.field === "start") setDraft((prev) => applyEventWindow(prev, { start: iso, end: new Date(new Date(iso).getTime() + 24 * 60 * 60 * 1000).toISOString() }));
-      else setDraft((prev) => applyEventWindow(prev, { [target.field]: iso }));
+      else {
+        const windowPatch = target.field === "start" ? { start: iso, end: new Date(new Date(iso).getTime() + 24 * 60 * 60 * 1000).toISOString() } : { [target.field]: iso };
+        const next = applyEventWindow(draft, windowPatch);
+        setDraft(() => next);
+        // sessions with their own times can be left outside the new dates: tell the organizer which ones
+        const outside = sessionsOutsideEvent(next.sessions, next.start, next.end);
+        if (outside.length) setTimeConflict({ title: "Check your session times", message: `${outside.map((s) => `"${s.name || "Untitled session"}"`).join(", ")} ${outside.length === 1 ? "now falls" : "now fall"} outside the event's dates. Open the Sessions step and set ${outside.length === 1 ? "its" : "their"} start and end times within the event (${formatDateTime(next.start, "")} to ${formatDateTime(next.end, "")}). Do you want to change the event time or the session time?`, eventStep: 1, target: null });
+      }
+      return;
+    }
+    // a session has to fall within its event: say so right away instead of accepting a time that cannot be saved
+    const session = draft.sessions.find((s) => s.key === target.key);
+    const problem = sessionTimeProblem({ field: target.field, value: iso, start: session?.start, end: session?.end, eventStart: draft.start, eventEnd: draft.end });
+    if (problem) {
+      // either the session's time or the event's dates can be changed to fix it
+      setTimeConflict({ title: "Session time is outside the event", message: `${problem} Do you want to change the event time or the session time?`, eventStep: 1, target });
       return;
     }
     setDraft((prev) => ({
@@ -458,7 +485,7 @@ export default function EventWizard({
                   onChange={patch}
                   onOpenDatePicker={(field) => setPickerTarget({ kind: "event", field })}
                   categories={categories}
-                  canManageCategories={isAdmin || user?.role === "ORGANIZER"}
+                  canManageCategories={isAdmin}
                   isAdmin={isAdmin}
                   isEditing={!!eventId}
                   rsvpAllowed={features.allowEventRSVP}
@@ -543,6 +570,18 @@ export default function EventWizard({
         <ListResetWarningModal busy={resetBusy} error={resetError} onCancel={() => setPendingCardInfo(null)} onConfirm={() => void confirmListReset()} />
       )}
 
+      {timeConflict && (
+        <ChoiceModal
+          title={timeConflict.title}
+          message={timeConflict.message}
+          onClose={() => setTimeConflict(null)}
+          first={{ label: "Change event time", onClick: () => { setTimeConflict(null); setCurrentStep(1); } }}
+          second={{
+            label: "Change session time",
+            onClick: () => { const t = timeConflict.target; setTimeConflict(null); handleStepChange(3); if (t) setPickerTarget(t); },
+          }}
+        />
+      )}
       <DateTimePickerModal
         key={pickerTarget ? `${JSON.stringify(pickerTarget)}-${pickerValue ?? ""}` : "picker-closed"}
         isOpen={!!pickerTarget}

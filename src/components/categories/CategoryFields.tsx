@@ -92,7 +92,11 @@ export default function CategoryFields({
           </label>
           <CustomDropdown
             value={categoryId}
-            onChange={(v) => onChange({ categoryId: v, subcategoryId: "" })}
+            onChange={(v) => {
+              // a category with only one subcategory has nothing to choose between: it is selected for them
+              const only = v ? api.subcategoryOptionsFor(v) : [];
+              onChange({ categoryId: v, subcategoryId: only.length === 1 ? only[0].value : "" });
+            }}
             options={withDelete(api.categoryOptions, deleteCategory)}
             placeholder={api.loading ? "Loading..." : api.categoryOptions.length ? "- Category -" : "No categories yet"}
             topAction={canManage ? { label: api.isOrganizer ? "Add custom category" : "Add New Category", onClick: () => setModal({ kind: "category" }) } : undefined}
@@ -220,14 +224,11 @@ export function CategoryModal({
                 placeholder="Type"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-[47px] px-3.5 text-xs border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D] text-gray-900 placeholder:text-[#828282]"
+                className="w-full h-[47px] px-3.5 text-xs border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black text-gray-900 placeholder:text-[#6B6B6B]"
               />
             </div>
           </div>
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#E0E0E0]">
-            <button type="button" onClick={onClose} className="px-6 py-[11px] text-base font-semibold text-[#15191C] bg-white border border-[#E0E0E0] rounded-lg hover:bg-gray-50 cursor-pointer">
-              Cancel
-            </button>
             <button
               type="submit"
               disabled={submitting}

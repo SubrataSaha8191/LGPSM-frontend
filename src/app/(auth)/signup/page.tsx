@@ -521,7 +521,7 @@ export default function SignupPage() {
                       digit
                         ? "border-[#FF651D] bg-white text-gray-950"
                         : "border-gray-200 bg-[#FAFAFA] text-gray-900"
-                    } focus:bg-white focus:border-[#FF651D] focus:ring-2 focus:ring-[#FF651D]/20 focus:outline-none`}
+                    } focus:bg-white focus:border-black focus:ring-2 focus:ring-black/20 focus:outline-none`}
                   />
                 ))}
               </div>

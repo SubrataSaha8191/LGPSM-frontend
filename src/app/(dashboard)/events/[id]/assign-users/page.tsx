@@ -342,7 +342,7 @@ export default function EventAssignUsersPage() {
                 placeholder="Search system user"
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+                className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
               />
             </div>
           </div>
@@ -374,7 +374,7 @@ export default function EventAssignUsersPage() {
             id="selectAll"
             checked={isAllSelected}
             onChange={handleSelectAll}
-            className="rounded border-gray-300 text-[#C44200] focus:ring-[#FF5B22] cursor-pointer check-orange"
+            className="rounded border-gray-300 text-[#C44200] focus:ring-black cursor-pointer check-orange"
           />
           <label htmlFor="selectAll" className="cursor-pointer">
             Select All ({selectedUserIds.length} selected)
@@ -439,7 +439,7 @@ export default function EventAssignUsersPage() {
                           checked={isSelected}
                           onChange={() => toggleSelectUser(u.id)}
                           aria-label={`Select ${u.name}`}
-                          className="rounded border-gray-300 text-[#C44200] focus:ring-[#FF5B22] cursor-pointer mt-0.5 check-orange"
+                          className="rounded border-gray-300 text-[#C44200] focus:ring-black cursor-pointer mt-0.5 check-orange"
                         />
                       </td>
 
@@ -627,13 +627,6 @@ export default function EventAssignUsersPage() {
               )}
 
               <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeAssignModal}
-                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
                 <button
                   type="submit"
                   disabled={submittingAssign}

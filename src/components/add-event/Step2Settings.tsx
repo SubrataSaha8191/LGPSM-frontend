@@ -1,6 +1,6 @@
 "use client";
 
-import { CARD_DISPLAY_DEFAULTS, CARD_DISPLAY_OPTIONS, CARD_INFO_OPTIONS, CUSTOM_DETAIL, EMPLOYEE_ID, EMPLOYEE_ID_LABEL, customFieldFor, customTitleKey, detailKind, isCustomDetail, type CardInfo, type CardInfoField } from "./eventDraft";
+import { CARD_DISPLAY_DEFAULTS, CARD_DISPLAY_OPTIONS, CARD_INFO_OPTIONS, CUSTOM_DETAIL, EMPLOYEE_ID, EMPLOYEE_ID_LABEL, customFieldFor, customShowKey, customTitleKey, detailKind, isCustomDetail, type CardInfo, type CardInfoField } from "./eventDraft";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CheckInPolicy, POLICY_FLAGS, POLICY_LABEL, policyOf, policyOptions } from "@/utils/checkInPolicy";
 import React, { useEffect, useRef } from "react";
@@ -66,7 +66,9 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
         </div>
       )}
 
-      {/* Select data to show on card: the event's own details every card prints (the card preview follows) */}
+      {/* Select data to show on card: the event's own details every card prints (the card preview follows). An organizer's own uploaded
+          design is the card as it is, so neither this nor Additional Information is offered for it. */}
+      {!draft.template?.staticCard && (
       <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900">Select data to show on card</span>
@@ -89,8 +91,9 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
           </p>
         )}
       </div>
+      )}
 
-      {/* Additional Information: the two guest details printed on the card, set right here (the card preview updates as you choose) */}
+      {!draft.template?.staticCard && (
       <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-900">Additional Information you want to show on card</span>
@@ -153,8 +156,18 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
                       onChange={(e) => setCardInfo({ ...info, [titleKey]: e.target.value })}
                       placeholder="e.g. Designation, Employee ID, Badge No."
                       aria-invalid={!!errors.cardInfo}
-                      className={`w-full px-3.5 py-2.5 bg-[#FAFAFA] border rounded-md text-sm text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D] ${errors.cardInfo ? "border-rose-400" : "border-[#E0E0E0]"}`}
+                      className={`w-full px-3.5 py-2.5 bg-[#FAFAFA] border rounded-md text-sm text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black ${errors.cardInfo ? "!border-rose-500" : "border-[#E0E0E0]"}`}
                     />
+                    <label htmlFor={`card-info-show-title-${slot}`} className="mt-2 inline-flex items-center gap-2 text-sm text-[#15191C] cursor-pointer">
+                      <input
+                        id={`card-info-show-title-${slot}`}
+                        type="checkbox"
+                        checked={info[customShowKey(field)] === true}
+                        onChange={(e) => setCardInfo({ ...info, [customShowKey(field)]: e.target.checked })}
+                        className="size-4 accent-[#1A9242] cursor-pointer"
+                      />
+                      Show this title on the card (e.g. &ldquo;{(info[titleKey] ?? "").trim() || "Designation"}: value&rdquo;)
+                    </label>
                   </div>
                 )}
               </div>
@@ -171,9 +184,10 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
           </p>
         )}
       </div>
+      )}
 
       {features.askFoodPreference && (
-        <div className={`p-4 border rounded-md bg-white space-y-4 ${errors.dietaryPreference ? "border-rose-400" : "border-[#E0E0E0]"}`}>
+        <div className={`p-4 border rounded-md bg-white space-y-4 ${errors.dietaryPreference ? "!border-rose-500" : "border-[#E0E0E0]"}`}>
           <label htmlFor="opt-food" className="flex items-center gap-3 cursor-pointer">
             <input
               id="opt-food"
@@ -206,7 +220,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
                     maxLength={100}
                     onChange={(e) => updateCategory(category.id, { title: e.target.value })}
                     placeholder="Dietary Preference"
-                    className="w-full max-w-md px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 focus:outline-none focus:border-[#16A34A]"
+                    className="w-full max-w-md px-3.5 py-2.5 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-sm text-gray-900 focus:outline-none focus:border-black"
                   />
                   <ul className="space-y-2.5">
                     {category.options.map((opt, optIdx) => (
@@ -220,7 +234,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
                           maxLength={60}
                           onChange={(e) => updateCategory(category.id, { options: category.options.map((o, i) => (i === optIdx ? e.target.value : o)) })}
                           placeholder={`Option ${optIdx + 1}`}
-                          className="flex-1 max-w-xs border-b border-gray-300 focus:border-[#FF651D] focus:outline-none py-1 text-sm text-gray-900 bg-transparent"
+                          className="flex-1 max-w-xs border-b border-gray-300 focus:border-black focus:outline-none py-1 text-sm text-gray-900 bg-transparent"
                         />
                         {category.options.length > 1 && (
                           <button

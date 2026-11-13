@@ -47,7 +47,7 @@ const ACCESS_OPTIONS: { value: AccessControl; label: string }[] = [
 ];
 
 const labelClass = "block text-sm font-medium text-gray-900 mb-1.5";
-const fieldClass = "w-full px-3.5 py-2.5 bg-[#FAFAFA] border rounded-md text-sm text-gray-900 focus:outline-none focus:border-[#FF651D]";
+const fieldClass = "w-full px-3.5 py-2.5 bg-[#FAFAFA] border rounded-md text-sm text-gray-900 focus:outline-none focus:border-black";
 
 function ExcelLogo({ className = "w-4 h-4 shrink-0" }: { className?: string }) {
   return (
@@ -176,7 +176,7 @@ export default function Step3Sessions({
                 onChange={(e) => updateSession(sess.key, { name: e.target.value })}
                 placeholder="Entry Session"
                 aria-invalid={!!nameError}
-                className={`${fieldClass} ${nameError ? "border-rose-400" : "border-[#E0E0E0]"}`}
+                className={`${fieldClass} ${nameError ? "!border-rose-500" : "border-[#E0E0E0]"}`}
               />
               {nameError && <p className="mt-1 text-xs font-medium text-rose-600">{nameError}</p>}
             </div>
@@ -203,7 +203,7 @@ export default function Step3Sessions({
                     type="button"
                     aria-label={`${sess.name || "Session"} ${field === "start" ? "start" : "end"} time`}
                     onClick={() => onOpenSessionPicker(sess.key, field)}
-                    className={`${fieldClass} flex items-center justify-between gap-2 text-left cursor-pointer ${timeError ? "border-rose-400" : "border-[#E0E0E0]"}`}
+                    className={`${fieldClass} flex items-center justify-between gap-2 text-left cursor-pointer ${timeError ? "!border-rose-500" : "border-[#E0E0E0]"}`}
                   >
                     <span className="truncate">{formatDateTime(field === "start" ? sess.start : sess.end, "Select date and time")}</span>
                     <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

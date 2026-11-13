@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ACCEPTED_IMAGE_TYPES, MediaPurpose, mediaService } from "@/services/mediaService";
 import { resolveImageUrl } from "@/utils/mediaUrl";
 import DashedBorder from "@/components/common/DashedBorder";
+import ImageCropModal from "@/components/common/ImageCropModal";
 
 interface ImageUploadFieldProps {
   // Stored image reference ("media:<id>", URL or site path); empty when there is no image
@@ -21,6 +22,8 @@ interface ImageUploadFieldProps {
   disabled?: boolean;
   optional?: boolean;
   onUploadingChange?: (uploading: boolean) => void;
+  /** Offer a 1:1 crop before the picture is uploaded */
+  squareCrop?: boolean;
 }
 
 // Uploads immediately and previews the stored copy, so what the user sees here is exactly what
@@ -37,12 +40,21 @@ export default function ImageUploadField({
   disabled = false,
   optional = false,
   onUploadingChange,
+  squareCrop = false,
 }: ImageUploadFieldProps) {
+  const [cropping, setCropping] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const preview = resolveImageUrl(value);
+
+  // a picked picture goes to the crop window first when this field crops; an animated or vector picture is uploaded as it is
+  const pick = (file: File | undefined) => {
+    if (!file || disabled) return;
+    if (squareCrop && /^image\/(jpeg|png|webp)$/.test(file.type)) { setCropping(file); if (inputRef.current) inputRef.current.value = ""; return; }
+    void upload(file);
+  };
 
   const upload = async (file: File | undefined) => {
     if (!file || disabled) return;
@@ -66,7 +78,7 @@ export default function ImageUploadField({
         accept={ACCEPTED_IMAGE_TYPES}
         className="hidden"
         disabled={disabled || uploading}
-        onChange={(e) => upload(e.target.files?.[0])}
+        onChange={(e) => pick(e.target.files?.[0])}
       />
       {preview ? (
         <div className={`relative w-full ${fill ? "flex-1 min-h-[140px]" : aspectClassName} rounded-md overflow-hidden border border-[#E0E0E0] bg-[#F4F5F8]`}>
@@ -103,7 +115,7 @@ export default function ImageUploadField({
           onDrop={(e) => {
             e.preventDefault();
             setDragOver(false);
-            upload(e.dataTransfer.files?.[0]);
+            pick(e.dataTransfer.files?.[0]);
           }}
           className={`group relative w-full rounded-md p-6 text-center text-sm transition-colors cursor-pointer disabled:cursor-not-allowed ${
             fill ? "flex flex-1 flex-col items-center justify-center" : ""
@@ -122,6 +134,7 @@ export default function ImageUploadField({
           <span className="block mt-1 text-xs text-[#828282]">{hint}</span>
         </button>
       )}
+      {cropping && <ImageCropModal file={cropping} onCancel={() => setCropping(null)} onConfirm={(cropped) => { setCropping(null); void upload(cropped); }} />}
       {error && <p role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{error}</p>}
     </div>
   );

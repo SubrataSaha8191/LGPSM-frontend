@@ -56,7 +56,7 @@ export default function HeroSection() {
                   placeholder="hello@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF5B22] text-sm border border-gray-200/60 shadow-sm font-[family-name:var(--font-space-grotesk)]"
+                  className="flex-1 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black text-sm border border-gray-200/60 shadow-sm font-[family-name:var(--font-space-grotesk)]"
                 />
                 <button
                   type="submit"

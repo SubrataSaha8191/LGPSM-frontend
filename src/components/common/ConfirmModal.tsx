@@ -93,8 +93,19 @@ export default function ConfirmModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
-        className={`bg-white rounded-xl border border-gray-100 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 confirm-modal-panel ${closing ? "is-closing" : ""}`}
+        className={`bg-white rounded-xl border border-gray-100 shadow-2xl max-w-sm w-full p-6 text-center space-y-4 relative confirm-modal-panel ${closing ? "is-closing" : ""}`}
       >
+        {/* closing the window is the same as answering no: the close icon replaces a Cancel button */}
+        <button
+          ref={cancelRef}
+          type="button"
+          onClick={() => resolve(false)}
+          aria-label={cancelText}
+          title={cancelText}
+          className="absolute right-3 top-3 size-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer focus-visible:outline-2 focus-visible:outline-black"
+        >
+          <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
         <div
           className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto shadow-2xs ${
             danger ? "bg-rose-100 text-rose-600" : "bg-orange-100 text-[#C44200]"
@@ -121,18 +132,10 @@ export default function ConfirmModal({
 
         <div className="pt-2 flex items-center gap-3">
           <button
-            ref={cancelRef}
-            type="button"
-            onClick={() => resolve(false)}
-            className="flex-1 py-2.5 font-bold text-xs rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5B22]"
-          >
-            {cancelText}
-          </button>
-          <button
             ref={confirmRef}
             type="button"
             onClick={() => resolve(true)}
-            className={`flex-1 py-2.5 font-bold text-xs rounded-md text-white shadow-2xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 ${
+            className={`w-full py-2.5 font-bold text-xs rounded-md text-white shadow-2xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 ${
               danger ? "bg-rose-600 hover:bg-rose-700 focus-visible:outline-rose-600" : "bg-[#C65318] hover:bg-[#A83800] focus-visible:outline-[#FF5B22]"
             }`}
           >

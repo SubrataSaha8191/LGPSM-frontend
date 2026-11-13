@@ -12,7 +12,7 @@ export default function BillingDateField({ value, onChange, placeholder, label, 
     try { input.current?.showPicker?.(); } catch { input.current?.focus(); }
   };
   return (
-    <div onClick={open} className="relative bg-white border border-[#E0E0E0] rounded-md h-[47px] px-4 flex items-center gap-2.5 cursor-pointer focus-within:border-[#FF651D]">
+    <div onClick={open} className="relative bg-white border border-[#E0E0E0] rounded-md h-[47px] px-4 flex items-center gap-2.5 cursor-pointer focus-within:border-black">
       <span className={`flex-1 min-w-0 truncate text-xs font-medium ${value ? "text-[#15191C]" : "text-[#6B6B6B]"}`}>{value ? formatDay(value) : placeholder}</span>
       <Icon name="billing/calendar" width={20} height={20} className="text-[#4B4F52] opacity-60" />
       <input

@@ -73,9 +73,6 @@ export default function CardPreviewModal({ eventId, inviteeId, inviteeName, onCl
               Download
             </a>
           )}
-          <button type="button" onClick={onClose} className="px-4 py-2 bg-[#C65318] hover:bg-[#A83800] text-white text-sm font-medium rounded-md cursor-pointer">
-            Close
-          </button>
         </div>
       </div>
     </div>

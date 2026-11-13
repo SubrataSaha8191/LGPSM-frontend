@@ -331,7 +331,7 @@ export default function OrganizerDetailsPage() {
                     placeholder="Search event.."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-[47px] pl-10 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] transition-colors"
+                    className="w-full h-[47px] pl-10 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black transition-colors"
                   />
                 </div>
               </div>
@@ -368,11 +368,11 @@ export default function OrganizerDetailsPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <label className="text-xs font-medium text-[#4B4F52]">
                           Starts from
-                          <input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value, to: f.to && e.target.value > f.to ? e.target.value : f.to }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-[#FF651D]" />
+                          <input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value, to: f.to && e.target.value > f.to ? e.target.value : f.to }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
                         </label>
                         <label className="text-xs font-medium text-[#4B4F52]">
                           Starts until
-                          <input type="date" value={draftFilters.to} min={draftFilters.from || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-[#FF651D]" />
+                          <input type="date" value={draftFilters.to} min={draftFilters.from || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
                         </label>
                       </div>
                       <div className="flex items-center justify-end gap-2 pt-1">
@@ -500,19 +500,12 @@ export default function OrganizerDetailsPage() {
                   placeholder="Type"
                   value={deactivateMessage}
                   onChange={(e) => setDeactivateMessage(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#FF5B22] resize-none"
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-md text-xs text-gray-800 placeholder-gray-500 focus:outline-none focus:border-black resize-none"
                 />
               </div>
 
               {/* Modal Buttons */}
               <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsDeactivateModalOpen(false)}
-                  className="px-6 py-[11px] bg-white border border-[#E0E0E0] hover:bg-gray-50 text-[#15191C] text-base font-semibold rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
                 {actionError && (
                   <p className="text-xs text-rose-600 font-medium break-words flex-1">{actionError}</p>
                 )}

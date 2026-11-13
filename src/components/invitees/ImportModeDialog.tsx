@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ModalClose from "@/components/common/ModalClose";
 import type { ImportMode, ImportPreview } from "@/services/inviteeService";
 import { alreadyUploadedAndSent, previewLines } from "@/utils/inviteeLists";
 
@@ -26,22 +27,21 @@ export default function ImportModeDialog({ fileName, rowCount, sentSets, preview
   if (alreadyUploadedAndSent(previews?.append)) {
     return (
       <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-mode-title">
-        <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[calc(100dvh-2rem)]">
-          <h2 id="import-mode-title" className="text-lg font-semibold text-[#15191C]">This list has already been uploaded</h2>
+        <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[calc(100dvh-2rem)] relative">
+          <ModalClose onClick={onCancel} />
+          <h2 id="import-mode-title" className="pr-8 text-lg font-semibold text-[#15191C]">This list has already been uploaded</h2>
           <p className="text-sm text-[#6B6B6B] break-words">{fileName} · {rowCount} row{rowCount === 1 ? "" : "s"}</p>
           <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{ALREADY_SENT_MESSAGE}</p>
-          <div className="flex justify-end">
-            <button type="button" onClick={onCancel} className="px-4 py-2 bg-[#C65318] hover:bg-[#A83800] rounded-md text-sm font-medium text-white cursor-pointer">OK</button>
-          </div>
         </div>
       </div>
     );
   }
   return (
     <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-mode-title">
-      <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[calc(100dvh-2rem)]">
+      <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl space-y-4 overflow-y-auto max-h-[calc(100dvh-2rem)] relative">
+        <ModalClose onClick={onCancel} disabled={busy} />
         <div>
-          <h2 id="import-mode-title" className="text-lg font-semibold text-[#15191C]">How should this list be imported?</h2>
+          <h2 id="import-mode-title" className="pr-8 text-lg font-semibold text-[#15191C]">How should this list be imported?</h2>
           <p className="text-sm text-[#6B6B6B] mt-1 break-words">{fileName} · {rowCount} row{rowCount === 1 ? "" : "s"}</p>
         </div>
 
@@ -72,9 +72,6 @@ export default function ImportModeDialog({ fileName, rowCount, sentSets, preview
           </details>
         )}
 
-        <div className="flex justify-end">
-          <button type="button" onClick={onCancel} disabled={busy} className="px-4 py-2 border border-[#E0E0E0] rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50">Cancel</button>
-        </div>
       </div>
     </div>
   );

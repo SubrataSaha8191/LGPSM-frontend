@@ -136,12 +136,12 @@ export default function CustomDropdown({
           plain
             ? `bg-transparent ${isOpen || plainTone === "ink" ? "text-[#15191C]" : "text-[#7F7F7F]"}`
             : disabled
-            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+            ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"
             : invalid && !(optional && isOpen)
-              ? "bg-[#FAFAFA] border-rose-400 text-gray-800"
+              ? "bg-[#FAFAFA] !border-rose-500 text-gray-800"
               : isOpen
-                ? `bg-white ${optional ? "border-[#16A34A]" : "border-[#FF651D]"} text-gray-800`
-                : `bg-[#FAFAFA] border-[#E0E0E0] ${optional ? "hover:border-[#E0E0E0]" : "hover:border-[#FF651D]"} text-gray-700`
+                ? `bg-white ${optional ? "border-[#16A34A]" : "border-black"} text-gray-800`
+                : `bg-[#FAFAFA] border-[#E0E0E0] ${optional ? "hover:border-[#E0E0E0]" : "hover:border-gray-500"} text-gray-700`
         }`}
       >
         <span className={`inline-flex items-center gap-2 min-w-0 ${plain ? "" : selectedOption && value !== "" ? "text-gray-900" : "text-gray-400"}`}>

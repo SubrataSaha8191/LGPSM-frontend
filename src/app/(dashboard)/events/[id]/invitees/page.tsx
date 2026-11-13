@@ -178,6 +178,8 @@ export default function InviteesManagementPage() {
   const [upload, setUpload] = useState<{ file: File; rows: InviteeSheetRow[] } | null>(null);
   const [showListPreview, setShowListPreview] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // bumped when guests are added from inside the list windows, so those lists refresh
+  const [listsReload, setListsReload] = useState(0);
   const [listsTab, setListsTab] = useState<"lists" | "aside" | null>(null);
   const [passAction, setPassAction] = useState<{ action: "REVOKE" | "REPLACE"; invitee: Invitee; needsReview?: boolean } | null>(null);
   const [passHistory, setPassHistory] = useState<CredentialHistoryRow[] | null>(null);
@@ -489,6 +491,8 @@ export default function InviteesManagementPage() {
     });
     await load();
     notifyDbUpdate();
+    // an open Invitee Preview List / Uploaded Lists window picks up the new dataset
+    setListsReload((n) => n + 1);
   };
 
   const handleGrantAccess = async () => {
@@ -640,7 +644,7 @@ export default function InviteesManagementPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search invitees"
-                    className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-[#FF651D]"
+                    className="w-full h-[47px] pl-12 pr-4 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs font-medium text-gray-900 placeholder:text-[#6B6B6B] focus:outline-none focus:border-black"
                   />
                 </div>
               </div>
@@ -757,6 +761,7 @@ export default function InviteesManagementPage() {
 
             {invitees.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#4B4F52]">
+                <div className="flex flex-wrap items-center gap-4">
                 <label className="inline-flex items-center gap-2.5 cursor-pointer">
                   <input
                     type="checkbox"
@@ -767,20 +772,18 @@ export default function InviteesManagementPage() {
                   />
                   Select All
                 </label>
+                {!historical && selectedIds.length > 0 && (
+                  <button type="button" onClick={() => void deleteSelected()} disabled={bulkDeleting || busy !== null} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border border-rose-200 text-rose-700 bg-white hover:bg-rose-50 cursor-pointer disabled:opacity-50">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" /></svg>
+                    {bulkDeleting ? "Deleting…" : `Delete selected (${selectedIds.length})`}
+                  </button>
+                )}
+                </div>
                 <span>
               {invitees.length} invitee{invitees.length === 1 ? "" : "s"}
               {lifecycleStarted && <> · {invitees.length - notInvited.length} invited · {notInvited.length} not yet invited</>}
               {selectedIds.length > 0 && <> · {selectedIds.length} selected</>}
             </span>
-              </div>
-            )}
-
-            {!historical && selectedIds.length > 0 && (
-              <div>
-                <button type="button" onClick={() => void deleteSelected()} disabled={bulkDeleting || busy !== null} className={`${btn} border border-rose-200 text-rose-700 bg-white hover:bg-rose-50`}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" /></svg>
-                  {bulkDeleting ? "Deleting…" : `Delete selected (${selectedIds.length})`}
-                </button>
               </div>
             )}
 
@@ -939,7 +942,7 @@ export default function InviteesManagementPage() {
         />
       )}
       {showListPreview && (
-        <InviteeListPreviewModal eventId={eventId} subtitle={event?.title} showCompany={showCompany} readOnly={historical} onChanged={() => { void load(); notifyDbUpdate(); }} onClose={() => setShowListPreview(false)} />
+        <InviteeListPreviewModal eventId={eventId} subtitle={event?.title} showCompany={showCompany} readOnly={historical} reloadSignal={listsReload + invitees.length} onAddInvitees={historical ? undefined : () => setShowChooser(true)} onChanged={() => { void load(); notifyDbUpdate(); }} onClose={() => setShowListPreview(false)} />
       )}
       {sentPopup && <SendSuccessModal title={sentPopup.title} message={sentPopup.message} details={sentPopup.details} onClose={() => setSentPopup(null)} />}
       {confirmFirstSend && (
@@ -990,11 +993,11 @@ export default function InviteesManagementPage() {
         identityLabel={fieldConfig.identityLabel}
         identity2Label={fieldConfig.identity2 ? headerFor("identity2", fieldConfig) : undefined}
         onClose={() => setShowManualAdd(false)}
-        onSaved={async () => { await load(); notifyDbUpdate(); }}
+        onSaved={async () => { await load(); notifyDbUpdate(); setListsReload((n) => n + 1); }}
       />
 
       {listsTab && (
-        <InviteeListsModal eventId={eventId} initialTab={listsTab} onClose={() => setListsTab(null)} onRestored={async () => { await load(); notifyDbUpdate(); }} />
+        <InviteeListsModal eventId={eventId} initialTab={listsTab} reloadSignal={listsReload + invitees.length} onAddInvitees={historical ? undefined : () => setShowChooser(true)} onClose={() => setListsTab(null)} onRestored={async () => { await load(); notifyDbUpdate(); }} />
       )}
       {showHistory && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="history-title">

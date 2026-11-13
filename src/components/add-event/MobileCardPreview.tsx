@@ -102,7 +102,11 @@ export default function MobileCardPreview({
           setFailed(false);
         })
         .catch(() => {
-          if (!controller.signal.aborted) setFailed(true);
+          // a card that no longer matches what has been entered is worse than none: drop it and offer "Try again"
+          if (controller.signal.aborted) return;
+          if (liveUrl.current) { URL.revokeObjectURL(liveUrl.current); liveUrl.current = null; }
+          setLive(null);
+          setFailed(true);
         })
         .finally(() => {
           if (!controller.signal.aborted) setLoading(false);
@@ -128,7 +132,7 @@ export default function MobileCardPreview({
   return (
     <div className="h-full bg-[#F7F3F0] p-4 sm:p-6 flex flex-col items-center">
       <div className="w-full flex items-center justify-between mb-4">
-        <span className="text-xs font-medium px-3 py-1 bg-white border border-[#E0E0E0] rounded-md text-gray-800">Preview</span>
+        <span className="text-xs font-medium px-3 py-1 bg-white border border-[#E0E0E0] rounded-md text-gray-800">Card Preview</span>
         <div className="w-28">
           <CustomDropdown
             value={zoomLevel}

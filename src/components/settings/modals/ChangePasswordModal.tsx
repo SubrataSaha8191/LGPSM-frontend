@@ -85,7 +85,7 @@ export default function ChangePasswordModal({
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
               wrapperClassName="mx-6"
-              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D]"
+              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black"
               required
             />
           </div>
@@ -97,7 +97,7 @@ export default function ChangePasswordModal({
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               wrapperClassName="mx-6"
-              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D]"
+              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black"
               required
             />
           </div>
@@ -109,21 +109,13 @@ export default function ChangePasswordModal({
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               wrapperClassName="mx-6"
-              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D]"
+              className="w-full h-[47px] px-4 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black"
               required
             />
           </div>
 
           {/* Modal Footer Actions */}
           <div className="flex items-center justify-end gap-3 px-4 py-4 mt-6 border-t border-[#E0E0E0]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-6 py-[11px] text-base font-semibold text-black bg-white border border-[#DDD] rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
             <button
               type="submit"
               disabled={isSubmitting}

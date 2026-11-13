@@ -260,7 +260,7 @@ export default function DashboardPage() {
   const lastBilled = [...(earnings?.events || [])].filter((e) => e.amount).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
   const card = "bg-white border border-[#E0E0E0] rounded-lg";
-  const dateField = "h-9 w-[132px] px-2.5 text-xs border border-[#E0E0E0] rounded-md bg-white text-[#15191C] focus:outline-none focus:border-[#FF651D]";
+  const dateField = "h-9 w-[132px] px-2.5 text-xs border border-[#E0E0E0] rounded-md bg-white text-[#15191C] focus:outline-none focus:border-black";
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">

@@ -17,7 +17,7 @@ interface InviteesPreviewModalProps {
   onClose: () => void;
 }
 
-const inputClass = "w-full px-2.5 py-1.5 text-sm border border-[#E0E0E0] rounded bg-white focus:outline-none focus:border-[#FF651D]";
+const inputClass = "w-full px-2.5 py-1.5 text-sm border border-[#E0E0E0] rounded bg-white focus:outline-none focus:border-black";
 
 // "Invitees List Quick Preview": what an uploaded sheet (or the current list) contains, row by row.
 // Mounted only while open, so its local edits start from the rows passed in.
@@ -66,7 +66,7 @@ export default function InviteesPreviewModal({ title = "Invitees List Preview", 
             placeholder="Search by name, email or mobile"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-[#FF651D]"
+            className="w-full px-3.5 py-2.5 text-sm border border-[#E0E0E0] rounded-md bg-[#FAFAFA] focus:outline-none focus:border-black"
           />
           {(invalidCount > 0 || repeatedCount > 0) && (
             <p className="text-xs font-medium text-amber-700" role="status">
