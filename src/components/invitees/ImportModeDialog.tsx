@@ -50,12 +50,12 @@ export default function ImportModeDialog({ fileName, rowCount, sentSets, preview
         )}
 
         <div className="space-y-3">
-          <button type="button" disabled={busy} onClick={() => onChoose("APPEND")} className="w-full text-left rounded-lg border border-[#E0E0E0] hover:border-[#FF651D] px-4 py-3 cursor-pointer disabled:opacity-60">
+          <button type="button" disabled={busy} onClick={() => onChoose("APPEND")} className="w-full text-left rounded-lg border border-[#E0E0E0] hover:bg-[#EEF3FF] px-4 py-3 cursor-pointer disabled:opacity-60">
             <span className="block text-sm font-semibold text-[#15191C]">Add to existing invitees</span>
             <span className="block text-xs text-[#6B6B6B] mt-0.5">Everyone already on the list stays. Only people who are not already invited are added; duplicates are skipped.</span>
             <Forecast preview={previews?.append ?? null} loading={!previews && !previewError} mode="APPEND" />
           </button>
-          <button type="button" disabled={busy} onClick={() => onChoose("REPLACE")} className="w-full text-left rounded-lg border border-[#E0E0E0] hover:border-[#FF651D] px-4 py-3 cursor-pointer disabled:opacity-60">
+          <button type="button" disabled={busy} onClick={() => onChoose("REPLACE")} className="w-full text-left rounded-lg border border-[#E0E0E0] hover:bg-[#EEF3FF] px-4 py-3 cursor-pointer disabled:opacity-60">
             <span className="block text-sm font-semibold text-[#15191C]">Replace the not-yet-invited list</span>
             <span className="block text-xs text-[#6B6B6B] mt-0.5">
               Invitees who have never been invited and are not in this file are set aside (kept, not deleted, and restorable from Uploaded Lists). Guests with a failed or unresolved send are always kept. {sentSets ? "Lists you have already sent from are left as they are." : "Anyone already invited is never removed."}

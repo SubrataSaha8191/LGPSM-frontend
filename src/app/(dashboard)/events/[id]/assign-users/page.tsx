@@ -1,6 +1,7 @@
 "use client";
 
 import { isHistoricalEvent } from "@/utils/eventUtils";
+import PopupMessage from "@/components/common/PopupMessage";
 import ClosedEventNotice from "@/components/events/ClosedEventNotice";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -317,17 +318,7 @@ export default function EventAssignUsersPage() {
         <ClosedEventNotice status={eventStatus} />
 
         {/* Error Notification Banner */}
-        {errorFeedback && (
-          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
-            <span>{errorFeedback}</span>
-            <button
-              onClick={() => setErrorFeedback(null)}
-              className="font-bold text-rose-600 hover:text-rose-800 ml-4 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <PopupMessage message={errorFeedback} onClose={() => setErrorFeedback(null)} />
 
         {/* Controls (Figma 217:19779): "System Users" + search, assigned/all filter, Add User. Assigning starts from
             the selected rows (bottom "Assign N users"), so the separate top "Assign Users" button is gone (organiser feedback). */}
@@ -622,9 +613,7 @@ export default function EventAssignUsersPage() {
                 onChange={setSessionScope}
               />
 
-              {errorFeedback && (
-                <p role="alert" className="text-xs font-medium text-rose-600 break-words">{errorFeedback}</p>
-              )}
+              <PopupMessage message={errorFeedback} />
 
               <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button

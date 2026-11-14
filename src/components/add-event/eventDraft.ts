@@ -108,14 +108,22 @@ export interface CardDisplay {
   location: boolean;
   /** the guest's name: its own checkbox (it is always collected; this decides whether it is printed on the card) */
   inviteeName: boolean;
+  /** the event's logo / picture */
+  logo: boolean;
 }
-export const CARD_DISPLAY_DEFAULTS: CardDisplay = { title: true, qr: true, dateTime: true, location: true, inviteeName: true };
+export const CARD_DISPLAY_DEFAULTS: CardDisplay = { title: true, qr: true, dateTime: true, location: true, inviteeName: true, logo: true };
+/** What is sent to the server: the logo flag only when it is switched off, so an older server never sees a key it does not know */
+export const cardDisplayForServer = <T extends Partial<CardDisplay>>(d: T): T => {
+  const { logo, ...rest } = d;
+  return (logo === false ? d : rest) as T;
+};
 export const CARD_DISPLAY_OPTIONS: { key: keyof CardDisplay; label: string }[] = [
   { key: "title", label: "Event Title" },
   { key: "qr", label: "Event QR" },
   { key: "dateTime", label: "Event Date & Time" },
   { key: "location", label: "Event Location" },
   { key: "inviteeName", label: "Invitee Name" },
+  { key: "logo", label: "Event Logo" },
 ];
 
 export interface EventDraft {
@@ -369,7 +377,7 @@ function commonPayload(draft: EventDraft) {
     dietaryPreference: buildDietaryPreference(draft),
     ...(draft.template ? { templateId: draft.template.id } : {}),
     ...(draft.cardInfo ? { cardInfo: draft.cardInfo } : {}),
-    cardDisplay: { ...CARD_DISPLAY_DEFAULTS, ...(draft.cardDisplay || {}) },
+    cardDisplay: cardDisplayForServer({ ...CARD_DISPLAY_DEFAULTS, ...(draft.cardDisplay || {}) }),
     // An empty key clears a previously saved logo
     media: { logoKey: draft.logoKey || "" },
   };

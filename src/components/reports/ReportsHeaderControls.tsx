@@ -88,7 +88,7 @@ export default function ReportsHeaderControls({
         <button
           type="button"
           onClick={onDownloadReport}
-          className="h-[47px] px-3 inline-flex items-center gap-2.5 text-xs font-medium text-black cursor-pointer shrink-0 rounded-md hover:bg-[#FFF3EC] transition-colors"
+          className="h-[47px] px-3 inline-flex items-center gap-2.5 text-xs font-medium text-black cursor-pointer shrink-0 rounded-md hover:bg-[#EEF3FF] transition-colors"
         >
           <Icon name="reports/download" width={15.83} height={19.22} />
           <span>Download Report</span>

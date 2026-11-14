@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import ModalClose from "@/components/common/ModalClose";
 import { CancelEventResult, CancellationPreview, eventService } from "@/services/eventService";
 import { previewLines } from "@/utils/cancellationSummary";
@@ -79,7 +80,7 @@ export default function EventCancelModal({ isOpen, onClose, eventId, eventTitle,
           <span className="block text-right text-xs text-[#6B6B6B]">{reason.length}/{REASON_MAX}</span>
         </label>
 
-        {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+        <PopupMessage message={error} />
         <div className="flex justify-end gap-3">
           <button type="button" onClick={submit} disabled={busy} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">{busy ? "Cancelling…" : "Cancel event permanently"}</button>
         </div>

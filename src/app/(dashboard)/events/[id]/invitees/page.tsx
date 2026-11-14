@@ -1,6 +1,8 @@
 "use client";
 
 import { eventCanIssuePasses, isHistoricalEvent } from "@/utils/eventUtils";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import PopupMessage from "@/components/common/PopupMessage";
 import ClosedEventNotice from "@/components/events/ClosedEventNotice";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createSingleFlight } from "@/utils/singleFlight";
@@ -209,10 +211,13 @@ export default function InviteesManagementPage() {
 
   // The skeleton is for the first load of an event; a refresh after an action keeps the rows on screen and swaps the data in
   const loadedFor = useRef<string | null>(null);
+  const quietRef = useRef(false);
   const load = useCallback(async () => {
     if (!eventId) return;
+    const quiet = quietRef.current;
+    quietRef.current = false;
     if (loadedFor.current !== eventId) setLoading(true);
-    setLoadError(null);
+    if (!quiet) setLoadError(null);
     // The delivery history only adds retry buttons and failure reasons: it is requested together with the rest, but the guest list
     // is shown as soon as the guests themselves arrive instead of waiting for it.
     const historyRequest = invitationService.getAllInvitations(eventId);
@@ -222,6 +227,7 @@ export default function InviteesManagementPage() {
       inviteeService.getInvitees(eventId),
     ]);
     if (!evtRes.success || !evtRes.data) {
+      if (quiet) return;
       setLoadError(evtRes.message || "Event not found or you do not have access to it.");
       setLoading(false);
       return;
@@ -232,7 +238,7 @@ export default function InviteesManagementPage() {
     if (orgChannel && typeof orgChannel === "object" && orgChannel.profile?.invitationChannel) setChannel(asInvitationChannel(orgChannel.profile.invitationChannel));
     setSessions(sessRes.success && Array.isArray(sessRes.data) ? sessRes.data : []);
     if (invRes.success && Array.isArray(invRes.data)) setInvitees(invRes.data as unknown as Invitee[]);
-    else setLoadError(invRes.message || "Failed to load invitees.");
+    else if (!quiet) setLoadError(invRes.message || "Failed to load invitees.");
     setSelectedIds((prev) => prev.filter((id) => (invRes.data as unknown as Invitee[] | undefined)?.some((i) => i._id === id)));
     loadedFor.current = eventId;
     setLoading(false);
@@ -246,6 +252,9 @@ export default function InviteesManagementPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // guests, their delivery state, RSVPs and check-ins follow what happens elsewhere (scans at the door, other devices)
+  useLiveRefresh(() => { quietRef.current = true; return load(); }, 20_000, !!eventId);
 
   const loadPassHistory = useCallback(async () => {
     try {
@@ -557,7 +566,7 @@ export default function InviteesManagementPage() {
 
   const btn = "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
   // Figma send button: outlined orange, 16px semibold, washed out until something can be sent
-  const primaryOutline = "inline-flex items-center gap-2 px-6 py-[11px] border border-[#FF651D] text-[#C44200] bg-white hover:bg-orange-50 text-base font-semibold rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+  const primaryOutline = "inline-flex items-center gap-2 px-6 py-[11px] border border-[#FF651D] text-[#C44200] bg-white hover:bg-[#EEF3FF] text-base font-semibold rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
   // one definition of the event's invitee fields drives the Excel sample, this preview, and the manual Add Invitee form
   const fieldConfig = inviteeConfigFor({ cardInfo: event?.cardInfo, dietaryEnabled: !!event?.dietaryPreference?.enabled, corporate: isCorporate });
   const sampleColumns = excelColumnsFor(fieldConfig);
@@ -571,19 +580,7 @@ export default function InviteesManagementPage() {
       <div className="px-4 sm:px-6 py-4 sm:py-6 w-full space-y-5 pb-24">
         {!sidebarFlow && eventId && <EventSubNav eventId={eventId} activeTab="invitees" inviteesCount={loading ? undefined : invitees.length} />}
 
-        {feedback && (
-          <div role={feedback.type === "error" ? "alert" : "status"} className={`p-3.5 rounded-md border text-sm flex items-start justify-between gap-3 ${feedback.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : feedback.type === "info" ? "bg-blue-50 border-blue-200 text-blue-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
-            <div className="min-w-0">
-              <p className="font-medium break-words">{feedback.message}</p>
-              {feedback.details && feedback.details.length > 0 && (
-                <ul className="list-disc pl-5 mt-1 text-xs space-y-0.5">
-                  {feedback.details.map((d, i) => <li key={i} className="break-words">{d}</li>)}
-                </ul>
-              )}
-            </div>
-            <button type="button" onClick={() => setFeedback(null)} aria-label="Dismiss" className="shrink-0 cursor-pointer opacity-70 hover:opacity-100">✕</button>
-          </div>
-        )}
+        <PopupMessage message={feedback ? [feedback.message, ...(feedback.details || []).map((d) => `• ${d}`)].join("\n") : null} type={feedback?.type === "success" ? "success" : feedback?.type === "info" ? "info" : "error"} onClose={() => setFeedback(null)} />
 
         {!eventId ? (
           // Figma 431:550 (Add Invitation step 1): the toolbar with nothing chosen yet, then the "No invitees yet" state
@@ -619,7 +616,7 @@ export default function InviteesManagementPage() {
               <svg className="w-20 h-20 text-[#BDBDBD]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
               </svg>
-              <p className="max-w-[300px] text-base text-[#4B4F52]">No invitees yet. Add invitees to your event to get started.</p>
+              <p className="max-w-[300px] text-base text-[#4B4F52]">Select an event to check its invitee list.</p>
               <button type="button" onClick={() => showAlert("Select an event first, then add its invitees.", "info")} className="px-6 py-2 rounded-md bg-[#F6F6F6] hover:bg-gray-200 text-base font-medium text-[#C44200] cursor-pointer">Add Invitees</button>
             </div>
           </>
@@ -1039,7 +1036,7 @@ export default function InviteesManagementPage() {
               <section aria-labelledby="pass-history-title" className="mt-8 pt-6 border-t border-[#E5E5E5]">
                 <h3 id="pass-history-title" className="text-base font-medium text-gray-900">Access Pass History</h3>
                 <p className="mt-1 text-xs text-[#6B6B6B]">Passes issued, replaced and revoked, with the reason and what happened to the message sent to the guest. “Accepted by the provider” is not proof of delivery.</p>
-                {passHistoryError && <p role="alert" className="mt-3 text-sm text-rose-600">{passHistoryError}</p>}
+                <PopupMessage message={passHistoryError} />
                 {!passHistory && !passHistoryError && <p className="mt-3 text-sm text-[#6B6B6B]">Loading…</p>}
                 {passHistory && passHistory.length === 0 && <p className="mt-3 text-sm text-[#6B6B6B]">No access pass has been issued, replaced or revoked yet.</p>}
                 {passHistory && passHistory.length > 0 && (
@@ -1063,7 +1060,7 @@ export default function InviteesManagementPage() {
                     </table>
                     <div className="mt-4 flex flex-wrap items-start gap-4">
                       {hasUnsent(passHistory) && (
-                        <button type="button" onClick={() => retryPassNotices(false)} disabled={retryingNotices} className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-[#FFF3EC] rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">{retryingNotices ? "Retrying…" : "Retry unsent messages"}</button>
+                        <button type="button" onClick={() => retryPassNotices(false)} disabled={retryingNotices} className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-[#EEF3FF] rounded-md text-sm font-medium cursor-pointer disabled:opacity-50">{retryingNotices ? "Retrying…" : "Retry unsent messages"}</button>
                       )}
                       {hasUnknown(passHistory) && (
                         <div role="group" aria-label="Messages with an unknown outcome" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900 space-y-2 max-w-md">

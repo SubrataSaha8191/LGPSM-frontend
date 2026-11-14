@@ -133,7 +133,7 @@ export default function VerifyLocationModal({ address, pin, onConfirm, onClose }
                     role="option"
                     aria-selected={chosen === i}
                     onClick={() => choose(i)}
-                    className={`w-full text-left text-sm px-3 py-2 rounded-md border cursor-pointer ${chosen === i ? "border-[#FF651D] bg-[#FFF3EC] text-[#15191C]" : "border-[#E0E0E0] hover:border-[#FF651D] text-[#4B4F52]"}`}
+                    className={`w-full text-left text-sm px-3 py-2 rounded-md border cursor-pointer ${chosen === i ? "border-[#FF651D] bg-[#FFF3EC] text-[#15191C]" : "border-[#E0E0E0] hover:bg-[#EEF3FF] text-[#4B4F52]"}`}
                   >
                     {m.label}
                   </button>

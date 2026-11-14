@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import { createPortal } from "react-dom";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CategoriesApi, CategoryOption } from "@/hooks/useCategories";
@@ -205,7 +206,7 @@ export function CategoryModal({
         <form onSubmit={submit} noValidate>
           <div className="px-6 pt-5 pb-6 space-y-5">
             {api.isOrganizer && <p className="text-xs text-[#828282]">Only you will see this {isSub ? "subcategory" : "category"}. It will not appear for other organizers.</p>}
-            {error && <p role="alert" className="p-3 rounded-md bg-rose-50 border border-rose-200 text-sm text-rose-700">{error}</p>}
+            <PopupMessage message={error} />
             {isSub && (
               <div>
                 <label className="block text-sm font-medium text-[#15191C] mb-2">Category</label>

@@ -1,6 +1,8 @@
 "use client";
 
 import PageHeader from "@/components/common/PageHeader";
+import PopupMessage from "@/components/common/PopupMessage";
+import { openDatePicker } from "@/utils/openDatePicker";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { addButtonClass } from "@/components/common/ListControls";
@@ -255,7 +257,7 @@ export default function OrganizerDetailsPage() {
               <button
                 onClick={() => setIsDeactivateModalOpen(true)}
                 disabled={isDeactivated}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FEE8E1] hover:bg-[#FCD8CC] text-[#A83800] text-xs font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FEE8E1] hover:bg-[#EEF3FF] text-[#A83800] text-xs font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6h12a6 6 0 00-6-6zM21 12h-6" />
@@ -265,9 +267,7 @@ export default function OrganizerDetailsPage() {
             </div>
           </div>
 
-          {actionError && !isDeactivateModalOpen && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium break-words">{actionError}</div>
-          )}
+          <PopupMessage message={!isDeactivateModalOpen ? actionError : null} onClose={() => setActionError(null)} />
 
           {/* Stats tiles: separate bordered cards (Figma 592:1790) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -368,11 +368,11 @@ export default function OrganizerDetailsPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <label className="text-xs font-medium text-[#4B4F52]">
                           Starts from
-                          <input type="date" value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value, to: f.to && e.target.value > f.to ? e.target.value : f.to }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
+                          <input type="date" onClick={openDatePicker} value={draftFilters.from} onChange={(e) => setDraftFilters((f) => ({ ...f, from: e.target.value, to: f.to && e.target.value > f.to ? e.target.value : f.to }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
                         </label>
                         <label className="text-xs font-medium text-[#4B4F52]">
                           Starts until
-                          <input type="date" value={draftFilters.to} min={draftFilters.from || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
+                          <input type="date" onClick={openDatePicker} value={draftFilters.to} min={draftFilters.from || undefined} onChange={(e) => setDraftFilters((f) => ({ ...f, to: e.target.value }))} className="mt-1 w-full h-[40px] px-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 focus:outline-none focus:border-black" />
                         </label>
                       </div>
                       <div className="flex items-center justify-end gap-2 pt-1">

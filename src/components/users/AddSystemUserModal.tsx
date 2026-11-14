@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import PhoneInput from "@/components/common/PhoneInput";
 import PasswordField from "@/components/common/PasswordField";
 import CustomDropdown from "@/components/common/CustomDropdown";
@@ -141,9 +142,7 @@ export default function AddSystemUserModal({ isAdmin, organizers = [], initialOr
                 />
               </div>
 
-              {formError && (
-                <p role="alert" className="text-xs font-medium text-rose-600 break-words">{formError}</p>
-              )}
+              <PopupMessage message={formError} />
 
               <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button type="submit" disabled={isSubmitting || missingOrganizer} title={missingOrganizer ? "Select an organizer first" : undefined} className="px-6 py-[11px] bg-[#C65318] hover:bg-[#A83800] text-white text-base font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">

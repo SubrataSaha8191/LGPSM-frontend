@@ -1,6 +1,8 @@
 "use client";
 
 import { useAlert } from "@/context/AlertContext";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import PopupMessage from "@/components/common/PopupMessage";
 import { sessionTimeProblem } from "@/utils/sessionWindow";
 import ChoiceModal from "@/components/common/ChoiceModal";
 import { isHistoricalEvent } from "@/utils/eventUtils";
@@ -143,6 +145,9 @@ export default function EventSessionsPage() {
   useEffect(() => {
     fetchSessions();
   }, [eventId]);
+
+  // session totals, the people assigned and the check-in counts follow what happens elsewhere
+  useLiveRefresh(() => fetchSessions(), 30_000, !!eventId);
 
   // Form State for Add Session Modal
   const [sessionName, setSessionName] = useState("");
@@ -553,7 +558,7 @@ export default function EventSessionsPage() {
                       <button
                         type="button"
                         onClick={() => handleOpenDatePicker(field)}
-                        className="w-full h-[47px] px-3 flex items-center justify-between gap-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 hover:border-[#FF651D] cursor-pointer text-left"
+                        className="w-full h-[47px] px-3 flex items-center justify-between gap-2 bg-[#FAFAFA] border border-[#E0E0E0] rounded-md text-xs text-gray-800 hover:bg-[#EEF3FF] cursor-pointer text-left"
                       >
                         <span className="truncate">{formatDateTime(field === "start" ? startTime : endTime)}</span>
                         <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -616,7 +621,7 @@ export default function EventSessionsPage() {
 
                 {!copyOn && !editingId && (
                 <div>
-                  <label className="block text-sm font-medium text-[#15191C] mb-1.5">Add Invitees List</label>
+                  <label className="block text-sm font-medium text-[#15191C] mb-1.5">Add Invitees List <span className="font-normal text-[#6B6B6B]">(optional)</span></label>
                   <div className="border border-[#E0E0E0] rounded-md flex items-center bg-[#FAFAFA] overflow-hidden min-h-[47px]">
                     <button type="button" onClick={askForFile} className="self-stretch flex items-center px-4 bg-[#EDEDED] hover:bg-[#E3E3E3] text-[#4B4F52] text-xs font-medium cursor-pointer transition-colors border-r border-[#E0E0E0]">
                       Choose File
@@ -637,9 +642,7 @@ export default function EventSessionsPage() {
                 )}
               </div>
 
-              {formError && (
-                <p role="alert" className="text-xs font-medium text-rose-600 break-words">{formError}</p>
-              )}
+              <PopupMessage message={formError} />
 
               <button
                 type="submit"

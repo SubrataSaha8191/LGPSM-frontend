@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -216,7 +217,7 @@ function TemplatesPageContent() {
                 title={`${t.name} · ${labelFor(t)}${t.isCustom && !t.isMine && !t.isUploaded ? " · AI design shared with all organizers" : t.isMine ? " · Yours" : ""}`}
                 aria-label={`Preview template ${t.name}`}
                 onClick={() => { setLivePreview(null); setPreview(t); }}
-                className="group relative text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:border-[#FF651D] focus-visible:border-black focus:outline-none transition-colors cursor-pointer"
+                className="group relative text-left bg-white border border-[#E0E0E0] rounded-md overflow-hidden hover:bg-[#EEF3FF] focus-visible:border-black focus:outline-none transition-colors cursor-pointer"
               >
                 <TemplateThumb imageKey={t.imageKey} name={t.name} className="aspect-[2/3]!" />
                 <span aria-hidden className="absolute top-2 right-2 size-6 rounded bg-black/55 text-white flex items-center justify-center">
@@ -421,7 +422,7 @@ function EventRenderPanel({ template, onLivePreview }: { template: TemplateCard;
           </button>
         ))}
       </div>
-      {message && <p role={message.tone === "error" ? "alert" : "status"} className={`text-xs ${message.tone === "error" ? "text-rose-600" : "text-[#4B4F52]"}`}>{message.text}</p>}
+      <PopupMessage message={message?.text} type={message?.tone === "error" ? "error" : "info"} />
     </div>
   );
 }

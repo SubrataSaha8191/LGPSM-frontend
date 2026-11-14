@@ -1,6 +1,8 @@
 "use client";
 
 import PageHeader from "@/components/common/PageHeader";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import PopupMessage from "@/components/common/PopupMessage";
 import React, { useCallback, useEffect, useState } from "react";
 import NotificationCard, { NotificationCardData } from "@/components/notifications/NotificationCard";
 import {
@@ -77,6 +79,9 @@ export default function NotificationsPage() {
     await loadPage(1);
     setLoading(false);
   }, [loadPage]);
+
+  // new notifications appear on their own (only while the first page is open, so reading older ones is never interrupted)
+  useLiveRefresh(() => { if (page === 1) return loadPage(1); }, 30_000);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,15 +194,7 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {errorFeedback && (
-          <div role="alert" className="p-4 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-3">
-            <span className="break-words min-w-0">{errorFeedback}</span>
-            <div className="flex items-center gap-3 shrink-0">
-              <button onClick={reload} className="font-semibold underline cursor-pointer">Retry</button>
-              <button onClick={() => setErrorFeedback(null)} aria-label="Dismiss" className="font-bold cursor-pointer">✕</button>
-            </div>
-          </div>
-        )}
+        <PopupMessage message={errorFeedback} action={{ label: "Try again", onClick: reload }} onClose={() => setErrorFeedback(null)} />
 
         {loading ? (
           <SkeletonRegion label="Loading notifications" className="space-y-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { templateColumnsFor } from "@/utils/inviteeTemplate";
+import PopupMessage from "@/components/common/PopupMessage";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import StepHeader from "./StepHeader";
@@ -218,6 +219,7 @@ export default function EventWizard({
 
   // A new event starts by choosing a template (the dialog cannot be closed until one is chosen); the template then
   // sets the event category and subcategory. Editing a saved event does not ask again.
+  const [dismissedError, setDismissedError] = useState<string | null>(null);
   const mustPickTemplate = !eventId && draftHydrated && !draft.template;
   const chooseTemplate = (template: SelectedTemplate | null, suggested?: { categoryId: string; subcategoryId: string }) => {
     // an explicit choice is never swapped out by the automatic suggestion that follows a category change
@@ -364,7 +366,7 @@ export default function EventWizard({
 
   // one stable object per choice, so the card preview is only redrawn when a tick actually changes
   const cd = { ...CARD_DISPLAY_DEFAULTS, ...(draft.cardDisplay || {}) };
-  const cardDisplay = useMemo(() => ({ title: cd.title, qr: cd.qr, dateTime: cd.dateTime, location: cd.location, inviteeName: cd.inviteeName }), [cd.title, cd.qr, cd.dateTime, cd.location, cd.inviteeName]);
+  const cardDisplay = useMemo(() => ({ title: cd.title, qr: cd.qr, dateTime: cd.dateTime, location: cd.location, inviteeName: cd.inviteeName, logo: cd.logo }), [cd.title, cd.qr, cd.dateTime, cd.location, cd.inviteeName, cd.logo]);
 
   const previewSession = previewKey ? draft.sessions.find((s) => s.key === previewKey) : undefined;
   const previewFile = previewKey ? sessionFiles[previewKey] : undefined;
@@ -427,31 +429,13 @@ export default function EventWizard({
         </div>
       )}
 
-      {(draftStatus !== "idle" || draftSavedAt || submitError || currentStepHasErrors) && (
+      {/* Problems are shown as popups, not banners */}
+      <PopupMessage message={currentStepHasErrors ? `Please complete all required details on Step ${currentStep} before proceeding to the next step.` : null} type="warning" title="Required details missing" onClose={() => setShowErrors(false)} />
+      <PopupMessage message={draftStatus === "discarded-stale" ? "An older unsaved draft was discarded because this event was changed since it was saved." : null} type="info" title="Draft discarded" onClose={onDismissDraftStatus} />
+      <PopupMessage message={submitError && submitError !== dismissedError ? `${submitError} Your entries are kept, so you can fix the problem and try again.` : null} title="The event could not be saved" onClose={() => setDismissedError(submitError)} />
+      {(draftSavedAt && draftStatus !== "restored") && (
         <div className="px-4 sm:px-6 pt-4 space-y-2">
-          {currentStepHasErrors && (
-            <div role="alert" className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-sm flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>Please complete all required details on Step {currentStep} before proceeding to the next step.</span>
-              </div>
-              <button type="button" onClick={() => setShowErrors(false)} className="text-amber-700 hover:text-amber-900 font-medium text-xs cursor-pointer shrink-0">Dismiss</button>
-            </div>
-          )}
-          {draftStatus === "discarded-stale" && (
-            <div role="status" className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-sm flex items-center justify-between gap-2">
-              <span>An older unsaved draft was discarded because this event was changed since it was saved.</span>
-              <button type="button" onClick={onDismissDraftStatus} className="font-medium cursor-pointer shrink-0">OK</button>
-            </div>
-          )}
-          {submitError && (
-            <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-sm break-words">
-              {submitError} Your entries are kept, so you can fix the problem and try again.
-            </div>
-          )}
-          {draftSavedAt && draftStatus !== "restored" && (
+          {(
             <p className="text-xs text-[#6B6B6B]">
               Draft saved on this device at {new Date(draftSavedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
               {canDiscard && (

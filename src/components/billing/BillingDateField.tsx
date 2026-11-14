@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import { openDatePicker } from "@/utils/openDatePicker";
 import Icon from "@/components/icons/Icon";
 
 // The date field of the Billing frames (217:24385, filter popover and Download Statement dialog): a white 47px box, 12px grey
@@ -17,7 +18,7 @@ export default function BillingDateField({ value, onChange, placeholder, label, 
       <Icon name="billing/calendar" width={20} height={20} className="text-[#4B4F52] opacity-60" />
       <input
         ref={input}
-        type="date"
+        type="date" onClick={openDatePicker}
         aria-label={label}
         value={value}
         min={min}

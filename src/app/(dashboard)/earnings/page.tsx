@@ -1,6 +1,7 @@
 "use client";
 
 import { csvRow, csvBlob } from "@/utils/csv";
+import PopupMessage from "@/components/common/PopupMessage";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
 import { EarningsRecord } from "@/types/earnings";
@@ -169,9 +170,7 @@ export default function EarningsPage() {
           These are amounts due, not payments: online payments are not configured.
         </p>
 
-        {loadError && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-medium break-words">{loadError}</div>
-        )}
+        <PopupMessage message={loadError} onClose={() => setLoadError(null)} />
 
         <EarningsStatsRow estimatedTotal={estimatedTotal} organizersBilled={organizersBilled} loading={loading} />
 

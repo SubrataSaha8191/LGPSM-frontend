@@ -231,7 +231,7 @@ export default function InviteeListsModal({ eventId, initialTab = "lists", onRes
                         <td className="py-3 pr-3 max-w-[180px] break-words">{g.fromSet.name}</td>
                         <td className="py-3 pr-3 text-xs whitespace-nowrap">{formatDateTime(g.setAsideAt, "—")}{g.setAsideBy ? <span className="block text-[#6B6B6B]">by {g.setAsideBy.name}</span> : null}</td>
                         <td className="py-3 pr-3 text-xs">{g.reasonText || "Reason not recorded"}{g.replacedBy ? <span className="block text-[#6B6B6B]">by “{listDisplayName(g.replacedBy.name)}”</span> : null}</td>
-                        <td className="py-3 text-right"><button type="button" disabled={!aside.restorable} onClick={() => { setOutcome(null); setConfirm([g.id]); }} aria-label={`Restore ${g.name}`} className="px-3 py-1.5 border border-[#FF651D] text-[#C44200] hover:bg-[#FFF3EC] rounded-md text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Restore</button></td>
+                        <td className="py-3 text-right"><button type="button" disabled={!aside.restorable} onClick={() => { setOutcome(null); setConfirm([g.id]); }} aria-label={`Restore ${g.name}`} className="px-3 py-1.5 border border-[#FF651D] text-[#C44200] hover:bg-[#D6F5E1] hover:text-[#0F7A33] rounded-md text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Restore</button></td>
                       </tr>
                     ))}
                   </tbody>

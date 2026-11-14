@@ -1,6 +1,7 @@
 "use client";
 
 import PhoneInput from "@/components/common/PhoneInput";
+import PopupMessage from "@/components/common/PopupMessage";
 import React, { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { useOverlayClose } from "@/hooks/useOverlayClose";
@@ -317,11 +318,7 @@ export default function AddInviteeManualModal({
             */}
 
             {/* Error */}
-            {error && (
-              <div role="alert" aria-live="assertive" className="px-3.5 py-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-                {error}
-              </div>
-            )}
+            <PopupMessage message={error} />
           </div>
 
           {/* Footer */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { CARD_DISPLAY_DEFAULTS, CARD_DISPLAY_OPTIONS, CARD_INFO_OPTIONS, CUSTOM_DETAIL, EMPLOYEE_ID, EMPLOYEE_ID_LABEL, customFieldFor, customShowKey, customTitleKey, detailKind, isCustomDetail, type CardInfo, type CardInfoField } from "./eventDraft";
+import PopupMessage from "@/components/common/PopupMessage";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { CheckInPolicy, POLICY_FLAGS, POLICY_LABEL, policyOf, policyOptions } from "@/utils/checkInPolicy";
 import React, { useEffect, useRef } from "react";
@@ -85,11 +86,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
             );
           })}
         </div>
-        {draft.cardDisplay?.qr === false && (
-          <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            Cards will be printed without the QR code. Guests will need to open their invitation link to show their entry QR at check-in.
-          </p>
-        )}
+        <PopupMessage message={draft.cardDisplay?.qr === false ? "Cards will be printed without the QR code. Guests will need to open their invitation link to show their entry QR at check-in." : null} type="warning" title="No QR code on the cards" />
       </div>
       )}
 
@@ -178,11 +175,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
           <p className="text-xs text-[#6B6B6B]">The title becomes the column heading in the Excel sample and the field name when adding an invitee.</p>
         )}
         {errors.cardInfo && <p role="alert" className="text-xs font-medium text-rose-600">{errors.cardInfo}</p>}
-        {sampleColumnsChanged && (
-          <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            You already downloaded the Excel sample with the earlier columns. These changes alter the columns, so download the sample again; a file with the old headings will be refused.
-          </p>
-        )}
+        <PopupMessage message={sampleColumnsChanged ? "You already downloaded the Excel sample with the earlier columns. These changes alter the columns, so download the sample again; a file with the old headings will be refused." : null} type="warning" title="Download the Excel sample again" />
       </div>
       )}
 
@@ -259,7 +252,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
               <button
                 type="button"
                 onClick={() => { const id = newClientKey("pref"); focusNext.current = `pref-title-${id}`; setCategories([...categories, { id, title: "", options: [""] }]); }}
-                className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-orange-50 text-sm font-medium rounded-md cursor-pointer"
+                className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-[#D6F5E1] hover:text-[#0F7A33] text-sm font-medium rounded-md cursor-pointer"
               >
                 + Add another question
               </button>

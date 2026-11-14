@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import { invitationService } from "@/services/invitationService";
 import InvitationCardImage from "@/components/events/InvitationCardImage";
 
@@ -50,9 +51,8 @@ export default function CardPreviewModal({ eventId, inviteeId, inviteeName, onCl
           </button>
         </div>
         <div className="flex-1 overflow-auto p-4 bg-[#F4F5F8] flex items-center justify-center min-h-[300px]">
-          {error ? (
-            <p role="alert" className="text-sm text-rose-600 text-center">{error}</p>
-          ) : url ? (
+          <PopupMessage message={error} title="The card could not be shown" />
+          {error ? null : url ? (
             <div className="relative w-full max-w-[320px] mx-auto aspect-[393/682]">
               <InvitationCardImage src={url} alt="Invitation card" />
             </div>

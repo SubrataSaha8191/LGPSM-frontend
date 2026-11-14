@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import PopupMessage from "@/components/common/PopupMessage";
+import { openDatePicker } from "@/utils/openDatePicker";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -51,6 +54,15 @@ const STATUS_STYLE: Record<RowStatus, string> = {
   Past: "bg-[#FFE3D7] text-[#A83800]",
   "Invitation not sent": "bg-[#FFE9C0] text-[#6F5600]",
   Cancelled: "bg-gray-200 text-gray-700",
+};
+
+// An event's card or row hovers in its status colour (the same tint as its status pill)
+const STATUS_HOVER: Record<RowStatus, string> = {
+  Upcoming: "hover:bg-[#C0FFD5]/50",
+  Ongoing: "hover:bg-[#CCD2FF]/50",
+  Past: "hover:bg-[#FFE3D7]/60",
+  "Invitation not sent": "hover:bg-[#FFE9C0]/60",
+  Cancelled: "hover:bg-gray-200/60",
 };
 
 // `compact` is the organiser filter drawer style (Figma 217:22781): 12px medium text, 16px padding
@@ -228,7 +240,7 @@ function OrganizerEventCard({ row, onOpen, onDelete }: { row: EventRow; onOpen: 
       aria-label={`Open ${row.name}`}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
-      className="bg-white border border-[#E2E2E2] rounded-lg p-6 flex gap-6 items-start drop-shadow-[0_4px_2px_rgba(0,0,0,0.08)] cursor-pointer hover:border-[#FFB08A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF651D] min-w-0"
+      className={`bg-white border border-[#E2E2E2] rounded-lg p-6 flex gap-6 items-start drop-shadow-[0_4px_2px_rgba(0,0,0,0.08)] cursor-pointer ${STATUS_HOVER[row.phase]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-black min-w-0`}
     >
       <EventCardThumbnail eventId={row.id} label={row.name} />
       <div className="flex-1 min-w-0 flex flex-col gap-3">
@@ -309,15 +321,20 @@ export default function EventListingPage() {
     return () => window.clearTimeout(timeoutId);
   }, [isOrganizer, loadOrganizers]);
 
+  const quietRef = useRef(false);
   const load = useCallback(async () => {
+    const quiet = quietRef.current;
+    quietRef.current = false;
     if (!loadedOnce.current) setLoading(true);
-    setLoadError(null);
+    if (!quiet) setLoadError(null);
     const res = await eventService.getEvents(selectedOrganizerId ? { organizerId: selectedOrganizerId } : undefined);
     const list = Array.isArray(res.data) ? (res.data as unknown as RawEvent[]) : [];
     if (res.success) { setRows(list.map(toRow)); loadedOnce.current = true; }
-    else setLoadError(res.message || "Failed to load events.");
+    else if (!quiet) setLoadError(res.message || "Failed to load events.");
     setLoading(false);
   }, [selectedOrganizerId]);
+  // statuses, invitee counts and invitation state follow changes made elsewhere
+  useLiveRefresh(() => { quietRef.current = true; return load(); }, 30_000);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -441,7 +458,7 @@ export default function EventListingPage() {
                       {/* always a date field (switching its type while it has focus made the value impossible to clear); the
                           "From" / "To" label stands in for the empty mm/dd/yyyy until the field is used */}
                       <input
-                        type="date"
+                        type="date" onClick={openDatePicker}
                         value={draftFilters[key]}
                         onChange={(e) => setDraftFilters((f) => ({ ...f, [key]: e.target.value }))}
                         aria-label={key === "from" ? "From" : "To"}
@@ -458,7 +475,7 @@ export default function EventListingPage() {
                     ))}
                   </div>
                 </fieldset>
-                {filterApplyError && <p role="alert" className="text-xs text-rose-700">{filterApplyError}</p>}
+                <PopupMessage message={filterApplyError} />
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={clearFilters} className="flex-1 py-1.5 px-6 bg-white border border-[#DDD] rounded text-[13px] font-semibold text-black hover:bg-gray-50 cursor-pointer">
@@ -510,12 +527,7 @@ export default function EventListingPage() {
             </div>
           </div>
 
-          {loadError && (
-            <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-sm flex items-center justify-between gap-3">
-              <span className="break-words">{loadError}</span>
-              <button type="button" onClick={load} className="font-medium underline shrink-0 cursor-pointer">Retry</button>
-            </div>
-          )}
+          <PopupMessage message={loadError} action={{ label: "Try again", onClick: load }} onClose={() => setLoadError(null)} />
 
           {loading ? (
             <SkeletonRegion label="Loading events" className="grid grid-cols-1 lg:grid-cols-2 min-[1500px]:grid-cols-3 gap-4">
@@ -596,18 +608,8 @@ export default function EventListingPage() {
           </div>
         </div>
 
-        {loadError && (
-          <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-sm flex items-center justify-between gap-3">
-            <span className="break-words">{loadError}</span>
-            <button type="button" onClick={load} className="font-medium underline shrink-0 cursor-pointer">Retry</button>
-          </div>
-        )}
-        {organizerError && (
-          <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-sm flex items-center justify-between gap-3">
-            <span className="break-words">{organizerError}</span>
-            <button type="button" onClick={loadOrganizers} className="font-medium underline shrink-0 cursor-pointer">Retry</button>
-          </div>
-        )}
+        <PopupMessage message={loadError} action={{ label: "Try again", onClick: load }} onClose={() => setLoadError(null)} />
+        <PopupMessage message={organizerError} action={{ label: "Try again", onClick: loadOrganizers }} onClose={() => setOrganizerError(null)} />
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[900px]">
@@ -634,7 +636,7 @@ export default function EventListingPage() {
                 </tr>
               ) : (
                 visible.map((r) => (
-                  <tr key={r.id} onClick={() => router.push(`/events/${r.id}`)} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/events/${r.id}`); }} tabIndex={0} role="link" aria-label={`Open ${r.name}`} className="border-b border-[#D3D3D3] hover:bg-gray-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#FF651D] cursor-pointer">
+                  <tr key={r.id} onClick={() => router.push(`/events/${r.id}`)} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/events/${r.id}`); }} tabIndex={0} role="link" aria-label={`Open ${r.name}`} className={`border-b border-[#D3D3D3] ${STATUS_HOVER[r.status]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-black cursor-pointer`}>
                     <td className="h-[46px] px-2.5 font-medium whitespace-nowrap"><Link href={`/events/${r.id}`} className="inline-block min-h-6 leading-6 align-middle hover:text-[#A83800]">{r.displayId}</Link></td>
                     <td className="px-2.5 max-w-[240px]"><Link href={`/events/${r.id}`} title={r.name} className="block min-h-6 leading-6 text-gray-900 hover:text-[#A83800] truncate">{r.name}</Link></td>
                     <td className="px-2.5 max-w-[180px] truncate" title={r.organizer}>{r.organizer}</td>

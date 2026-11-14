@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import ModalClose from "@/components/common/ModalClose";
 
 interface Props {
@@ -32,7 +33,7 @@ export default function ListResetWarningModal({ onCancel, onConfirm, busy = fals
             </span>
             Yes, I have read this
           </label>
-          {error && <p role="alert" className="mt-3 rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">{error}</p>}
+          <PopupMessage message={error} />
         </div>
         <div className="px-6 py-4 border-t border-[#E0E0E0] flex justify-end gap-3">
           <button type="button" onClick={onConfirm} disabled={!read || busy} className="px-6 py-2 text-sm font-semibold bg-[#C65318] hover:bg-[#A83800] text-white rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">{busy ? "Deleting…" : "Okay"}</button>

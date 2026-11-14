@@ -1,6 +1,7 @@
 "use client";
 
 import PhoneInput from "@/components/common/PhoneInput";
+import PopupMessage from "@/components/common/PopupMessage";
 import type { InvitationChannel } from "@/utils/invitationChannel";
 // import { INVITATION_CHANNEL_OPTIONS } from "@/utils/invitationChannel"; (invitation channel field hidden for now)
 // import CustomDropdown from "@/components/common/CustomDropdown"; (only used by the hidden invitation channel field)
@@ -188,7 +189,7 @@ export default function AddEventOrganizerPage() {
               {/* Organizer Logo Box */}
               <div className="space-y-2">
                 {/* an individual has a profile picture; an organization has a logo */}
-                <label className="block text-sm font-medium text-[#15191C]">{formData.organizationType === "INDIVIDUAL" ? "Profile Picture" : "Organizer Logo"}</label>
+                <label className="block text-sm font-medium text-[#15191C]">{formData.organizationType === "INDIVIDUAL" ? "Profile Picture" : "Organizer Logo"} <span className="font-normal text-[#6B6B6B]">(optional)</span></label>
                 <input
                   ref={logoInputRef}
                   type="file"
@@ -256,17 +257,9 @@ export default function AddEventOrganizerPage() {
             </div>
           </form>
 
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-md text-xs font-semibold text-center animate-fadeIn">
-              {error}
-            </div>
-          )}
+          <PopupMessage message={error} onClose={() => setError("")} />
 
-          {isSuccess && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md text-xs font-semibold text-center animate-fadeIn">
-              Organizer added successfully! Redirecting to list...
-            </div>
-          )}
+          <PopupMessage message={isSuccess ? "Organizer added successfully! Redirecting to the list…" : null} type="success" onClose={() => undefined} />
         </div>
     </div>
   );

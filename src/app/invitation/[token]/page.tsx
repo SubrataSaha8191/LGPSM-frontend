@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import { useParams } from "next/navigation";
 import { DietarySelection, invitationService, PublicInvitationData } from "@/services/invitationService";
 import { usePageTitle } from "@/context/PageTitleContext";
@@ -392,17 +393,8 @@ export default function PublicInvitationPage() {
               <p className="mt-1 text-xs text-slate-500">Choose whether you can attend, then submit your response.</p>
             </div>
 
-            {error && (
-              <div role="alert" aria-live="assertive" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">
-                {error}
-              </div>
-            )}
-
-            {submitSuccessMsg && rsvpSaved && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">
-                {submitSuccessMsg}
-              </div>
-            )}
+            <PopupMessage message={error} />
+            <PopupMessage message={submitSuccessMsg && rsvpSaved ? submitSuccessMsg : null} type="success" />
 
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -505,8 +497,8 @@ export default function PublicInvitationPage() {
               <h3 className="text-sm font-bold text-[color:var(--inv-ink)]">Your preferences</h3>
               <p className="mt-1 text-xs text-slate-500">Please answer the questions below. You can change your answers later from this page.</p>
             </div>
-            {error && <div role="alert" aria-live="assertive" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-600">{error}</div>}
-            {submitSuccessMsg && foodSaved && <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-medium">{submitSuccessMsg}</div>}
+            <PopupMessage message={error} />
+            <PopupMessage message={submitSuccessMsg && foodSaved ? submitSuccessMsg : null} type="success" />
             <fieldset className="rounded-xl border border-[color:var(--inv-line)] bg-[color:var(--inv-soft)] p-4 space-y-4">
               {dietaryPrompts.map((prompt, index) => (
                 <div key={`${index}-${prompt.title}`} className="space-y-1.5">

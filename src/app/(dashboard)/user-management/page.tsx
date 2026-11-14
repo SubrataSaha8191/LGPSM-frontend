@@ -1,10 +1,12 @@
 "use client";
 
 import PhoneInput from "@/components/common/PhoneInput";
+import PopupMessage from "@/components/common/PopupMessage";
 import ListControls, { addButtonClass } from "@/components/common/ListControls";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { userService } from "@/services/userService";
 import { eventService } from "@/services/eventService";
@@ -26,6 +28,7 @@ import { formatDate } from "@/utils/dateTime";
 export default function AllUsersPage() {
   const { confirm } = useAlert();
   const { user } = useAuth();
+  const router = useRouter();
   const [users, setUsers] = useState<SystemUserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
@@ -344,25 +347,8 @@ export default function AllUsersPage() {
 
       {/* Page Content */}
       <div className="px-4 sm:px-6 pt-[30px] w-full space-y-6 bg-white pb-24">
-        {added && (
-          <div role="status" className="p-3 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex flex-wrap items-center justify-between gap-2">
-            <span className="break-words">User &quot;{added.name}&quot; added{added.organizerName ? ` under ${added.organizerName}` : ""}.</span>
-            {isAdminView && added.organizerId && (
-              <Link href={`/user-management/add?organizer=${added.organizerId}`} className="underline whitespace-nowrap">View {added.organizerName ? `${added.organizerName}'s` : "the organizer's"} system users</Link>
-            )}
-          </div>
-        )}
-        {errorFeedback && (
-          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
-            <span>{errorFeedback}</span>
-            <button
-              onClick={() => setErrorFeedback(null)}
-              className="font-bold text-rose-600 hover:text-rose-800 ml-4 cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <PopupMessage message={added ? `User “${added.name}” added${added.organizerName ? ` under ${added.organizerName}` : ""}.` : null} type="success" title="User added" action={isAdminView && added?.organizerId ? { label: `View ${added.organizerName ? `${added.organizerName}'s` : "the organizer's"} system users`, onClick: () => router.push(`/user-management/add?organizer=${added.organizerId}`) } : undefined} onClose={() => setAdded(null)} />
+        <PopupMessage message={errorFeedback} onClose={() => setErrorFeedback(null)} />
 
         {/* Controls (Figma 450:6796 / 217:23029) */}
         <ListControls label="Search" searchId="system-user-search" placeholder="Find system users by name or phone number..." value={searchQuery} onChange={setSearchQuery}>
@@ -702,9 +688,7 @@ aria-label={`Select ${u.name}`}
                 onChange={setSessionScope}
               />
 
-              {errorFeedback && (
-                <p role="alert" className="text-xs font-medium text-rose-600 break-words">{errorFeedback}</p>
-              )}
+              <PopupMessage message={errorFeedback} />
 
               <div className="-mx-6 mt-6 px-6 py-4 border-t border-[#E0E0E0] flex items-center justify-end gap-3">
                 <button

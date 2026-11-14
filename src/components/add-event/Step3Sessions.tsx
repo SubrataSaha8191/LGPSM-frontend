@@ -339,7 +339,7 @@ export default function Step3Sessions({
       <button
         type="button"
         onClick={handleAddSession}
-        className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-orange-50 text-sm font-medium rounded-md inline-flex items-center gap-1.5 cursor-pointer bg-white"
+        className="px-4 py-2 border border-[#FF651D] text-[#C44200] hover:bg-[#D6F5E1] hover:text-[#0F7A33] text-sm font-medium rounded-md inline-flex items-center gap-1.5 cursor-pointer bg-white"
       >
         <span aria-hidden>+</span> Add Sessions
       </button>

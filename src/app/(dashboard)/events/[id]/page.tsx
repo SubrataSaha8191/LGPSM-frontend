@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useLiveRefresh } from "@/hooks/useLiveRefresh";
+import PopupMessage from "@/components/common/PopupMessage";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -47,13 +49,13 @@ const card = "bg-white border border-[#E0E0E0] rounded-lg";
 // corner is the one real link and is stretched across the card, so there is still a single link per card for keyboards and screen readers.
 // The Sessions card holds a table that can scroll sideways, so there only the arrow is the link: dragging its scroll bar or selecting text
 // must never be taken for "open this page".
-function ArrowLink({ href, label, stretch = false }: { href: string; label: string; stretch?: boolean }) {
+function ArrowLink({ href, label, stretch = false, arrow }: { href: string; label: string; stretch?: boolean; arrow?: string }) {
   return (
     <Link
       href={href}
       aria-label={label}
       title={label}
-      className={`p-1.5 -m-1.5 rounded-full text-gray-900 hover:text-[#A83800] hover:bg-[#FFF3EC] focus:outline-none focus-visible:ring-2 focus-visible:ring-black ${stretch ? "after:absolute after:inset-0 after:rounded-lg after:content-['']" : ""}`}
+      className={`p-1.5 -m-1.5 rounded-full text-gray-900 ${arrow ? arrow : "hover:text-[#15191C] hover:bg-[#EEF3FF]"} transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-black ${stretch ? "after:absolute after:inset-0 after:rounded-lg after:content-['']" : ""}`}
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H9M17 7v8" />
@@ -63,16 +65,19 @@ function ArrowLink({ href, label, stretch = false }: { href: string; label: stri
 }
 
 // the look of a card that is clickable all over
-const clickableCard = "relative cursor-pointer transition-colors hover:border-[#E8B9A3] hover:bg-[#FFFAF7] focus-within:border-[#C44200]";
+// the three totals hover in their own colour; the other cards hover light blue
+const clickableCard = "relative cursor-pointer transition-colors hover:bg-[#EEF3FF] focus-within:border-black";
 
 // Figma widget: coloured round icon, big number, label, arrow to the related list
 function MetricCard({ value, label, href, tone, icon }: { value: number | null; label: string; href: string; tone: "peach" | "mint" | "lavender"; icon: React.ReactNode }) {
   const tones = { peach: "bg-[#FFDCCF] text-[#C44200]", mint: "bg-[#C9F6E6] text-[#15803D]", lavender: "bg-[#DCE1FF] text-[#2C2EB5]" };
+  const arrow = { peach: "group-hover:text-[#C44200]", mint: "group-hover:text-[#15803D]", lavender: "group-hover:text-[#2C2EB5]" };
+  const hover = { peach: "hover:bg-[#FFDCCF]/60", mint: "hover:bg-[#C9F6E6]/60", lavender: "hover:bg-[#DCE1FF]/60" };
   return (
-    <div className={`${card} ${clickableCard} p-4 flex flex-col gap-3`}>
+    <div className={`group ${card} relative cursor-pointer transition-colors focus-within:border-black ${hover[tone]} p-4 flex flex-col gap-3`}>
       <div className="flex items-start justify-between">
         <span className={`size-10 rounded-full flex items-center justify-center ${tones[tone]}`}>{icon}</span>
-        <ArrowLink href={href} label={`Open ${label}`} stretch />
+        <ArrowLink href={href} label={`Open ${label}`} stretch arrow={arrow[tone]} />
       </div>
       <div>
         <p className="text-3xl font-medium text-black leading-none">{value === null ? <span role="status" aria-label="Loading" className="inline-block h-[30px] w-12 rounded bg-gray-200 animate-pulse align-top" /> : String(value).padStart(2, "0")}</p>
@@ -169,16 +174,21 @@ export default function EventDetailsPage() {
 
   // The skeleton is for the first load of an event; a refresh after cancelling or editing keeps the page on screen
   const loadedFor = useRef<string | null>(null);
+  // a background refresh must never replace the page with an error when one request fails
+  const quietRef = useRef(false);
   const load = useCallback(async () => {
+    const quiet = quietRef.current;
+    quietRef.current = false;
     const requestId = ++requestIdRef.current;
     if (loadedFor.current !== eventId) setLoading(true);
-    setLoadError(null);
+    if (!quiet) setLoadError(null);
     const [evRes, sessRes] = await Promise.all([
       eventService.getEvent(eventId),
       sessionService.getSessions(eventId),
     ]);
     if (requestId !== requestIdRef.current) return;
     if (!evRes.success || !evRes.data) {
+      if (quiet) return;
       setLoadError(evRes.message || "Event not found or you do not have access to it.");
       setLoading(false);
       return;
@@ -217,6 +227,9 @@ export default function EventDetailsPage() {
     if (eventId) load();
     return () => { requestIdRef.current += 1; };
   }, [eventId, load]);
+
+  // check-ins, guest logs, totals and the status all follow what is happening at the door
+  useLiveRefresh(() => { quietRef.current = true; return load(); }, 15_000, !!eventId);
 
   if (loading) {
     return (
@@ -279,12 +292,7 @@ export default function EventDetailsPage() {
     <div className="w-full min-h-full bg-white">
       <PageHeader title={pageTitle} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
       <div className="px-4 sm:px-6 py-4 sm:py-6 w-full space-y-6 pb-24">
-        {notice && (
-          <div role="status" className="p-3 bg-emerald-50 border border-emerald-200 rounded-md text-sm text-emerald-800 flex justify-between gap-3">
-            <span>{notice}</span>
-            <button type="button" onClick={() => setNotice(null)} className="font-medium cursor-pointer">Dismiss</button>
-          </div>
-        )}
+        <PopupMessage message={notice} type="success" onClose={() => setNotice(null)} />
         {event.status === "CANCELLED" && (
           <div role="status" className="p-3 bg-gray-100 border border-gray-300 rounded-md text-sm text-gray-800">
             <p className="font-medium">This event was cancelled{event.cancelledAt ? ` on ${formatDateTime(event.cancelledAt)}` : ""}.</p>

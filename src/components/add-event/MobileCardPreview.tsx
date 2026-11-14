@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { SelectedTemplate } from "./eventDraft";
+import { SelectedTemplate, cardDisplayForServer } from "./eventDraft";
 import { templateService, TemplatePreviewPayload } from "@/services/templateService";
 import CustomDropdown from "@/components/common/CustomDropdown";
 
@@ -73,7 +73,7 @@ export default function MobileCardPreview({
       subcategoryName: subcategoryName || undefined,
       logoKey: logoKey && /^media:[0-9a-fA-F]{24}$/.test(logoKey) ? logoKey : undefined,
       ...(cardInfo ? { cardInfo } : {}),
-      ...(cardDisplay ? { cardDisplay } : {}),
+      ...(cardDisplay ? { cardDisplay: cardDisplayForServer(cardDisplay) } : {}),
     }),
     [eventTitle, eventStart, eventEnd, venue, contactNumber, categoryName, subcategoryName, logoKey, cardInfo, cardDisplay]
   );
@@ -132,7 +132,7 @@ export default function MobileCardPreview({
   return (
     <div className="h-full bg-[#F7F3F0] p-4 sm:p-6 flex flex-col items-center">
       <div className="w-full flex items-center justify-between mb-4">
-        <span className="text-xs font-medium px-3 py-1 bg-white border border-[#E0E0E0] rounded-md text-gray-800">Card Preview</span>
+        <h2 className="text-base font-medium text-gray-900">Card Preview</h2>
         <div className="w-28">
           <CustomDropdown
             value={zoomLevel}

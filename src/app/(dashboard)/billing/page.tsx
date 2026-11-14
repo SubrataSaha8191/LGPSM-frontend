@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import PageHeader from "@/components/common/PageHeader";
 import Icon from "@/components/icons/Icon";
 import BillingDateField, { formatDay } from "@/components/billing/BillingDateField";
@@ -217,7 +218,7 @@ export default function BillingPage() {
                 <span className="block text-xs font-medium text-[#15191C] mb-2">To<span className="text-[#C44200]">*</span></span>
                 <BillingDateField label="Statement to date" placeholder="Select Date" value={statement.to} min={statement.from || undefined} onChange={(to) => { setStatement((s) => ({ ...s, to })); setStatementError(null); }} />
               </div>
-              {statementError && <p role="alert" className="text-sm text-rose-600">{statementError}</p>}
+              <PopupMessage message={statementError} />
             </div>
             <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E5E5E5]">
               <button type="button" onClick={downloadStatement} className="px-6 py-2.5 bg-[#C65318] hover:bg-[#A83800] rounded-md text-base font-semibold text-white cursor-pointer">Download Statement</button>

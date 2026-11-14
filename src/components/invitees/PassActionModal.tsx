@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { credentialService, ReasonCategory } from "@/services/credentialService";
 import { NOTE_MAX, reasonLabel, reasonsFor, validatePassForm } from "@/utils/credentialUi";
@@ -99,7 +100,7 @@ export default function PassActionModal({ action, invitee, needsReview, onClose,
               <span className="text-[#6B6B6B]">{note.length}/{NOTE_MAX} · kept in the pass history, not sent to the guest</span>
             </div>
           </div>
-          {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+          <PopupMessage message={error} />
         </div>
         <div className="flex justify-end gap-3 px-6 py-4 border-t border-[#E5E5E5]">
           <button type="button" onClick={submit} disabled={busy || (touched && !!blocked)} className="px-6 py-2.5 bg-[#C65318] hover:bg-[#A83800] rounded-md text-base font-semibold text-white cursor-pointer disabled:opacity-50">

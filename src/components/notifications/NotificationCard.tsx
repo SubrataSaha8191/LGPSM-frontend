@@ -35,7 +35,7 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
     <div
       onClick={handleOpen}
       className={`rounded-md border border-[#E0E0E0] px-5 pt-[22px] pb-5 flex gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/40 ${
-        unread ? "bg-white cursor-pointer hover:border-[#FFB08A]" : "bg-[#F8F8F8]"
+        unread ? "bg-white cursor-pointer hover:bg-[#EEF3FF]" : "bg-[#F8F8F8]"
       }`}
     >
       <div className="flex-1 min-w-0">
@@ -57,7 +57,7 @@ export default function NotificationCard({ notification, onClear, onMarkRead }: 
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onMarkRead(notification.id); }}
-            className="text-[11px] font-semibold text-[#C44200] hover:bg-orange-50 px-2 py-1 rounded cursor-pointer whitespace-nowrap"
+            className="text-[11px] font-semibold text-[#C44200] hover:bg-[#EEF3FF] px-2 py-1 rounded cursor-pointer whitespace-nowrap"
             title="Mark as read"
           >
             Mark read

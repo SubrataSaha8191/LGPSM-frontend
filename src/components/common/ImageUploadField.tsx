@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import Image from "next/image";
 import { ACCEPTED_IMAGE_TYPES, MediaPurpose, mediaService } from "@/services/mediaService";
 import { resolveImageUrl } from "@/utils/mediaUrl";
@@ -135,7 +136,7 @@ export default function ImageUploadField({
         </button>
       )}
       {cropping && <ImageCropModal file={cropping} onCancel={() => setCropping(null)} onConfirm={(cropped) => { setCropping(null); void upload(cropped); }} />}
-      {error && <p role="alert" className="mt-1.5 text-xs font-medium text-rose-600">{error}</p>}
+      <PopupMessage message={error} />
     </div>
   );
 }

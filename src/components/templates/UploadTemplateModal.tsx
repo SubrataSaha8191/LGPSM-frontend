@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import PopupMessage from "@/components/common/PopupMessage";
 import CategoryFields from "@/components/categories/CategoryFields";
 import ImageUploadField from "@/components/common/ImageUploadField";
 import { useCategories } from "@/hooks/useCategories";
@@ -102,7 +103,7 @@ export default function UploadTemplateModal({ onClose, onCreated }: Props) {
             />
             {shown.image && <p className="mt-1 text-xs font-medium text-rose-600">{shown.image}</p>}
           </div>
-          {error && <p role="alert" className="text-sm font-medium text-rose-600 break-words">{error}</p>}
+          <PopupMessage message={error} />
           <div className="flex justify-end gap-3 pt-1">
             <button type="submit" disabled={saving || uploading} className="px-6 py-2.5 bg-[#C65318] hover:bg-[#A83800] text-white text-sm font-medium rounded-md cursor-pointer disabled:opacity-60">
               {saving ? "Saving…" : uploading ? "Uploading…" : "Save template"}

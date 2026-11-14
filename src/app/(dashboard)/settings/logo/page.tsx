@@ -128,7 +128,7 @@ export default function LogoSettingsPage() {
             onDrop={(e) => { e.preventDefault(); setDragOver(false); selectFile(e.dataTransfer.files?.[0]); }}
             aria-label={shownUrl ? "Replace the organiser logo" : "Upload an organiser logo"}
             className={`relative w-full max-w-[541px] h-[109px] rounded-lg border p-4 flex items-center justify-center cursor-pointer disabled:cursor-wait ${
-              dragOver ? "border-[#FF651D] bg-orange-50/40" : "border-[#D2D2D2] hover:border-[#FF651D]"
+              dragOver ? "border-[#FF651D] bg-orange-50/40" : "border-[#D2D2D2] hover:bg-[#EEF3FF]"
             }`}
           >
             {uploading ? (

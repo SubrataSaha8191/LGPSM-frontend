@@ -12,6 +12,8 @@ export interface CustomAlertModalProps {
   message: string;
   type?: AlertType;
   buttonText?: string;
+  /** What the button does besides closing the window (for example "Try again") */
+  onAction?: () => void;
 }
 
 export default function CustomAlertModal({
@@ -21,6 +23,7 @@ export default function CustomAlertModal({
   message,
   type = "info",
   buttonText,
+  onAction,
 }: CustomAlertModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -104,14 +107,14 @@ export default function CustomAlertModal({
         <h3 className="text-base font-bold text-gray-900">{title || defaultTitle}</h3>
 
         {/* Message */}
-        <p className="text-xs text-gray-600 leading-relaxed font-medium px-2">{message}</p>
+        <p className="text-xs text-gray-600 leading-relaxed font-medium px-2 whitespace-pre-line break-words">{message}</p>
 
         {/* An action button only when the message asks for one (the close icon dismisses it) */}
         {buttonText && (
         <div className="pt-2">
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { onAction?.(); onClose(); }}
             className={`w-full py-2.5 font-bold text-xs rounded-md transition-colors cursor-pointer shadow-2xs text-white ${
               type === "success"
                 ? "bg-emerald-600 hover:bg-emerald-700"

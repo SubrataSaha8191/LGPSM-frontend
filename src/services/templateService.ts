@@ -63,7 +63,7 @@ export interface TemplatePreviewPayload {
   endIso?: string;
   venue?: string;
   contactNumber?: string;
-  cardDisplay?: { title: boolean; qr: boolean; dateTime: boolean; location: boolean; inviteeName?: boolean };
+  cardDisplay?: { title: boolean; qr: boolean; dateTime: boolean; location: boolean; inviteeName?: boolean; logo?: boolean };
   locationSub?: string;
   isVirtual?: boolean;
   categoryName?: string;

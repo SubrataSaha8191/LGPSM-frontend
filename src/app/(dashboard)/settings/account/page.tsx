@@ -1,6 +1,7 @@
 "use client";
 
 import { formatOrganizerId } from "@/utils/formatId";
+import PopupMessage from "@/components/common/PopupMessage";
 import OrganisationDetailsForm from "@/components/settings/OrganisationDetailsForm";
 import PageHeader from "@/components/common/PageHeader";
 import React, { useState, useEffect } from "react";
@@ -82,16 +83,8 @@ export default function AccountSettingsPage() {
       <div className="px-4 sm:px-6 pt-10 pb-24 w-full space-y-6">
         <h2 className="text-xl font-medium text-black">{editing ? "Edit Profile" : "My Profile"}</h2>
 
-        {savedMessage && (
-          <div role="status" className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-md text-xs font-semibold">
-            Account details updated successfully!
-          </div>
-        )}
-        {errorMessage && (
-          <div role="alert" className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-md text-xs font-semibold">
-            {errorMessage}
-          </div>
-        )}
+        <PopupMessage message={savedMessage ? "Account details updated successfully!" : null} type="success" onClose={() => setSavedMessage(false)} />
+        <PopupMessage message={errorMessage} onClose={() => setErrorMessage("")} />
 
         {!editing ? (
           <section className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-lg p-8 flex flex-col sm:flex-row items-start sm:items-center gap-10" aria-label="My profile">
