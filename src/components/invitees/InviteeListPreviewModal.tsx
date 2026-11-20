@@ -33,6 +33,9 @@ const PAGE_SIZE = 10;
 // invitees never loads them all at once. Guests can be edited or deleted here. Deleting a guest nothing has happened to erases them;
 // a guest who was already invited, answered or attended is set aside instead (their history is kept, their pass stops working, and
 // they can be restored from Uploaded Lists > Set-aside guests). The confirmation says which of the two will happen.
+// the sessions a guest can enter: every one of them reads as "All sessions" when the event has several
+const sessionsText = (m: InviteeSetMember) => (!m.sessions || m.sessions.length === 0 ? "—" : (m.sessionCount ?? 0) > 1 && m.sessions.length === m.sessionCount ? "All sessions" : m.sessions.join(", "));
+
 export default function InviteeListPreviewModal({ eventId, title = "Invitee Preview List", subtitle, showCompany = true, onClose, onChanged, readOnly = false, onAddInvitees, reloadSignal = 0 }: Props) {
   const { showAlert } = useAlert();
   // the guests being deleted: asked for a reason (and where to send it) first
@@ -231,6 +234,7 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
                   <th className="py-2.5 pr-3 font-medium">Email</th>
                   <th className="py-2.5 pr-3 font-medium">Mobile Number</th>
                   <th className="py-2.5 pr-3 font-medium">Invitee Dataset</th>
+                  <th className="py-2.5 pr-3 font-medium">Session</th>
                   {showCompany && <th className="py-2.5 pr-3 font-medium">Company Name</th>}
                   {!readOnly && <th className="py-2.5 font-medium text-right w-20">Actions</th>}
                 </tr>
@@ -248,6 +252,7 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
                     <td className="py-2.5 pr-3 break-all">{m.email || "—"}</td>
                     <td className="py-2.5 pr-3 whitespace-nowrap">{m.mobile || "—"}</td>
                     <td className="py-2.5 pr-3 break-words" title={m.setName}>{m.setName ? listDisplayName(m.setName) : "—"}</td>
+                    <td className="py-2.5 pr-3 break-words">{sessionsText(m)}</td>
                     {showCompany && <td className="py-2.5 pr-3 break-words">{m.company || "—"}</td>}
                     {!readOnly && (
                       <td className="py-2.5 text-right whitespace-nowrap">

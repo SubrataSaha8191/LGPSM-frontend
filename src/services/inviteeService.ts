@@ -107,6 +107,9 @@ export interface InviteeSetMember {
   /** the uploaded list the guest belongs to */
   setId?: string;
   setName?: string;
+  /** the sessions the guest can enter, and how many sessions the event has */
+  sessions?: string[];
+  sessionCount?: number;
 }
 
 export interface SetAsideGuest {

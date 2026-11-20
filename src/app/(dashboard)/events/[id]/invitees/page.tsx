@@ -772,12 +772,6 @@ export default function InviteesManagementPage() {
                     {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
                   </button>
                 ))}
-                {printableCards && (
-                  <button type="button" onClick={() => setDownloadOpen(true)} disabled={!canIssue || busy !== null} title={!canIssue ? "This event is over, so cards can no longer be produced" : selectedIds.length ? `Download printable cards for the ${selectedIds.length} ticked guest(s)` : "Download printable cards for every guest"} className={`${primaryOutline}`}>
-                    <Icon name="billing/download" width={16} height={16} />
-                    {selectedIds.length ? `Download (${selectedIds.length})` : "Download"}
-                  </button>
-                )}
               </div>
             </div>
 
@@ -846,6 +840,12 @@ export default function InviteesManagementPage() {
                 <ButtonIcon name="history" />
                 History
               </button>
+              {printableCards && (
+                <button type="button" onClick={() => setDownloadOpen(true)} disabled={!canIssue || busy !== null} title={!canIssue ? "This event is over, so cards can no longer be produced" : selectedIds.length ? `Download printable cards for the ${selectedIds.length} ticked guest(s)` : "Download printable cards for every guest"} className={`${btn} bg-[#1F65FF] hover:bg-[#1A56DB] text-white border border-[#1F65FF] disabled:opacity-50`}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12" /><path d="m7 11 5 5 5-5" /><path d="M5 21h14" /></svg>
+                  Download Cards
+                </button>
+              )}
             </div>
 
             {invitees.length > 0 && (
