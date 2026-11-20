@@ -17,6 +17,9 @@ import DeleteInviteeModal, { type RemovalDetails } from "@/components/add-event/
 import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChooserModal";
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import SendWarningModal from "@/components/invitees/SendWarningModal";
+import SendBillModal from "@/components/invitees/SendBillModal";
+import { billingService, type BillQuote } from "@/services/billingService";
+import { openRazorpayCheckout } from "@/utils/razorpayCheckout";
 import SendSuccessModal from "@/components/invitees/SendSuccessModal";
 import { asInvitationChannel } from "@/utils/invitationChannel";
 import InfoTip from "@/components/common/InfoTip";
@@ -193,6 +196,10 @@ export default function InviteesManagementPage() {
   const [targetSessionId, setTargetSessionId] = useState("");
   const [sampleReminder, setSampleReminder] = useState(false);
   const [confirmFirstSend, setConfirmFirstSend] = useState(false);
+  // the bill (invitees x per-head rate + GST) shown before invitations go out, and the payment that follows
+  const [bill, setBill] = useState<{ quote: BillQuote; ids: string[] } | null>(null);
+  const [billBusy, setBillBusy] = useState(false);
+  const [billError, setBillError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const sendInFlight = useRef(false);
   const resendInFlight = useRef(false);
@@ -365,9 +372,46 @@ export default function InviteesManagementPage() {
     }
   };
 
+  // Sending is charged per invitation: show the bill first when there is something to pay (Figma 2001:2467). With no rate set, or the
+  // invitations already paid for, there is nothing to charge and the send goes ahead.
+  const showBillOrSend = async (): Promise<boolean> => {
+    const ids = sendTargets.map((t) => t._id);
+    if (ids.length === 0) return false;
+    const res = await billingService.quote(eventId, ids);
+    if (!res.success || !res.data) { setFeedback({ type: "error", message: res.message || "The bill could not be worked out. Please try again." }); return true; }
+    if (!res.data.payable) return false;
+    setBillError(null);
+    setBill({ quote: res.data, ids });
+    return true;
+  };
+
+  const payAndSend = async () => {
+    if (!bill) return;
+    setBillBusy(true);
+    setBillError(null);
+    try {
+      const start = await billingService.startPayment(eventId, bill.ids);
+      if (!start.success || !start.data) { setBillError(start.message || "The payment could not be started."); return; }
+      const result = await openRazorpayCheckout({
+        keyId: start.data.keyId, orderId: start.data.providerOrderId, amount: start.data.amount, currency: start.data.currency,
+        name: "EventQRapp", description: `${event?.title || "Event"}: ${start.data.invitees} invitation${start.data.invitees === 1 ? "" : "s"}`,
+        prefill: { name: user?.fullName, email: user?.email },
+      });
+      if (result.status === "cancelled") { setBillError("Payment cancelled. Nothing was charged and no invitation was sent."); return; }
+      if (result.status === "failed") { setBillError(result.message); return; }
+      const confirmed = await billingService.confirmPayment({ providerOrderId: result.providerOrderId, providerPaymentId: result.providerPaymentId, signature: result.signature });
+      if (!confirmed.success) { setBillError(confirmed.message || "We could not confirm the payment. If money was debited it is kept as credit for this event; check Billing."); return; }
+      setBill(null);
+      await handleSend();
+    } finally {
+      setBillBusy(false);
+    }
+  };
+
   // The first send locks the event, so it goes through the Figma warning (2001:2443); later sends go straight out
   const requestSend = async () => {
     if (!lifecycleStarted) { setConfirmFirstSend(true); return; }
+    if (await showBillOrSend()) return;
     // Sending reaches real people and cannot be taken back, so say who it goes to and how before it goes
     const count = sendTargets.length;
     if (count === 0) { handleSend(); return; } // nothing to send: handleSend explains why
@@ -975,9 +1019,10 @@ export default function InviteesManagementPage() {
           eventId={eventId}
           eventTitle={event?.title || "this event"}
           onCancel={() => setConfirmFirstSend(false)}
-          onConfirm={() => { setConfirmFirstSend(false); handleSend(); }}
+          onConfirm={async () => { setConfirmFirstSend(false); if (!(await showBillOrSend())) handleSend(); }}
         />
       )}
+      {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (
         <PassActionModal
           key={`${passAction.action}-${passAction.invitee._id}`}

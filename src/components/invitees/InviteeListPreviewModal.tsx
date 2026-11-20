@@ -48,6 +48,8 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
   const [term, setTerm] = useState("");
   const [page, setPage] = useState(1);
   const [tick, setTick] = useState(0);
+  // bumped after guests are deleted so the dropdown's lists and counts are fetched again straight away
+  const [setsTick, setSetsTick] = useState(0);
   // the page that was last fetched, tagged with the request it answers; "loading" is simply "no answer for the current request yet"
   const [result, setResult] = useState<{ key: string; members: InviteeSetMember[]; total: number; error: string | null } | null>(null);
   const key = `${setId}|${page}|${term}|${tick}|${reloadSignal}`;
@@ -93,7 +95,7 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
 
   // the list of datasets changes when guests are added with a new upload or by hand
   useEffect(() => {
-    if (!reloadSignal) return;
+    if (!reloadSignal && !setsTick) return;
     inviteeService.getInviteeSets(eventId).then((r) => {
       if (!r.success || !r.data) return;
       const fresh = [...r.data.sets, ...(r.data.sessionLists ?? [])];
@@ -104,9 +106,11 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
       setSets(fresh);
       if (added) { setSetId(added.id); setPage(1); setSelected([]); }
       else if (fresh.length) setSetId((cur) => (cur === "" ? ALL : cur));
+      // a list whose last guest was deleted is gone: fall back to All (or to the empty state when no list is left)
+      setSetId((cur) => (cur && cur !== ALL && !fresh.some((x) => x.id === cur) ? (fresh.length ? ALL : "") : cur === ALL && fresh.length === 0 ? "" : cur));
+      setPage(1);
     }).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, reloadSignal]);
+  }, [eventId, reloadSignal, setsTick]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -125,7 +129,7 @@ export default function InviteeListPreviewModal({ eventId, title = "Invitee Prev
   const canEdit = (m: InviteeSetMember) => !readOnly && (m.delivery === "NOT_SENT" || m.delivery === "FAILED");
   const deletable = members.filter(canDelete);
   const allOnPage = deletable.length > 0 && deletable.every((m) => selected.includes(m.id));
-  const refresh = () => { setSelected([]); setTick((t) => t + 1); onChanged?.(); };
+  const refresh = () => { setSelected([]); setTick((t) => t + 1); setSetsTick((t) => t + 1); onChanged?.(); };
 
   const noticeNote = (notice?: { email: string; whatsapp: string; reasons?: string[] }) => {
     if (!notice) return "";

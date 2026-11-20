@@ -34,6 +34,8 @@ export interface PriceRateChange {
 
 export interface PricingSettings {
   ratePerInvitee: number | null;
+  /** GST (%) added to every invitation bill */
+  gstPercent: number;
   currency: string;
   updatedAt: string | null;
   history: PriceRateChange[];
@@ -80,6 +82,8 @@ export const platformSettingsService = {
   getPricing: () => apiClient<PricingSettings>("/api/v1/settings/pricing", { method: "GET" }, true),
   updateRate: (ratePerInvitee: number): Promise<ApiResponse<PricingSettings>> =>
     apiClient<PricingSettings>("/api/v1/settings/pricing", { method: "PUT", body: JSON.stringify({ ratePerInvitee }) }, true),
+  updateGst: (gstPercent: number): Promise<ApiResponse<PricingSettings>> =>
+    apiClient<PricingSettings>("/api/v1/settings/gst", { method: "PUT", body: JSON.stringify({ gstPercent }) }, true),
   getEarnings: (from?: string, to?: string) => {
     const q = new URLSearchParams();
     if (from) q.set("from", from);

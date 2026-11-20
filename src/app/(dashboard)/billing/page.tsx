@@ -165,13 +165,13 @@ export default function BillingPage() {
         {outstanding.length > 0 && (
           <section aria-label="Amount due" className="rounded-xl border border-[#D6E4FF] bg-[#F5F8FF] p-4 sm:p-5">
             <h2 className="text-base font-semibold text-[#15191C]">Amount due</h2>
-            <p className="mt-0.5 text-xs text-[#6B6B6B]">Invitations sent on each event at the rate fixed for that event. If you send more later, only the new ones are added.</p>
+            <p className="mt-0.5 text-xs text-[#6B6B6B]">Invitations sent on each event at the rate fixed for that event, plus GST. If you send more later, only the new ones are added.</p>
             <ul className="mt-3 divide-y divide-[#E1EAF8]">
               {outstanding.map((b) => (
                 <li key={b.eventId} className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-[#15191C]">{b.eventName}</p>
-                    <p className="text-xs text-[#6B6B6B]">{b.dueInvitees} invitation{b.dueInvitees === 1 ? "" : "s"} × {money(b.ratePerInvitee ?? 0)}</p>
+                    <p className="text-xs text-[#6B6B6B]">{b.dueInvitees} invitation{b.dueInvitees === 1 ? "" : "s"} × {money(b.ratePerInvitee ?? 0)} + {b.gstPercent ?? 0}% GST</p>
                   </div>
                   <span className="text-base font-semibold text-[#15191C]">{money(b.due)}</span>
                   <button type="button" disabled={paying !== null} onClick={() => pay(b)} className="h-[40px] px-5 bg-[#1F65FF] hover:bg-[#1A56DB] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg cursor-pointer">

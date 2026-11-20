@@ -4,6 +4,7 @@ import PageHeader from "@/components/common/PageHeader";
 import PopupMessage from "@/components/common/PopupMessage";
 import React, { useCallback, useEffect, useState } from "react";
 import PricePerHeadCard from "@/components/settings/PricePerHeadCard";
+import GstCard from "@/components/settings/GstCard";
 import PriceHistoryTable from "@/components/settings/PriceHistoryTable";
 import { PriceHistoryRecord } from "@/types/priceRate";
 import { platformSettingsService, PricingSettings } from "@/services/platformSettingsService";
@@ -42,6 +43,15 @@ export default function PriceRateSettingsPage() {
     setSaving(false);
   };
 
+  const handleSaveGst = async (gst: number) => {
+    if (saving) return;
+    setSaving(true);
+    const res = await platformSettingsService.updateGst(gst);
+    if (res.success && res.data) { setPricing(res.data); setError(null); setNotice(`GST is now ${gst}%. It applies to bills made from now on.`); }
+    else setError(res.message || "GST could not be saved, so it is unchanged.");
+    setSaving(false);
+  };
+
   return (
     <div className="w-full min-h-full bg-white">
       {/* Header */}
@@ -55,6 +65,7 @@ export default function PriceRateSettingsPage() {
         <PopupMessage message={error} onClose={() => setError(null)} />
         <PopupMessage message={notice} type="success" title="Price rate updated" onClose={() => setNotice(null)} />
         {pricing && <PricePerHeadCard key={pricing.ratePerInvitee ?? "unset"} currentRate={pricing.ratePerInvitee} saving={saving} onSaveRate={handleSaveRate} />}
+        {pricing && <GstCard key={pricing.gstPercent} current={pricing.gstPercent} saving={saving} onSave={handleSaveGst} />}
         <PriceHistoryTable history={pricing ? toHistory(pricing.history) : []} />
       </div>
     </div>
