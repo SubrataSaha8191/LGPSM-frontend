@@ -320,6 +320,8 @@ export default function InviteesManagementPage() {
   const targetListId = listIdFor(sessionPickOptions, targetSessionId);
 
   const filterSession = sessions.find((s) => s._id === sessionFilter);
+  // the session columns: only the chosen session when one is picked in the dropdown, every session when "All" is
+  const shownSessions = filterSession ? [filterSession] : sessions;
   const term = search.trim().toLowerCase();
   const filteredInvitees = invitees.filter(
     (i) =>
@@ -894,7 +896,7 @@ export default function InviteesManagementPage() {
                       {isAdmin && <th className="h-[46px] px-2.5 font-medium whitespace-nowrap">RSVP Status</th>}
                       <th className="h-[46px] px-2.5 font-medium whitespace-nowrap">Access Pass</th>
                       {dietaryTitles.map((title) => <th key={title} className="h-[46px] px-2.5 font-medium text-center min-w-[96px] max-w-[130px] leading-tight break-words">{title}</th>)}
-                      {sessions.map((sess) => <th key={sess._id} className="h-[46px] px-2.5 font-medium whitespace-nowrap">{sess.name.replace(/\s+session$/i, "")}</th>)}
+                      {shownSessions.map((sess) => <th key={sess._id} className="h-[46px] px-2.5 font-medium whitespace-nowrap">{sess.name.replace(/\s+session$/i, "")}</th>)}
                       <th className="h-[46px] px-2.5 font-medium text-right sticky right-0 bg-white shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]">Action</th>
                     </tr>
                   </thead>
@@ -945,7 +947,7 @@ export default function InviteesManagementPage() {
                               </td>
                             );
                           })}
-                          {sessions.map((sess) => (
+                          {shownSessions.map((sess) => (
                             <td key={sess._id} className="py-3 px-2.5">
                               {allowedIn(i, sess)
                                 ? <span role="img" aria-label={`Has access to ${sess.name}`} className="text-[#0F7A33] font-bold">✓</span>
@@ -964,7 +966,7 @@ export default function InviteesManagementPage() {
                       );
                     })}
                     {visible.length === 0 && (
-                      <tr><td colSpan={10 + sessions.length + dietaryTitles.length} className="py-10 text-center text-[#6B6B6B]">No invitees match the current filters.</td></tr>
+                      <tr><td colSpan={10 + shownSessions.length + dietaryTitles.length} className="py-10 text-center text-[#6B6B6B]">No invitees match the current filters.</td></tr>
                     )}
                   </tbody>
                 </table>

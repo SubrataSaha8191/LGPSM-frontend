@@ -29,6 +29,8 @@ export type CheckoutResult =
 export async function openRazorpayCheckout(opts: {
   keyId: string; orderId: string; amount: number; currency: string; name: string; description: string;
   prefill?: { name?: string; email?: string; contact?: string };
+  /** the logo in the payment window; defaults to the EventQRapp mark served by this site */
+  image?: string;
 }): Promise<CheckoutResult> {
   if (!(await loadScript()) || !window.Razorpay) return { status: "failed", message: "The payment window could not be loaded. Check your connection and try again." };
   return new Promise((resolve) => {
@@ -41,6 +43,8 @@ export async function openRazorpayCheckout(opts: {
       currency: opts.currency,
       name: opts.name,
       description: opts.description,
+      // Razorpay fetches the logo itself, so it must be a public https address (a local address cannot be reached)
+      image: opts.image ?? `${window.location.origin}/images/branding/eventqrapp-mark-256.png`,
       prefill: opts.prefill,
       theme: { color: "#1F65FF" },
       handler: (r: RazorpaySuccess) => done({ status: "paid", providerOrderId: r.razorpay_order_id, providerPaymentId: r.razorpay_payment_id, signature: r.razorpay_signature }),

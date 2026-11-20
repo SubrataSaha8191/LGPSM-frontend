@@ -537,7 +537,7 @@ export default function EventSessionsPage() {
           </div>
         </div>
 
-      {/* Add Session popup (Figma 217:22172): no title bar; one bordered card holding the fields, then the outlined Add Session button */}
+      {/* Add Session popup (Figma 217:22172): no title bar; one bordered card holding the fields, then the blue Add Session / Save Session button */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={editingId ? "Edit Session" : "Add Session"}>
           <div
@@ -682,11 +682,8 @@ export default function EventSessionsPage() {
                 type="submit"
                 disabled={savingSession}
                 aria-busy={savingSession}
-                className="px-4 py-2.5 border border-[#1F65FF] text-[#1F65FF] hover:bg-[#1F65FF]/5 text-sm font-medium rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 bg-white"
+                className="px-6 py-2.5 bg-[#1F65FF] hover:bg-[#1A56DB] text-white text-sm font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
                 <span>{savingSession ? (editingId ? "Saving…" : "Adding…") : editingId ? "Save Session" : "Add Session"}</span>
               </button>
             </form>
