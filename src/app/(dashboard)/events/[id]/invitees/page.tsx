@@ -411,7 +411,6 @@ export default function InviteesManagementPage() {
   // The first send locks the event, so it goes through the Figma warning (2001:2443); later sends go straight out
   const requestSend = async () => {
     if (!lifecycleStarted) { setConfirmFirstSend(true); return; }
-    if (await showBillOrSend()) return;
     // Sending reaches real people and cannot be taken back, so say who it goes to and how before it goes
     const count = sendTargets.length;
     if (count === 0) { handleSend(); return; } // nothing to send: handleSend explains why
@@ -420,7 +419,8 @@ export default function InviteesManagementPage() {
       title: "Send invitations?",
       message: `Send the invitation for “${event?.title || "this event"}” to ${count} ${count === 1 ? "guest" : "guests"} by ${by}? They will receive it straight away.`,
     });
-    if (ok) handleSend();
+    // Confirm leads to the bill (and then Razorpay); with nothing to charge the invitations go out
+    if (ok && !(await showBillOrSend())) handleSend();
   };
 
   const handleResend = async (targets: InvitationData[] = resendTargets) => {
