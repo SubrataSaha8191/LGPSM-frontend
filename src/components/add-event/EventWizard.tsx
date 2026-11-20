@@ -24,7 +24,7 @@ import { suggestTemplate, SuggestableTemplate } from "@/utils/templateSuggestion
 import { rowProblem, rowsToSheetFile } from "@/utils/inviteeSheet";
 import { excelColumnsFor, headerFor } from "@/utils/inviteeFields";
 import { inviteeService, type InviteeSetInfo } from "@/services/inviteeService";
-import { CARD_DISPLAY_DEFAULTS, cardDisplayOfDraft, isStaticTemplate, titleLimitOf, DraftErrors, EventDraft, SelectedTemplate, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
+import { InvitationType, CARD_DISPLAY_DEFAULTS, cardDisplayOfDraft, isStaticTemplate, titleLimitOf, DraftErrors, EventDraft, SelectedTemplate, applyEventWindow, stepOfError, validateEventDraft } from "./eventDraft";
 import { DraftStatus } from "@/hooks/useFormDraft";
 import { useAlert } from "@/context/AlertContext";
 import { sessionTimeProblem, sessionsOutsideEvent } from "@/utils/sessionWindow";
@@ -235,12 +235,13 @@ export default function EventWizard({
   // sets the event category and subcategory. Editing a saved event does not ask again.
   const [dismissedError, setDismissedError] = useState<string | null>(null);
   const mustPickTemplate = !readOnly && !eventId && draftHydrated && !draft.template;
-  const chooseTemplate = (template: SelectedTemplate | null, suggested?: { categoryId: string; subcategoryId: string }) => {
+  const chooseTemplate = (template: SelectedTemplate | null, suggested?: { categoryId: string; subcategoryId: string }, invitationType?: InvitationType) => {
     // an explicit choice is never swapped out by the automatic suggestion that follows a category change
     autoTemplateId.current = null;
     setDraft((prev) => ({
       ...prev,
       template,
+      ...(invitationType ? { invitationType } : {}),
       // an uploaded design is the whole card: nothing about the card's data is chosen for it
       ...(template?.staticCard ? { cardInfo: null, cardDisplay: { ...CARD_DISPLAY_DEFAULTS } } : {}),
       // the template's event type fills the category and subcategory; a general template leaves what is there
@@ -592,6 +593,7 @@ export default function EventWizard({
         extraCategory={extraCategory}
         organizerId={draft.organizerIds[0]}
         selectedTemplateId={draft.template?.id}
+        invitationType={draft.invitationType || "DIGITAL"}
         categoryId={draft.categoryId || undefined}
         subcategoryId={draft.subcategoryId || undefined}
       />

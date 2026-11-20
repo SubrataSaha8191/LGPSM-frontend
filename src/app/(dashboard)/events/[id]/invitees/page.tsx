@@ -18,6 +18,7 @@ import AddInviteeChooserModal from "@/components/add-event/modals/AddInviteeChoo
 import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManualModal";
 import SendWarningModal from "@/components/invitees/SendWarningModal";
 import SendBillModal from "@/components/invitees/SendBillModal";
+import DownloadCardsModal from "@/components/invitees/DownloadCardsModal";
 import { billingService, type BillQuote } from "@/services/billingService";
 import { openRazorpayCheckout } from "@/utils/razorpayCheckout";
 import SendSuccessModal from "@/components/invitees/SendSuccessModal";
@@ -155,7 +156,7 @@ export default function InviteesManagementPage() {
   const isAdmin = user?.role === "ADMIN";
 
   const [eventsOptions, setEventsOptions] = useState<{ value: string; label: string }[]>([]);
-  const [event, setEvent] = useState<{ title?: string; status?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] }; cardInfo?: { primary?: string | null; secondary?: string | null } } | null>(null);
+  const [event, setEvent] = useState<{ title?: string; invitationType?: "DIGITAL" | "PRINT" | "BOTH"; status?: string; schedule?: { start?: string; end?: string }; categoryId?: { name?: string } | string; dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] }; cardInfo?: { primary?: string | null; secondary?: string | null } } | null>(null);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [invitees, setInvitees] = useState<Invitee[]>([]);
   const [history, setHistory] = useState<InvitationData[]>([]);
@@ -322,6 +323,11 @@ export default function InviteesManagementPage() {
   const filterSession = sessions.find((s) => s._id === sessionFilter);
   // the session columns: only the chosen session when one is picked in the dropdown, every session when "All" is
   const shownSessions = filterSession ? [filterSession] : sessions;
+  // how this event's cards reach guests: sent digitally, printed (downloaded as PDFs), or both. Events made before the choice existed are digital.
+  const invitationType = event?.invitationType || "DIGITAL";
+  const digitalInvites = invitationType !== "PRINT";
+  const printableCards = invitationType !== "DIGITAL";
+  const [downloadOpen, setDownloadOpen] = useState(false);
   const term = search.trim().toLowerCase();
   const filteredInvitees = invitees.filter(
     (i) =>
@@ -749,7 +755,7 @@ export default function InviteesManagementPage() {
                   Add Invitees
                 </button>
                 )}
-                {notInvited.length > 0 || !lifecycleStarted ? (
+                {digitalInvites && (notInvited.length > 0 || !lifecycleStarted ? (
                   <button type="button" onClick={requestSend} disabled={!canIssue || busy !== null || sendTargets.length === 0} title={!canIssue ? "This event is over, so invitations can no longer be sent" : sendTargets.length ? undefined : "Tick the guests to invite, or filter by Not Sent"} className={`${primaryOutline}`}>
                     <ButtonIcon name={busy === "send" ? "spinner" : "send"} />
                     {busy === "send" ? "Sending..." : sendTargets.length ? `Send Invitation (${sendTargets.length})` : "Send Invitation"}
@@ -765,6 +771,12 @@ export default function InviteesManagementPage() {
                     <ButtonIcon name={busy === "resend" ? "spinner" : "resend"} />
                     {busy === "resend" ? "Resending..." : `Resend Invitation${resendTargets.length ? ` (${resendTargets.length})` : ""}`}
                   </button>
+                ))}
+                {printableCards && (
+                  <button type="button" onClick={() => setDownloadOpen(true)} disabled={!canIssue || busy !== null} title={!canIssue ? "This event is over, so cards can no longer be produced" : selectedIds.length ? `Download printable cards for the ${selectedIds.length} ticked guest(s)` : "Download printable cards for every guest"} className={`${primaryOutline}`}>
+                    <Icon name="billing/download" width={16} height={16} />
+                    {selectedIds.length ? `Download (${selectedIds.length})` : "Download"}
+                  </button>
                 )}
               </div>
             </div>
@@ -772,6 +784,7 @@ export default function InviteesManagementPage() {
             {/* Working tools the frames do not show are kept in a secondary row */}
             <div className="flex flex-wrap items-center gap-2.5">
               <input ref={fileInput} type="file" accept=".xlsx,.xls" aria-label="Upload invitee Excel file" className="sr-only" onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }} />
+              {digitalInvites && (
               <div className="w-[230px]">
                 <CustomDropdown
                   value={channel}
@@ -799,6 +812,7 @@ export default function InviteesManagementPage() {
                     ]}
                 />
               </div>
+              )}
               <button type="button" onClick={() => downloadInviteeTemplate(fieldConfig)} className={`${btn} border border-[#E0E0E0] text-gray-800 hover:bg-gray-50`}>
                 <ButtonIcon name="download" />
                 Download Excel Sample
@@ -816,7 +830,7 @@ export default function InviteesManagementPage() {
                   <InfoTip label="About Uploaded Lists" text="Every Excel file you upload becomes a list. Open this to see each file, how many guests came from it and whether invitations were sent. You can replace a list that has not been sent yet, or bring back guests that were set aside." align="left" />
                 </span>
               )}
-              {(notInvited.length > 0 || !lifecycleStarted) && (
+              {digitalInvites && (notInvited.length > 0 || !lifecycleStarted) && (
                 <button
                   type="button"
                   onClick={() => handleResend()}
@@ -958,7 +972,7 @@ export default function InviteesManagementPage() {
                             <InviteeRowMenu
                               name={i.name}
                               onEdit={historical || (i.invitationStatus !== "PENDING" && i.invitationStatus !== "FAILED") ? undefined : () => setEditing({ id: i._id, name: i.name, email: i.email || "", phone: i.mobile || "" })}
-                              onResend={canIssue && sentRecord?._id && i.invitationStatus === "FAILED" ? () => handleResend([sentRecord]) : undefined}
+                              onResend={digitalInvites && canIssue && sentRecord?._id && i.invitationStatus === "FAILED" ? () => handleResend([sentRecord]) : undefined}
                               onRemove={historical ? undefined : () => setDeletingId(i._id)}
                             />
                           </td>
@@ -1024,6 +1038,7 @@ export default function InviteesManagementPage() {
           onConfirm={async () => { setConfirmFirstSend(false); if (!(await showBillOrSend())) handleSend(); }}
         />
       )}
+      {downloadOpen && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} onClose={() => setDownloadOpen(false)} />}
       {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (
         <PassActionModal

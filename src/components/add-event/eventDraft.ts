@@ -43,6 +43,13 @@ export const titleLimitOf = (templateData?: unknown): number | undefined => {
   return typeof n === "number" && n > 0 ? Math.min(EVENT_TITLE_MAX_LENGTH, n) : undefined;
 };
 
+export type InvitationType = "DIGITAL" | "PRINT" | "BOTH";
+export const INVITATION_TYPE_OPTIONS: { value: InvitationType; label: string }[] = [
+  { value: "DIGITAL", label: "Digital only" },
+  { value: "PRINT", label: "Print only" },
+  { value: "BOTH", label: "Print and Digital both" },
+];
+
 export interface SelectedTemplate {
   id: string;
   name: string;
@@ -184,6 +191,8 @@ export interface EventDraft {
   dietaryEnabled: boolean;
   preferenceCategories: PreferenceCategory[];
   template: SelectedTemplate | null;
+  /** How guests get the card: sent digitally, printed (downloaded as PDFs), or both. Chosen with the template. */
+  invitationType?: InvitationType;
   /** null until the organiser saves a choice; the card then keeps guest name, then company */
   cardInfo?: CardInfo | null;
   /** "Select data to show on card": which event details every card prints (all by default) */
@@ -247,6 +256,7 @@ export function createEmptyEventDraft(): EventDraft {
     // for the primary (large) or the secondary (smaller) line
     cardInfo: { primary: null, secondary: null },
     cardDisplay: { ...CARD_DISPLAY_DEFAULTS },
+    invitationType: "DIGITAL",
     logoKey: null,
     sessions: [createSessionDraft("Entry Session", start, end)],
     skipInvitees: true,
@@ -419,6 +429,7 @@ function commonPayload(draft: EventDraft) {
     },
     dietaryPreference: buildDietaryPreference(draft),
     ...(draft.template ? { templateId: draft.template.id } : {}),
+    invitationType: draft.invitationType || "DIGITAL",
     ...(draft.cardInfo ? { cardInfo: draft.cardInfo } : {}),
     cardDisplay: cardDisplayForServer(cardDisplayOfDraft(draft)),
     // An empty key clears a previously saved logo
@@ -464,6 +475,7 @@ export interface ServerEvent {
   dietaryPreference?: { enabled?: boolean; title?: string; options?: unknown[] };
   templateId?: string | { _id: string; name: string; previewImageKey?: string; templateData?: { uploaded?: boolean; dynamicDetails?: boolean } } | null;
   cardDisplay?: Partial<CardDisplay>;
+  invitationType?: InvitationType;
   cardInfo?: { primary?: CardInfoField | null; secondary?: CardInfoField | null; identityLabel?: string | null; secondaryIdentityLabel?: string | null };
   media?: { logoKey?: string };
   updatedAt?: string;
@@ -533,6 +545,7 @@ export function eventToDraft(event: ServerEvent, sessions: ServerSession[]): Eve
     cardInfo: nameSplit.cardInfo,
     cardDisplay: { ...CARD_DISPLAY_DEFAULTS, ...(event?.cardDisplay || {}), inviteeName: nameSplit.inviteeName },
     template,
+    invitationType: event?.invitationType || "DIGITAL",
     logoKey: event?.media?.logoKey || null,
     sessions: draftSessionsFromServer(sessions || [], start, end),
     skipInvitees: true,

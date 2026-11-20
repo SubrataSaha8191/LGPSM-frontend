@@ -13,6 +13,7 @@ import { eventService } from "@/services/eventService";
 import { eventDisplayStatus } from "@/utils/eventUtils";
 import CustomDropdown from "@/components/common/CustomDropdown";
 import { formatEventId } from "@/utils/formatId";
+import SetRateModal from "@/components/organizers/SetRateModal";
 import { usePageTitle } from "@/context/PageTitleContext";
 import { Skeleton, SkeletonRegion, TableSkeleton } from "@/components/common/Skeleton";
 import { formatDate, formatDateTime } from "@/utils/dateTime";
@@ -49,6 +50,7 @@ export default function OrganizerDetailsPage() {
   usePageTitle(organizer?.name ? `${organizer.name} · Organizers` : "Organizer Details");
 
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isRateOpen, setIsRateOpen] = useState(false);
   const [deactivateReason, setDeactivateReason] = useState("Policy Violation");
   const [deactivateMessage, setDeactivateMessage] = useState("");
   const [isDeactivated, setIsDeactivated] = useState(false);
@@ -266,6 +268,12 @@ export default function OrganizerDetailsPage() {
             {/* Action Buttons: Deactivate & Edit */}
             <div className="flex items-center gap-3 shrink-0">
               <button
+                onClick={() => setIsRateOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#EAF1FF] hover:bg-[#D6E4FF] text-[#1F65FF] text-xs font-semibold rounded-md transition-colors cursor-pointer"
+              >
+                <span>Set Rate</span>
+              </button>
+              <button
                 onClick={() => setIsDeactivateModalOpen(true)}
                 disabled={isDeactivated}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FDE2E1] hover:bg-[#FAD0CE] text-[#B42318] text-xs font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
@@ -278,6 +286,7 @@ export default function OrganizerDetailsPage() {
             </div>
           </div>
 
+          {isRateOpen && <SetRateModal organizerId={organizer.id} organizerName={organizer.name} onClose={() => setIsRateOpen(false)} />}
           <PopupMessage message={!isDeactivateModalOpen ? actionError : null} onClose={() => setActionError(null)} />
 
           {/* Stats tiles: separate bordered cards (Figma 592:1790) */}

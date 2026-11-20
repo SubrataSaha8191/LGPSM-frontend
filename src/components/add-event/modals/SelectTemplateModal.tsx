@@ -6,7 +6,7 @@ import CustomDropdown from "@/components/common/CustomDropdown";
 import TemplateThumb from "@/components/settings/TemplateThumb";
 import { templateService, Template } from "@/services/templateService";
 import { useCategories, ExtraCategory } from "@/hooks/useCategories";
-import { SelectedTemplate, isStaticTemplate, titleLimitOf } from "../eventDraft";
+import { SelectedTemplate, InvitationType, INVITATION_TYPE_OPTIONS, isStaticTemplate, titleLimitOf } from "../eventDraft";
 import { eventTypeForChoice, eventTypeForTemplate } from "@/utils/templateEventType";
 import UploadTemplateModal from "@/components/templates/UploadTemplateModal";
 import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
@@ -17,7 +17,9 @@ interface SelectTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
   /** `suggested` is the event type the template was made for, so the form can follow the choice */
-  onSelectTemplate: (template: SelectedTemplate | null, suggested?: { categoryId: string; subcategoryId: string }) => void;
+  onSelectTemplate: (template: SelectedTemplate | null, suggested?: { categoryId: string; subcategoryId: string }, invitationType?: InvitationType) => void;
+  /** How the cards reach guests; chosen here together with the template (a new event starts as Digital only) */
+  invitationType?: InvitationType;
   selectedTemplateId?: string | null;
   // Pre-filter by the event's category/subcategory when chosen
   categoryId?: string;
@@ -35,7 +37,7 @@ interface SelectTemplateModalProps {
 const templateCategoryId = (t: Template) => (typeof t.categoryId === "object" && t.categoryId ? t.categoryId._id : t.categoryId || "");
 
 // The parent remounts this modal (via key) each time it opens, so its state starts from the props
-export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate, selectedTemplateId, categoryId, subcategoryId, required = false, onLeave, extraCategory, organizerId }: SelectTemplateModalProps) {
+export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate, selectedTemplateId, invitationType: initialType = "DIGITAL", categoryId, subcategoryId, required = false, onLeave, extraCategory, organizerId }: SelectTemplateModalProps) {
   const categories = useCategories(extraCategory);
   const { user } = useAuth();
   const { confirm, showAlert } = useAlert();
@@ -58,6 +60,7 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
   const filterCategory = !categories.loading && chosenCategory && !categories.categoryOptions.some((o) => o.value === chosenCategory) ? "" : chosenCategory;
   const filterSub = !filterCategory || (!categories.loading && chosenSub && !categories.subcategoryOptionsFor(filterCategory).some((o) => o.value === chosenSub)) ? "" : chosenSub;
   const [pendingId, setPendingId] = useState<string | null>(selectedTemplateId || null);
+  const [invitationType, setInvitationType] = useState<InvitationType>(initialType);
   const [uploadOpen, setUploadOpen] = useState(false);
   // The app's dialog keyboard support moves focus to the first control when a dialog opens, which here is the category dropdown and
   // shows it with a focus ring as if it were being edited. The window itself takes the focus instead (Tab still reaches every control).
@@ -137,7 +140,8 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
     if (required && !chosen) return;
     onSelectTemplate(
       chosen ? { id: chosen._id, name: chosen.name, previewKey: chosen.previewImageKey || null, staticCard: isStaticTemplate(chosen.templateData), titleMaxChars: titleLimitOf(chosen.templateData) } : null,
-      chosen ? eventTypeForChoice(eventTypeForTemplate(chosen, categories.categoryOptions, categories.subcategoryOptionsFor), filterCategory, filterSub) ?? undefined : undefined
+      chosen ? eventTypeForChoice(eventTypeForTemplate(chosen, categories.categoryOptions, categories.subcategoryOptionsFor), filterCategory, filterSub) ?? undefined : undefined,
+      invitationType
     );
     onClose();
   };
@@ -155,7 +159,7 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
         </div>
         {required && <p className="px-6 pt-3 text-sm text-[#4B4F52]">The template decides how every guest&apos;s card looks and sets the event category and subcategory for you. You can change the template later while creating the event.</p>}
 
-        <div className="px-6 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="px-6 pt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <span className="block text-sm font-medium text-gray-900 mb-1.5">Event Category</span>
             <CustomDropdown portal
@@ -179,6 +183,15 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
               placeholder={filterCategory ? "All subcategories" : "Select a category first"}
               options={filterCategory ? [{ value: "", label: "All subcategories" }, ...categories.subcategoryOptionsFor(filterCategory)] : []}
               ariaLabel="Filter templates by subcategory"
+            />
+          </div>
+          <div>
+            <span className="block text-sm font-medium text-gray-900 mb-1.5">Invitation Type<span className="text-[#D92D20]">*</span></span>
+            <CustomDropdown portal
+              value={invitationType}
+              onChange={(v) => setInvitationType(v as InvitationType)}
+              options={INVITATION_TYPE_OPTIONS}
+              ariaLabel="Invitation type"
             />
           </div>
         </div>

@@ -11,7 +11,14 @@ export interface UpdateProfilePayload {
   organization?: { name: string; phone?: string; whatsapp?: string; email?: string; address?: string; website?: string };
 }
 
+export interface OrganizerRate { customRate: number | null; defaultRate: number | null; effectiveRate: number | null; currency: string }
+
 export const userService = {
+  /** Admin: the rate charged per invitee to one organizer (their own when set, otherwise the platform rate) */
+  getOrganizerRate: (id: string) => apiClient<OrganizerRate>(`/api/users/${id}/rate`, { method: "GET" }, true),
+  /** Admin: set the organizer's own per-invitee rate; null removes it so the platform rate applies again */
+  setOrganizerRate: (id: string, ratePerInvitee: number | null) => apiClient<OrganizerRate>(`/api/users/${id}/rate`, { method: "PUT", body: JSON.stringify({ ratePerInvitee }) }, true),
+
   async getProfile(): Promise<ApiResponse<UserData>> {
     const response = await apiClient<UserData>("/api/users/profile", { method: "GET" }, true);
     if (response.success && response.data) {
