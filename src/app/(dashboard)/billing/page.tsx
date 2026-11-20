@@ -8,13 +8,14 @@ import BillingDateField, { formatDay } from "@/components/billing/BillingDateFie
 import { Invoice, filterInvoices, statementCsv, validateRange } from "@/components/billing/billingStatement";
 import { formatMoney } from "@/utils/money";
 import { csvBlob } from "@/utils/csv";
+import { billingService, type EventBill } from "@/services/billingService";
+import { openRazorpayCheckout } from "@/utils/razorpayCheckout";
+import { useAuth } from "@/context/AuthContext";
 
 // Organiser Billing (Figma 217:24385 list, 217:23316 filter, and the Download Statement dialog).
 //
-// Online payments are not integrated yet, so there are no invoices and the list is deliberately empty: nothing here is invented.
-// The page is built for real data (search, date filter, selection, per-invoice and statement download all work on `invoices`);
-// when a payment provider and its invoices endpoint exist, only this array needs to be filled from it.
-const NO_INVOICES: Invoice[] = [];
+// The organiser pays for the invitations sent on each event through Razorpay (due = invitations sent x the rate locked on the event,
+// minus what was already paid). Paid payments become the invoices listed below; nothing here is invented.
 
 const money = (amount: number) => formatMoney(amount, { minFractionDigits: 1, maxFractionDigits: 1 });
 
@@ -28,7 +29,42 @@ function saveCsv(name: string, csv: string) {
 }
 
 export default function BillingPage() {
-  const invoices = NO_INVOICES; // see note above
+  const { user } = useAuth();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [bills, setBills] = useState<EventBill[]>([]);
+  const [paying, setPaying] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const refresh = () => Promise.all([billingService.getEventBills(), billingService.getInvoices()]).then(([b, i]) => {
+    if (b.success && b.data) setBills(b.data.events);
+    if (i.success && i.data) setInvoices(i.data);
+    setLoaded(true);
+  });
+  useEffect(() => { refresh(); }, []);
+
+  const pay = async (bill: EventBill) => {
+    setNotice(null);
+    setPaying(bill.eventId);
+    try {
+      const start = await billingService.startPayment(bill.eventId);
+      if (!start.success || !start.data) { setNotice({ text: start.message || "Could not start the payment.", ok: false }); return; }
+      const result = await openRazorpayCheckout({
+        keyId: start.data.keyId, orderId: start.data.providerOrderId, amount: start.data.amount, currency: start.data.currency,
+        name: "EventQRapp", description: `${bill.eventName} (${start.data.invitees} invitation${start.data.invitees === 1 ? "" : "s"})`,
+        prefill: { name: user?.fullName, email: user?.email },
+      });
+      if (result.status === "cancelled") { setNotice({ text: "Payment cancelled. Nothing was charged.", ok: false }); return; }
+      if (result.status === "failed") { setNotice({ text: result.message, ok: false }); return; }
+      const confirmed = await billingService.confirmPayment({ providerOrderId: result.providerOrderId, providerPaymentId: result.providerPaymentId, signature: result.signature });
+      if (!confirmed.success) { setNotice({ text: confirmed.message || "We could not confirm the payment. If money was debited it will be matched shortly; check the invoices below.", ok: false }); return; }
+      setNotice({ text: `Payment received for ${bill.eventName}. Your invoice is in the list below.`, ok: true });
+      await refresh();
+    } finally {
+      setPaying(null);
+    }
+  };
+  const outstanding = bills.filter((b) => b.due > 0);
   const [search, setSearch] = useState("");
   const [range, setRange] = useState({ from: "", to: "" });
   const [filterOpen, setFilterOpen] = useState(false);
@@ -123,6 +159,30 @@ export default function BillingPage() {
           </div>
         </div>
 
+        <PopupMessage message={notice && !notice.ok ? notice.text : null} />
+        {notice?.ok && <p role="status" className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-sm text-[#15803D]">{notice.text}</p>}
+
+        {outstanding.length > 0 && (
+          <section aria-label="Amount due" className="rounded-xl border border-[#D6E4FF] bg-[#F5F8FF] p-4 sm:p-5">
+            <h2 className="text-base font-semibold text-[#15191C]">Amount due</h2>
+            <p className="mt-0.5 text-xs text-[#6B6B6B]">Invitations sent on each event at the rate fixed for that event. If you send more later, only the new ones are added.</p>
+            <ul className="mt-3 divide-y divide-[#E1EAF8]">
+              {outstanding.map((b) => (
+                <li key={b.eventId} className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[#15191C]">{b.eventName}</p>
+                    <p className="text-xs text-[#6B6B6B]">{b.dueInvitees} invitation{b.dueInvitees === 1 ? "" : "s"} × {money(b.ratePerInvitee ?? 0)}</p>
+                  </div>
+                  <span className="text-base font-semibold text-[#15191C]">{money(b.due)}</span>
+                  <button type="button" disabled={paying !== null} onClick={() => pay(b)} className="h-[40px] px-5 bg-[#1F65FF] hover:bg-[#1A56DB] disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg cursor-pointer">
+                    {paying === b.eventId ? "Opening…" : "Pay now"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {(range.from || range.to) && (
           <p className="text-xs text-[#4B4F52]">
             Showing payments {range.from ? `from ${formatDay(range.from)}` : ""}{range.from && range.to ? " " : ""}{range.to ? `to ${formatDay(range.to)}` : ""}
@@ -158,11 +218,11 @@ export default function BillingPage() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-16 text-center whitespace-normal">
-                    <p className="text-base font-medium text-[#15191C]">{filtering ? "No invoices match your search or dates" : "No invoices yet"}</p>
+                    <p className="text-base font-medium text-[#15191C]">{filtering ? "No invoices match your search or dates" : loaded ? "No invoices yet" : "Loading…"}</p>
                     <p className="mt-1 text-sm text-[#6B6B6B] max-w-md mx-auto">
                       {filtering
                         ? "Try a different search or clear the dates."
-                        : "Online payments are not available yet. When they go live, your invoices and payment history will be listed here."}
+                        : "When you pay for an event's invitations, the invoice is listed here."}
                     </p>
                   </td>
                 </tr>

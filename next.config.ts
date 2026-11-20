@@ -25,12 +25,12 @@ const ENFORCED_CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'
 const REPORT_ONLY_CSP = [
   "default-src 'self'",
   // Google's sign-in button (accounts.google.com/gsi) and the profile picture it shows
-  "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client",
+  "script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client https://checkout.razorpay.com",
   "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
-  `img-src 'self' data: blob: ${apiOrigin}${mediaOrigin ? ` ${mediaOrigin}` : ""} https://tile.openstreetmap.org https://*.googleusercontent.com`,
+  `img-src 'self' data: blob: ${apiOrigin}${mediaOrigin ? ` ${mediaOrigin}` : ""} https://tile.openstreetmap.org https://*.googleusercontent.com https://*.razorpay.com`,
   "font-src 'self' data:",
-  `connect-src 'self' ${apiOrigin} https://nominatim.openstreetmap.org https://accounts.google.com/gsi/`,
-  "frame-src https://accounts.google.com/gsi/",
+  `connect-src 'self' ${apiOrigin} https://nominatim.openstreetmap.org https://accounts.google.com/gsi/ https://api.razorpay.com https://lumberjack.razorpay.com`,
+  "frame-src https://accounts.google.com/gsi/ https://api.razorpay.com https://checkout.razorpay.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
 ].join("; ");
