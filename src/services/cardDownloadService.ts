@@ -1,21 +1,20 @@
 import { apiClient, API_BASE_URL } from "./apiClient";
 import { tokenStorage } from "./tokenStorage";
 
-export const MAX_PER_ZIP = 100;
-export interface CardPlan { total: number; perZip: number; zips: number }
+export interface CardPlan { planId: string; total: number; zips: number; sizes: number[] }
 
 export const cardDownloadService = {
-  /** How many guests the cards are for and how many zip files that makes */
-  plan: (eventId: string, perZip: number, inviteeIds?: string[]) =>
-    apiClient<CardPlan>(`/api/v1/events/${eventId}/invitation-cards/plan`, { method: "POST", body: JSON.stringify({ perZip, inviteeIds }) }, true),
+  /** Keeps the chosen guests and says how many zip files they make: the system splits them evenly, at most 100 guests per zip */
+  plan: (eventId: string, inviteeIds: string[]) =>
+    apiClient<CardPlan>(`/api/v1/events/${eventId}/invitation-cards/plan`, { method: "POST", body: JSON.stringify({ inviteeIds }) }, true),
 
-  /** One zip (part n of the guests) of printable PDFs, one per guest; saved through the browser's normal download */
-  async downloadPart(eventId: string, perZip: number, part: number, inviteeIds?: string[]): Promise<void> {
+  /** One zip (part n) of printable PDFs, one per guest; saved through the browser's normal download */
+  async downloadPart(eventId: string, planId: string, part: number): Promise<void> {
     const token = tokenStorage.getAccessToken();
     const res = await fetch(`${API_BASE_URL}/api/v1/events/${eventId}/invitation-cards/download`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ perZip, part, inviteeIds }),
+      body: JSON.stringify({ planId, part }),
     });
     if (!res.ok) {
       let message = "The cards could not be produced. Please try again.";

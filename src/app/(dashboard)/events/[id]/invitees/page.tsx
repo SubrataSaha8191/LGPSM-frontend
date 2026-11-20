@@ -841,7 +841,7 @@ export default function InviteesManagementPage() {
                 History
               </button>
               {printableCards && (
-                <button type="button" onClick={() => setDownloadOpen(true)} disabled={!canIssue || busy !== null} title={!canIssue ? "This event is over, so cards can no longer be produced" : selectedIds.length ? `Download printable cards for the ${selectedIds.length} ticked guest(s)` : "Download printable cards for every guest"} className={`${btn} bg-[#1F65FF] hover:bg-[#1A56DB] text-white border border-[#1F65FF] disabled:opacity-50`}>
+                <button type="button" onClick={() => setDownloadOpen(true)} disabled={!canIssue || busy !== null || selectedIds.length === 0} title={!canIssue ? "This event is over, so cards can no longer be produced" : selectedIds.length === 0 ? "Tick the guests to make cards for" : `Download printable cards for the ${selectedIds.length} ticked guest(s)`} className={`${btn} bg-[#1F65FF] hover:bg-[#1A56DB] text-white border border-[#1F65FF] disabled:opacity-50`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12" /><path d="m7 11 5 5 5-5" /><path d="M5 21h14" /></svg>
                   Download Cards
                 </button>
@@ -1038,7 +1038,7 @@ export default function InviteesManagementPage() {
           onConfirm={async () => { setConfirmFirstSend(false); if (!(await showBillOrSend())) handleSend(); }}
         />
       )}
-      {downloadOpen && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} onClose={() => setDownloadOpen(false)} />}
+      {downloadOpen && selectedIds.length > 0 && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} onClose={() => setDownloadOpen(false)} />}
       {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (
         <PassActionModal
