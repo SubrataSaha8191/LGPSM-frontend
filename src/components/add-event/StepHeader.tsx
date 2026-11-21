@@ -6,16 +6,14 @@ interface StepHeaderProps {
   currentStep: number;
   onStepClick: (step: number) => void;
   maxUnlockedStep?: number;
-  /** print-only with an uploaded design: there is no Settings step */
-  hideSettings?: boolean;
 }
 
-export default function StepHeader({ currentStep, onStepClick, maxUnlockedStep, hideSettings = false }: StepHeaderProps) {
+export default function StepHeader({ currentStep, onStepClick, maxUnlockedStep }: StepHeaderProps) {
   const steps = [
     { num: 1, label: "Event Details" },
     { num: 2, label: "Settings" },
     { num: 3, label: "Sessions" },
-  ].filter((step) => !(hideSettings && step.num === 2));
+  ];
 
   return (
     <div className="w-full bg-white border-b border-gray-200 px-6 pt-4 pb-0 font-sans sticky top-[68px] z-20">

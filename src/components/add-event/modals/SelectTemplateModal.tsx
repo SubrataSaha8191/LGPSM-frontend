@@ -48,7 +48,7 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
   const isOwnCard = (t: Template) => isMine(t) && !t.isSystemTemplate;
   // Every template is listed, as on the Templates page. An admin's list also holds organizers' private designs: those can serve
   // only that organizer's own events, so for anyone else they are shown but cannot be chosen (the one already in use stays usable)
-  const usable = (t: Template) => !t.ownerId || isMine(t) || t.isSystemTemplate || t._id === selectedTemplateId || (!!organizerId && t.ownerId === organizerId);
+  const usable = (t: Template) => !staticBlocked(t) && (!t.ownerId || isMine(t) || t.isSystemTemplate || t._id === selectedTemplateId || (!!organizerId && t.ownerId === organizerId));
   // a design shared with all organizers is managed on the Templates page, not removed from a picker
   const canDelete = (t: Template) => isMine(t) && !t.isSystemTemplate;
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -61,6 +61,10 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
   const filterSub = !filterCategory || (!categories.loading && chosenSub && !categories.subcategoryOptionsFor(filterCategory).some((o) => o.value === chosenSub)) ? "" : chosenSub;
   const [pendingId, setPendingId] = useState<string | null>(selectedTemplateId || null);
   const [invitationType, setInvitationType] = useState<InvitationType>(initialType);
+  // Your own uploaded card (a static design) can only be sent: print-ready cards are drawn from the live template, so Print only and Print and
+  // Digital both use the ready templates.
+  const digitalOnly = invitationType === "DIGITAL";
+  const staticBlocked = (t: Template) => !digitalOnly && isStaticTemplate(t.templateData);
   const [uploadOpen, setUploadOpen] = useState(false);
   // The app's dialog keyboard support moves focus to the first control when a dialog opens, which here is the category dropdown and
   // shows it with a focus ring as if it were being edited. The window itself takes the focus instead (Tab still reaches every control).
@@ -136,7 +140,12 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
   };
 
   const handleSave = () => {
-    const chosen = templates.find((t) => t._id === pendingId && usable(t));
+    const chosen = templates.find((t) => t._id === pendingId && usable(t) && !staticBlocked(t));
+    // the event's own uploaded card cannot go with Print only or Print and Digital both: a ready template has to be chosen instead
+    if (!digitalOnly && !chosen && templates.some((t) => t._id === selectedTemplateId && isStaticTemplate(t.templateData))) {
+      showAlert("This event uses your own uploaded card, which can't be used with Print only or Print and Digital both. Choose a ready template, or choose Digital only to keep your card.", "error");
+      return;
+    }
     if (required && !chosen) return;
     onSelectTemplate(
       chosen ? { id: chosen._id, name: chosen.name, previewKey: chosen.previewImageKey || null, staticCard: isStaticTemplate(chosen.templateData), titleMaxChars: titleLimitOf(chosen.templateData) } : null,
@@ -189,11 +198,24 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
             <span className="block text-sm font-medium text-gray-900 mb-1.5">Invitation Type<span className="text-[#D92D20]">*</span></span>
             <CustomDropdown portal
               value={invitationType}
-              onChange={(v) => setInvitationType(v as InvitationType)}
+              onChange={(v) => {
+                const next = v as InvitationType;
+                setInvitationType(next);
+                // a static card chosen earlier cannot go with Print only or Print and Digital both: the choice is cleared
+                const current = templates.find((t) => t._id === pendingId);
+                if (next !== "DIGITAL" && current && isStaticTemplate(current.templateData)) setPendingId(null);
+                if (next !== "DIGITAL" && scope === "mine") setScope("all");
+              }}
               options={INVITATION_TYPE_OPTIONS}
               ariaLabel="Invitation type"
             />
           </div>
+        </div>
+        {/* what the choice means, in plain words, so nobody is surprised later */}
+        <div className="mx-6 mt-3 rounded-md border border-[#D6E4FF] bg-[#F5F8FF] px-4 py-3 text-xs text-[#15191C]" role="status" aria-live="polite">
+          {invitationType === "DIGITAL" && <>Guests are sent their card by email and WhatsApp. You can use a ready template <b>or upload your own card design</b>.</>}
+          {invitationType === "PRINT" && <><b>Print only:</b> the cards are downloaded as print-ready PDFs and are not sent. Guests are not asked to RSVP or choose food. <b>Your own uploaded card can&apos;t be used</b> with this option, so please choose a ready template. To upload your own card, choose Digital only.</>}
+          {invitationType === "BOTH" && <><b>Print and Digital both:</b> you can send the card to guests and also download print-ready PDFs. <b>Your own uploaded card can&apos;t be used</b> with this option, so please choose a ready template. To upload your own card, choose Digital only.</>}
         </div>
 
         {/* outside the scrolling list, and always there, including when My templates is empty: there is always a way back to All templates */}
@@ -236,7 +258,7 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
                       >
                         <TemplateThumb imageKey={t.previewImageKey} name={t.name} className="" />
                       </button>
-                      {!usable(t) ? <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">Other organizer</span> : t.isPublished === false ? <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-amber-600 px-1.5 py-0.5 text-[10px] text-white">Draft</span> : isMine(t) && <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">Own</span>}
+                      {staticBlocked(t) ? <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">Digital only</span> : !usable(t) ? <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">Other organizer</span> : t.isPublished === false ? <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-amber-600 px-1.5 py-0.5 text-[10px] text-white">Draft</span> : isMine(t) && <span className="pointer-events-none absolute left-1 bottom-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">Own</span>}
                       {canDelete(t) && (
                         <>
                           <button type="button" onClick={() => void removeOwn(t)} aria-label={`Delete ${t.name}`} title="Delete this template" className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-white/95 text-rose-600 shadow hover:bg-rose-50 cursor-pointer">
@@ -254,10 +276,11 @@ export default function SelectTemplateModal({ isOpen, onClose, onSelectTemplate,
 
         <div className="px-6 py-4 border-t border-[#E5E5E5] flex flex-wrap justify-between items-center gap-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-[#4B4F52]">
-            <button type="button" onClick={() => setUploadOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1F65FF] hover:underline cursor-pointer">
+            <button type="button" onClick={() => setUploadOpen(true)} disabled={!digitalOnly} title={digitalOnly ? undefined : "Your own card can be uploaded only when Invitation Type is Digital only"} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1F65FF] hover:underline cursor-pointer disabled:text-[#9CA3AF] disabled:no-underline disabled:cursor-not-allowed">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
               Upload your own template
             </button>
+            {!digitalOnly && <span className="text-[#6B6B6B]">Available with Digital only.</span>}
             <span>
               Need a custom design?{" "}
               <Link href="/contact" className="text-[#15803D] font-medium underline">Contact us</Link>

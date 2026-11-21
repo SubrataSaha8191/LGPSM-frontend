@@ -200,15 +200,11 @@ export default function EventWizard({
   const requiredErrors: DraftErrors = inviteesMissing && draft.sessions[0] ? { [`session:${draft.sessions[0].key}:invitees`]: "Add the invitees list, or tick \"I don't have any invitees list yet\" to skip it for later." } : {};
   const visibleErrors: DraftErrors = showErrors ? { ...allErrors, ...requiredErrors } : {};
 
-  // Print only: the cards are downloaded, never sent, so there is nothing about answering or checking in. With an uploaded (static) design
-  // the Settings step has nothing left to ask at all and is skipped.
-  const printOnly = isPrintOnly(draft);
-  const skipSettings = printOnly && !!draft.template?.staticCard;
-  const afterDetails = skipSettings ? 3 : 2;
+  // Print only: the cards are downloaded, never sent, so there is nothing about answering or checking in (those questions are left out)
 
   const step1Valid = useMemo(() => !Object.keys(allErrors).some((k) => stepOfError(k) === 1), [allErrors]);
   const step2Valid = useMemo(() => step1Valid && !Object.keys(allErrors).some((k) => stepOfError(k) === 2), [allErrors, step1Valid]);
-  const maxUnlockedStep = readOnly ? 3 : skipSettings ? (step1Valid ? 3 : 1) : step2Valid ? 3 : step1Valid ? 2 : 1;
+  const maxUnlockedStep = readOnly ? 3 : step2Valid ? 3 : step1Valid ? 2 : 1;
 
   // Choosing an event type pre-selects the template made for it. Only a template this form chose itself is ever
   // replaced: once the organizer picks one by hand, their choice stays.
@@ -491,7 +487,7 @@ export default function EventWizard({
             preview column to the rounded border, so no square corners poke past it */}
         <div className="border border-[#E0E0E0] rounded-lg overflow-clip flex flex-col xl:flex-row bg-white">
           <div className="w-full xl:w-[62%] flex flex-col min-w-0">
-            <StepHeader currentStep={currentStep} onStepClick={handleStepChange} maxUnlockedStep={maxUnlockedStep} hideSettings={skipSettings} />
+            <StepHeader currentStep={currentStep} onStepClick={handleStepChange} maxUnlockedStep={maxUnlockedStep} />
             {readOnly && (
               <div role="status" className="mx-6 mt-5 rounded-md border border-[#B8D0FF] bg-[#EAF1FF] px-4 py-3 text-sm text-[#0F3A99]">
                 <p className="font-semibold text-[#1647B8]">Editing is closed</p>
@@ -517,9 +513,9 @@ export default function EventWizard({
                   canManageCategories={isAdmin}
                   isAdmin={isAdmin}
                   isEditing={!!eventId}
-                  printOnly={printOnly} rsvpAllowed={features.allowEventRSVP}
+                  printOnly={isPrintOnly(draft)} rsvpAllowed={features.allowEventRSVP}
                   errors={visibleErrors}
-                  onNext={() => handleStepChange(afterDetails)}
+                  onNext={() => handleStepChange(2)}
                   onCancel={onCancel}
                   readOnly={readOnly}
                 />
@@ -550,7 +546,7 @@ export default function EventWizard({
                   onOpenSessionPicker={(key, field) => setPickerTarget({ kind: "session", key, field })}
                   onOpenInviteesPreview={setPreviewKey}
                   onFinish={handleFinish}
-                  onBack={() => setCurrentStep(skipSettings ? 1 : 2)}
+                  onBack={() => setCurrentStep(2)}
                   submitting={submitting}
                   submitLabel={submitLabel}
                   readOnly={readOnly}
@@ -561,8 +557,8 @@ export default function EventWizard({
             {readOnly && (
               <div className="px-6 pb-6 pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E5E5]">
                 <div className="flex items-center gap-3 pt-4">
-                  {currentStep > 1 ? <button type="button" onClick={() => setCurrentStep(skipSettings && currentStep === 3 ? 1 : currentStep - 1)} className="px-6 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-medium rounded-md cursor-pointer">Back</button> : <button type="button" onClick={onCancel} className="px-6 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-medium rounded-md cursor-pointer">Back to event</button>}
-                  {currentStep < 3 ? <button type="button" onClick={() => setCurrentStep(currentStep === 1 ? afterDetails : currentStep + 1)} className="px-8 py-2.5 bg-[#1F65FF] hover:bg-[#1F65FF] text-white text-sm font-medium rounded-md cursor-pointer">Next</button> : <button type="button" onClick={onCancel} className="px-8 py-2.5 bg-[#1F65FF] hover:bg-[#1F65FF] text-white text-sm font-medium rounded-md cursor-pointer">Back to event</button>}
+                  {currentStep > 1 ? <button type="button" onClick={() => setCurrentStep(currentStep - 1)} className="px-6 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-medium rounded-md cursor-pointer">Back</button> : <button type="button" onClick={onCancel} className="px-6 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-medium rounded-md cursor-pointer">Back to event</button>}
+                  {currentStep < 3 ? <button type="button" onClick={() => setCurrentStep(currentStep + 1)} className="px-8 py-2.5 bg-[#1F65FF] hover:bg-[#1F65FF] text-white text-sm font-medium rounded-md cursor-pointer">Next</button> : <button type="button" onClick={onCancel} className="px-8 py-2.5 bg-[#1F65FF] hover:bg-[#1F65FF] text-white text-sm font-medium rounded-md cursor-pointer">Back to event</button>}
                 </div>
                 {readOnlyActions && <div className="flex items-center gap-3 pt-4">{readOnlyActions}</div>}
               </div>
