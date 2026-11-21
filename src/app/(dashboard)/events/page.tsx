@@ -82,6 +82,8 @@ interface RawEvent {
   categoryId?: { _id?: string; name?: string } | string;
   organizerId?: { fullName?: string; profile?: { organizationName?: string } } | string;
   invitationsSent?: number;
+  /** the event's print-ready cards were made: it can no longer be edited */
+  cardsDownloaded?: boolean;
   invitationType?: "DIGITAL" | "PRINT" | "BOTH";
   sessionCount?: number;
   sessionsCount?: number;
@@ -113,7 +115,7 @@ function toRow(e: RawEvent): EventRow {
     sessionsCount: e.sessionsCount ?? e.sessionCount ?? e.sessions?.length ?? e.sessionNames?.length,
     sessionNames: e.sessionNames || [],
     inviteesCount: e.inviteesCount,
-    canEdit: !(e.invitationsSent && e.invitationsSent > 0),
+    canEdit: !(e.invitationsSent && e.invitationsSent > 0) && !e.cardsDownloaded,
     printOnly: e.invitationType === "PRINT",
     ended,
     phase: e.status === "CANCELLED" ? "Cancelled" : (timeStatus === "Past" || timeStatus === "Ongoing" ? timeStatus : "Upcoming"),

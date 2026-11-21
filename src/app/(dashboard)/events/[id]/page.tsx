@@ -281,7 +281,8 @@ export default function EventDetailsPage() {
   const organizer = typeof event.organizerId === "object" ? event.organizerId?.profile?.organizationName || "Organisation not set" : "Organisation not set";
   const venue = typeof event.location === "string" ? event.location : event.location?.address;
   const delivery = report?.deliverySummary || { SENT: 0, PENDING: 0, FAILED: 0 };
-  const invitationLifecycleStarted = delivery.SENT > 0 || delivery.FAILED > 0;
+  const cardsDownloaded = !!(event as unknown as { cardsDownloadedAt?: string }).cardsDownloadedAt;
+  const invitationLifecycleStarted = delivery.SENT > 0 || delivery.FAILED > 0 || cardsDownloaded;
   // The API refuses edits once invitations went out and for closed or cancelled events
   // An event is over once its end time has passed (or it was closed earlier): nobody has to close it
   // its end time has passed (cancelled or not): a past event is deleted, not cancelled
@@ -378,7 +379,7 @@ export default function EventDetailsPage() {
               Edit
               </Link>
             ) : (
-              <button type="button" disabled title={editLocked ? "This event can’t be edited after invitations have been sent" : "Checking whether this event can still be edited…"} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1F65FF] text-white text-sm font-medium rounded-md opacity-50 cursor-not-allowed">
+              <button type="button" disabled title={editLocked ? "This event can’t be edited after invitations have been sent or cards have been downloaded" : "Checking whether this event can still be edited…"} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1F65FF] text-white text-sm font-medium rounded-md opacity-50 cursor-not-allowed">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>

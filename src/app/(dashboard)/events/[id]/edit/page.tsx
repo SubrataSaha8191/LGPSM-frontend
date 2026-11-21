@@ -78,12 +78,13 @@ export default function EditEventPage() {
         setIsFetchingEvent(false);
         return;
       }
-      const ev = eventRes.data as unknown as { status?: string; schedule?: { end?: string } };
+      const ev = eventRes.data as unknown as { status?: string; schedule?: { end?: string }; cardsDownloadedAt?: string };
       const ended = !!ev.schedule?.end && new Date(ev.schedule.end).getTime() <= Date.now();
       const invitationsOut = !!(reportRes.success && reportRes.data && (reportRes.data.deliverySummary.SENT > 0 || reportRes.data.deliverySummary.FAILED > 0));
       const why =
         ev.status === "CANCELLED" ? "This event was cancelled, so it can no longer be edited." :
         ev.status === "COMPLETED" || ended ? "This event is over, so it can no longer be edited." :
+        ev.cardsDownloadedAt ? "This event can’t be edited after its cards have been downloaded, because guests hold cards made from its details." :
         invitationsOut ? "This event can’t be edited after invitations have been sent, because guests already hold passes made from its details." : null;
       setLockReason(why);
       // adding to a closed event is still possible while it has not ended and was not cancelled
