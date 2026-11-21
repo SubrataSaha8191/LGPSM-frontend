@@ -1038,7 +1038,7 @@ export default function InviteesManagementPage() {
           onConfirm={async () => { setConfirmFirstSend(false); if (!(await showBillOrSend())) handleSend(); }}
         />
       )}
-      {downloadOpen && selectedIds.length > 0 && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} onClose={() => setDownloadOpen(false)} />}
+      {downloadOpen && selectedIds.length > 0 && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} sessionId={filterSession?._id} onClose={() => setDownloadOpen(false)} />}
       {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (
         <PassActionModal

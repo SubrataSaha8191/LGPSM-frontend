@@ -9,6 +9,8 @@ interface DownloadCardsModalProps {
   eventTitle: string;
   /** the ticked guests: cards are made for these and nobody else */
   inviteeIds: string[];
+  /** the session the list is filtered to; the zips are named after it. Empty for all sessions. */
+  sessionId?: string;
   onClose: () => void;
 }
 
@@ -18,14 +20,14 @@ const btn = "px-6 py-[11px] rounded-lg text-base font-semibold cursor-pointer di
  * Printable cards for the ticked guests. The system decides the split: zips of at most 100 guests, filled evenly, so a large selection
  * is a few zips and never a flood of small ones. They download one after another.
  */
-export default function DownloadCardsModal({ eventId, eventTitle, inviteeIds, onClose }: DownloadCardsModalProps) {
+export default function DownloadCardsModal({ eventId, eventTitle, inviteeIds, sessionId, onClose }: DownloadCardsModalProps) {
   const [plan, setPlan] = useState<CardPlan | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [state, setState] = useState<{ running: boolean; part: number; done: number; error: string | null; finished: boolean }>({ running: false, part: 0, done: 0, error: null, finished: false });
 
   useEffect(() => {
     let live = true;
-    cardDownloadService.plan(eventId, inviteeIds).then((r) => {
+    cardDownloadService.plan(eventId, inviteeIds, sessionId).then((r) => {
       if (!live) return;
       if (r.success && r.data) setPlan(r.data); else setPlanError(r.message || "The cards could not be planned.");
     });
@@ -69,7 +71,7 @@ export default function DownloadCardsModal({ eventId, eventTitle, inviteeIds, on
           </p>
           <div className="rounded-md bg-[#F5F8FF] border border-[#D6E4FF] px-4 py-3 text-sm text-[#15191C]" aria-live="polite">
             {planError ? <span className="text-[#D92D20]">{planError}</span>
-              : plan ? <><b>{plan.total}</b> guest{plan.total === 1 ? "" : "s"} → <b>{plan.zips}</b> zip file{plan.zips === 1 ? "" : "s"}{plan.zips > 1 ? ` (about ${plan.sizes[0]} guests each)` : ""}</>
+              : plan ? <><b>{plan.total}</b> guest{plan.total === 1 ? "" : "s"} → <b>{plan.zips}</b> zip file{plan.zips === 1 ? "" : "s"}{plan.zips > 1 ? ` (about ${plan.sizes[0]} guests each)` : ""}<span className="block mt-1 text-xs text-[#4B4F52] break-words">{plan.zips > 1 ? `${plan.fileNames[0]} … ${plan.fileNames[plan.fileNames.length - 1]}` : plan.fileNames[0]}</span></>
               : "Working out the zips…"}
           </div>
           {state.running && <p className="text-sm text-[#1F65FF] font-medium" role="status">Preparing zip {state.part} of {plan?.zips}… keep this window open.</p>}
