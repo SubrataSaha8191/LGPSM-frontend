@@ -9,6 +9,8 @@ import { expectedColumnsFor } from "@/utils/inviteeFields";
 import type { InviteeSetInfo } from "@/services/inviteeService";
 import { listDisplayName } from "@/utils/inviteeLists";
 import { InviteeSheetRow, missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
+import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
+import { isTooLarge } from "@/utils/uploadLimits";
 import InfoTip from "@/components/common/InfoTip";
 
 // Invitee sheets stay in memory only (they hold guest contact details and a File object)
@@ -113,6 +115,7 @@ export default function Step3Sessions({
     onSessionFileChange(key, null);
   };
 
+  const [tooLarge, setTooLarge] = React.useState<number | null>(null);
   const handleFile = async (session: DraftSession, file: File) => {
     setFileError((prev) => ({ ...prev, [session.key]: undefined }));
     try {
@@ -125,6 +128,10 @@ export default function Step3Sessions({
         setFileError((prev) => ({ ...prev, [session.key]: "The sheet has no invitee rows." }));
         return;
       }
+      if (isTooLarge(parsed.rows.length)) {
+        setTooLarge(parsed.rows.length);
+        return;
+      }
       onSessionFileChange(session.key, { file, name: file.name, rows: parsed.rows, problemCount: parsed.problems.length });
       onSkipInviteesChange(false);
       onOpenInviteesPreview(session.key);
@@ -134,6 +141,8 @@ export default function Step3Sessions({
   };
 
   return (
+    <>
+    <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -370,5 +379,6 @@ export default function Step3Sessions({
         </div>
       </div>}
     </form>
+    </>
   );
 }

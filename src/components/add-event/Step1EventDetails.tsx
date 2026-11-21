@@ -30,6 +30,8 @@ interface Step1EventDetailsProps {
   isEditing?: boolean;
   // Admin event settings: RSVP can be switched off platform-wide
   rsvpAllowed: boolean;
+  /** a print-only event is never sent, so there is no RSVP to accept */
+  printOnly?: boolean;
   errors: DraftErrors;
   onNext: () => void;
   onCancel: () => void;
@@ -254,7 +256,7 @@ function DateButton({ label, value, placeholder, onClick, error, optional = fals
 }
 
 // Controlled step: all values live in the wizard draft owned by the page
-export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, categories, canManageCategories, isAdmin, isEditing, rsvpAllowed, errors, onNext, onCancel, readOnly = false }: Step1EventDetailsProps) {
+export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, categories, canManageCategories, isAdmin, isEditing, rsvpAllowed, printOnly = false, errors, onNext, onCancel, readOnly = false }: Step1EventDetailsProps) {
   // what to tell the person when something other than a digit was typed in the contact number
   const [contactNote, setContactNote] = useState<string | null>(null);
   // an admin's uploaded design can hold fewer characters than the usual limit: it sets the title's limit
@@ -372,7 +374,7 @@ export default function Step1EventDetails({ draft, onChange, onOpenDatePicker, c
           <PhoneNote message={contactNote} />
           <Err msg={errors.contactNumber} />
         </div>
-              {rsvpAllowed ? (
+              {printOnly ? null : rsvpAllowed ? (
           <div className="p-4 border border-[#E0E0E0] rounded-md bg-white space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label htmlFor="event-rsvp" className="flex items-center gap-2 cursor-pointer">

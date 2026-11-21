@@ -43,6 +43,9 @@ export const titleLimitOf = (templateData?: unknown): number | undefined => {
   return typeof n === "number" && n > 0 ? Math.min(EVENT_TITLE_MAX_LENGTH, n) : undefined;
 };
 
+/** A print-only event is never sent, so nothing about answering an invitation (RSVP, food choice, who can check in) applies to it */
+export const isPrintOnly = (d: { invitationType?: string }): boolean => d.invitationType === "PRINT";
+
 export type InvitationType = "DIGITAL" | "PRINT" | "BOTH";
 export const INVITATION_TYPE_OPTIONS: { value: InvitationType; label: string }[] = [
   { value: "DIGITAL", label: "Digital only" },
@@ -342,11 +345,11 @@ export function validateEventDraft(draft: EventDraft, options: DraftValidationOp
   else if (!isAfter(draft.end, draft.start)) errors.end = "End must be after the start.";
   else if (createdMs !== null && new Date(draft.end as string).getTime() <= createdMs) errors.end = options.isNew ? "The event cannot end in the past." : "The event must end after it was created.";
   // RSVP acceptance itself is optional; once it is ticked its last date is required
-  if (draft.rsvpEnabled && options.rsvpOffered && !isValidIso(draft.rsvpDeadline)) errors.rsvpDeadline = "Choose the last date to accept RSVPs, or untick Event RSVP Acceptance.";
-  else if (draft.rsvpEnabled && draft.rsvpDeadline && isAfter(draft.rsvpDeadline, draft.end)) {
+  if (!isPrintOnly(draft) && draft.rsvpEnabled && options.rsvpOffered && !isValidIso(draft.rsvpDeadline)) errors.rsvpDeadline = "Choose the last date to accept RSVPs, or untick Event RSVP Acceptance.";
+  else if (!isPrintOnly(draft) && draft.rsvpEnabled && draft.rsvpDeadline && isAfter(draft.rsvpDeadline, draft.end)) {
     errors.rsvpDeadline = "RSVP deadline should be before the event ends.";
   }
-  if (draft.dietaryEnabled) {
+  if (!isPrintOnly(draft) && draft.dietaryEnabled) {
     const hasMissingOptions = draft.preferenceCategories.some((category) => !category.options.some((option) => option.trim()));
     // an option row left blank (for example after "Add another option") must be filled in or removed, even when another option is filled
     const hasBlankOption = draft.preferenceCategories.some((category) => category.options.some((option) => !option.trim()));
@@ -420,14 +423,17 @@ function commonPayload(draft: EventDraft) {
       ? { location: { address: draft.venue.trim(), ...(draft.addressDetails?.trim() ? { addressDetails: draft.addressDetails.trim() } : {}) } }
       : {}),
     schedule: { start: draft.start, end: draft.end },
-    rsvp: {
-      enabled: draft.rsvpEnabled,
-      ...(draft.rsvpEnabled && draft.rsvpDeadline ? { acceptanceLastDate: draft.rsvpDeadline } : {}),
-      allowAllInvited: draft.allowAllInvited,
-      allowNotResponded: draft.allowNotResponded,
-      allowDeclined: draft.allowDeclined,
-    },
-    dietaryPreference: buildDietaryPreference(draft),
+    // a print-only event has no RSVP, no food question and the plain entry rule, whatever an earlier draft held
+    rsvp: isPrintOnly(draft)
+      ? { enabled: false, allowAllInvited: true, allowNotResponded: false, allowDeclined: false }
+      : {
+          enabled: draft.rsvpEnabled,
+          ...(draft.rsvpEnabled && draft.rsvpDeadline ? { acceptanceLastDate: draft.rsvpDeadline } : {}),
+          allowAllInvited: draft.allowAllInvited,
+          allowNotResponded: draft.allowNotResponded,
+          allowDeclined: draft.allowDeclined,
+        },
+    dietaryPreference: isPrintOnly(draft) ? { enabled: false, options: [] } : buildDietaryPreference(draft),
     ...(draft.template ? { templateId: draft.template.id } : {}),
     invitationType: draft.invitationType || "DIGITAL",
     ...(draft.cardInfo ? { cardInfo: draft.cardInfo } : {}),

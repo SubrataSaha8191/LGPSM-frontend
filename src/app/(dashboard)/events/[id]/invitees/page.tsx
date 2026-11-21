@@ -19,6 +19,8 @@ import AddInviteeManualModal from "@/components/add-event/modals/AddInviteeManua
 import SendWarningModal from "@/components/invitees/SendWarningModal";
 import SendBillModal from "@/components/invitees/SendBillModal";
 import DownloadCardsModal from "@/components/invitees/DownloadCardsModal";
+import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
+import { isTooLarge, secondsLeft, splitNote, UPLOAD_COOLDOWN_MS } from "@/utils/uploadLimits";
 import { billingService, type BillQuote } from "@/services/billingService";
 import { openRazorpayCheckout } from "@/utils/razorpayCheckout";
 import SendSuccessModal from "@/components/invitees/SendSuccessModal";
@@ -328,6 +330,9 @@ export default function InviteesManagementPage() {
   const digitalInvites = invitationType !== "PRINT";
   const printableCards = invitationType !== "DIGITAL";
   const [downloadOpen, setDownloadOpen] = useState(false);
+  // a file with more invitees than one upload holds (the popup points to the contact page), and the pause after a successful upload
+  const [tooLarge, setTooLarge] = useState<number | null>(null);
+  const uploadCooldownUntil = useRef(0);
   const term = search.trim().toLowerCase();
   const filteredInvitees = invitees.filter(
     (i) =>
@@ -476,6 +481,11 @@ export default function InviteesManagementPage() {
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
+    const wait = secondsLeft(uploadCooldownUntil.current);
+    if (wait > 0) {
+      setFeedback({ type: "error", message: `Please wait ${wait} second${wait === 1 ? "" : "s"} before uploading another list.` });
+      return;
+    }
     try {
       const parsed = await parseInviteeSheet(file, ownLists.map((session) => session.name), expectedColumnsFor(fieldConfig));
       if (parsed.missingColumns.length > 0) {
@@ -484,6 +494,10 @@ export default function InviteesManagementPage() {
       }
       if (parsed.rows.length === 0) {
         setFeedback({ type: "error", message: "The sheet has no invitee rows." });
+        return;
+      }
+      if (isTooLarge(parsed.rows.length)) {
+        setTooLarge(parsed.rows.length);
         return;
       }
       setUpload({ file, rows: parsed.rows });
@@ -498,8 +512,8 @@ export default function InviteesManagementPage() {
   const handleImport = (rows: InviteeSheetRow[]) => importPreviewFlight.current.run(() => prepareImport(rows));
   const prepareImport = async (rows: InviteeSheetRow[]) => {
     if (!upload || importInFlight.current) return;
-    if (rows.length > 1000) {
-      setFeedback({ type: "error", message: "A sheet can contain at most 1,000 invitees. Remove some rows or split the upload." });
+    if (isTooLarge(rows.length)) {
+      setTooLarge(rows.length);
       return;
     }
     if (invitees.length === 0) {
@@ -540,10 +554,15 @@ export default function InviteesManagementPage() {
     }
     setImportChoice(null);
     setUpload(null);
+    if (res.code === "IMPORT_TOO_LARGE") {
+      setTooLarge(rows.length);
+      return;
+    }
     if (!res.success || !res.data) {
       setFeedback({ type: "error", message: res.message || "The invitee list could not be imported." });
       return;
     }
+    uploadCooldownUntil.current = Date.now() + UPLOAD_COOLDOWN_MS;
     const d = res.data;
     const drift = previewDiscrepancy(forecast, { imported: d.imported, archived: d.archived });
     const parts = [`${d.imported} added`];
@@ -557,7 +576,7 @@ export default function InviteesManagementPage() {
     if (d.rejected) parts.push(`${d.rejected} rejected`);
     setFeedback({
       type: d.rejected ? "error" : "success",
-      message: `Invitee list imported: ${parts.join(", ")}.${drift ? ` ${drift}` : ""}`,
+      message: `Invitee list imported: ${parts.join(", ")}.${splitNote(d.imported)}${drift ? ` ${drift}` : ""}`,
       // Row-level summary: rejected rows first, then rows whose existing guest details were kept
       details: [...(d.errors || []).map((e) => `Row ${e.row}: ${e.error}`), ...(d.notices || []).map((n) => `Row ${n.row}: ${n.message}`)].slice(0, 10),
     });
@@ -1038,6 +1057,7 @@ export default function InviteesManagementPage() {
           onConfirm={async () => { setConfirmFirstSend(false); if (!(await showBillOrSend())) handleSend(); }}
         />
       )}
+      <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
       {downloadOpen && selectedIds.length > 0 && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} sessionId={filterSession?._id} onClose={() => setDownloadOpen(false)} />}
       {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (

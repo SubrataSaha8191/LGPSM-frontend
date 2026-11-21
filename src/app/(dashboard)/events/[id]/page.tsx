@@ -29,6 +29,7 @@ import { Skeleton, SkeletonRegion } from "@/components/common/Skeleton";
 
 interface EventDetail {
   _id: string;
+  invitationType?: "DIGITAL" | "PRINT" | "BOTH";
   title: string;
   status?: string;
   schedule?: { start?: string; end?: string };
@@ -482,6 +483,20 @@ export default function EventDetailsPage() {
                 label={event.title}
               />
             </div>
+            {/* A print-only event is never sent: its button downloads the cards instead (the guests are ticked on the Invitees tab) */}
+            {event.invitationType === "PRINT" ? (
+              event.status === "CANCELLED" ? (
+                <span aria-disabled="true" title="This event is cancelled. Cards can no longer be produced." className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#1F65FF] text-white text-sm font-medium rounded-md opacity-40 cursor-not-allowed">
+                  Download Invitee Cards
+                </span>
+              ) : (
+                <Link href={`/events/${eventId}/invitees`} className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#1F65FF] hover:bg-[#1A56DB] text-white text-sm font-medium rounded-md">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" aria-hidden><path d="M12 3v12" /><path d="m7 11 5 5 5-5" /><path d="M5 21h14" /></svg>
+                  Download Invitee Cards
+                </Link>
+              )
+            ) : (
+              <>
             {/* Faded once invitations have gone out (Figma 426:2); resends happen per guest on the Invitees tab */}
             {event.status === "CANCELLED" ? (
               <span aria-disabled="true" title="This event is cancelled. Invitations can no longer be sent." className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#1F65FF] text-white text-sm font-medium rounded-md opacity-40 cursor-not-allowed">
@@ -497,6 +512,8 @@ export default function EventDetailsPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               Send Invitation
             </Link>
+            )}
+              </>
             )}
           </section>
         </div>

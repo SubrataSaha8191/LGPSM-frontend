@@ -108,19 +108,43 @@ function endSessionAccountInactive() {
   }
 }
 
+// Identical reads repeated within a moment are answered from here instead of the server. A screen mounting, the tab regaining focus and a
+// "data changed" notice often ask for the same list at nearly the same time, and nothing needs the server to answer each of them. The
+// copy lives 2 seconds (shorter than the fastest poll in the app, 4 s), is kept per signed-in token, and is dropped at once when anything is
+// written (any POST/PUT/PATCH/DELETE) or when the person signs out. A caller that must always ask the server passes `cache: "no-store"`.
+const READ_TTL_MS = 2_000;
+const recentReads = new Map<string, { at: number; value: ApiResponse<unknown> }>();
+const MAX_RECENT_READS = 100;
+export function forgetRecentReads(): void { recentReads.clear(); }
+
 export async function apiClient<T = unknown>(
   endpoint: string,
   options: RequestInit = {},
   requiresAuth: boolean = false
 ): Promise<ApiResponse<T>> {
   const method = (options.method || "GET").toUpperCase();
-  if (method !== "GET" || options.body || options.signal) return requestApi<T>(endpoint, options, requiresAuth);
+  if (method !== "GET" || options.body || options.signal) {
+    if (method !== "GET") recentReads.clear(); // a change: whatever was read before may be out of date
+    const result = await requestApi<T>(endpoint, options, requiresAuth);
+    if (method !== "GET") recentReads.clear(); // and anything read while it was running
+    return result;
+  }
   const key = `${requiresAuth ? tokenStorage.getAccessToken() || "" : "public"} ${endpoint}`;
+  if (options.cache !== "no-store") {
+    const recent = recentReads.get(key);
+    if (recent && Date.now() - recent.at < READ_TTL_MS) return structuredClone(recent.value) as ApiResponse<T>;
+  }
   const pending = inflightGets.get(key);
   if (pending) return structuredClone(await pending) as ApiResponse<T>;
   const request = requestApi<T>(endpoint, options, requiresAuth).finally(() => inflightGets.delete(key));
   inflightGets.set(key, request as Promise<ApiResponse<unknown>>);
-  return request;
+  const result = await request;
+  // only a successful answer is kept: an error or a refusal is never replayed
+  if (result.success !== false && !result.error && options.cache !== "no-store") {
+    if (recentReads.size >= MAX_RECENT_READS) recentReads.delete(recentReads.keys().next().value as string);
+    recentReads.set(key, { at: Date.now(), value: structuredClone(result) as ApiResponse<unknown> });
+  }
+  return result;
 }
 
 async function requestApi<T = unknown>(

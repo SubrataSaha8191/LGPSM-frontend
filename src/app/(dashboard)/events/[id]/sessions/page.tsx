@@ -25,6 +25,8 @@ import SampleReminderModal from "@/components/invitees/SampleReminderModal";
 import { acknowledgeSampleReminder, sampleReminderAcknowledged } from "@/utils/sampleReminder";
 import { excelColumnsFor } from "@/utils/inviteeFields";
 import { missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
+import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
+import { isTooLarge } from "@/utils/uploadLimits";
 import { downloadInviteeTemplate, templateColumnsFor, type TemplateColumns } from "@/utils/inviteeTemplate";
 import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerModal";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
@@ -241,6 +243,7 @@ export default function EventSessionsPage() {
     }
   };
 
+  const [tooLarge, setTooLarge] = useState<number | null>(null);
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -252,6 +255,12 @@ export default function EventSessionsPage() {
         setUploadedFileName("");
         setUploadedFile(null);
         setFormError(missingColumnsMessage(parsed.missingColumns));
+        return;
+      }
+      if (isTooLarge(parsed.rows.length)) {
+        setUploadedFileName("");
+        setUploadedFile(null);
+        setTooLarge(parsed.rows.length);
         return;
       }
     } catch {
@@ -401,6 +410,7 @@ export default function EventSessionsPage() {
 
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
+      <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
       {/* Organiser frame 217:22014 says "Event Sessions"; the Super Admin frame 2114:5996 keeps "Event" */}
       <PageHeader title={user?.role === "ADMIN" ? "Event" : "Event Sessions"} />
 

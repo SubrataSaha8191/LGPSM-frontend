@@ -42,6 +42,8 @@ interface EventRow {
   sessionNames: string[];
   inviteesCount?: number;
   canEdit: boolean;
+  /** a print-only event is never sent: there is no Send Invitation for it */
+  printOnly: boolean;
   /** its end time has passed: offered "Delete Event" instead of "Cancel Event" */
   ended: boolean;
   /** where the event is in time (or Cancelled), shown on the organizer's cards */
@@ -80,6 +82,7 @@ interface RawEvent {
   categoryId?: { _id?: string; name?: string } | string;
   organizerId?: { fullName?: string; profile?: { organizationName?: string } } | string;
   invitationsSent?: number;
+  invitationType?: "DIGITAL" | "PRINT" | "BOTH";
   sessionCount?: number;
   sessionsCount?: number;
   sessions?: unknown[];
@@ -111,6 +114,7 @@ function toRow(e: RawEvent): EventRow {
     sessionNames: e.sessionNames || [],
     inviteesCount: e.inviteesCount,
     canEdit: !(e.invitationsSent && e.invitationsSent > 0),
+    printOnly: e.invitationType === "PRINT",
     ended,
     phase: e.status === "CANCELLED" ? "Cancelled" : (timeStatus === "Past" || timeStatus === "Ongoing" ? timeStatus : "Upcoming"),
   };
@@ -204,10 +208,16 @@ function OrganizerCardMenu({ row, onDelete }: { row: EventRow; onDelete: (row: E
               <Icon name="events/edit" width={16} height={16} />
               {active && row.canEdit ? "Edit" : "View Details"}
             </Link>
-            {active && row.phase === "Upcoming" && (
+            {active && row.phase === "Upcoming" && !row.printOnly && (
               <Link href={`/events/${row.id}/invitees`} className={item}>
                 <Icon name="events/send" width={16} height={16} />
                 Send Invitation
+              </Link>
+            )}
+            {active && row.phase === "Upcoming" && row.printOnly && (
+              <Link href={`/events/${row.id}/invitees`} className={item}>
+                <Icon name="billing/download-active" width={16} height={16} />
+                Download Invitee Cards
               </Link>
             )}
             {active && (

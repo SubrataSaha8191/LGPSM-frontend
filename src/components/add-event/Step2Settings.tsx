@@ -3,6 +3,7 @@
 import { CARD_DISPLAY_DEFAULTS, CARD_DISPLAY_OPTIONS, CARD_INFO_OPTIONS, CUSTOM_DETAIL, EMPLOYEE_ID, EMPLOYEE_ID_LABEL, customFieldFor, customShowKey, customTitleKey, detailKind, isCustomDetail, type CardInfo, type CardInfoField } from "./eventDraft";
 import PopupMessage from "@/components/common/PopupMessage";
 import CustomDropdown from "@/components/common/CustomDropdown";
+import { isPrintOnly } from "./eventDraft";
 import { CheckInPolicy, POLICY_FLAGS, POLICY_LABEL, policyOf, policyOptions } from "@/utils/checkInPolicy";
 import React, { useEffect, useRef } from "react";
 import { DraftErrors, EventDraft, PreferenceCategory, newClientKey } from "./eventDraft";
@@ -80,6 +81,8 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
     document.getElementById(focusNext.current)?.focus();
     focusNext.current = null;
   }, [categories]);
+  // Print only: the cards are downloaded, never sent, so only the card's own details remain on this step
+  const printOnly = isPrintOnly(draft);
   const anyRsvpOption = features.acceptInvitedAttendees || features.chooseNotRespondedInvitees || features.chooseRSVPDeclinedInvitees;
 
   return (
@@ -93,7 +96,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
     >
       {/* Who can check in: one dropdown, shown only while RSVP is on (it is about how guests' answers affect entry).
           Food preference below does not depend on RSVP being on. */}
-      {draft.rsvpEnabled && anyRsvpOption && (
+      {!printOnly && draft.rsvpEnabled && anyRsvpOption && (
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <label className="text-sm font-medium text-gray-900">Who can check in</label>
@@ -225,7 +228,7 @@ export default function Step2Settings({ draft, onChange, errors, features, sampl
       </div>
       )}
 
-      {features.askFoodPreference && (
+      {!printOnly && features.askFoodPreference && (
         <div className={`p-4 border rounded-md bg-white space-y-4 ${errors.dietaryPreference ? "!border-rose-500" : "border-[#E0E0E0]"}`}>
           <label htmlFor="opt-food" className="flex items-center gap-3 cursor-pointer">
             <input

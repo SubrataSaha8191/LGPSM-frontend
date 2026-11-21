@@ -16,6 +16,8 @@ import { apiClient, ApiResponse } from "./apiClient";
 
 export interface EventData {
   id: string;
+  /** how guests get the card: DIGITAL (sent), PRINT (downloaded as PDFs) or BOTH; absent = DIGITAL */
+  invitationType?: "DIGITAL" | "PRINT" | "BOTH";
   _id?: string;
   title: string;
   description?: string;
