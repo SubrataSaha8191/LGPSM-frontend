@@ -68,6 +68,8 @@ export const tokenStorage = {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    // the "last seen" time (see hooks/useReturnToDashboard): a new sign-in must not count as coming back after a long absence
+    localStorage.removeItem("lgpsm_last_seen");
     document.cookie = `${SESSION_MARKER_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     document.cookie = "lgpsm_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   },

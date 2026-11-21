@@ -103,7 +103,7 @@ export function AdminAuthLayout({ children }: { children: React.ReactNode }) {
 export function AuthLogo() {
   return (
     <Link href="/" className="inline-block">
-      <Image src="/images/branding/eventqrapp-logo.svg" alt="EventQRapp" width={190} height={34} priority fetchPriority="high" className="h-[34px] w-auto" />
+      <Image src="/images/branding/Final-Logo.svg" alt="EventQRapp" width={194} height={34} priority fetchPriority="high" className="h-[34px] w-auto" />
     </Link>
   );
 }

@@ -9,12 +9,12 @@ const STATS = [
   { value: "5 sec", label: "Average guest check-in time" },
   { value: "1 QR", label: "Unique entry code for every guest" },
 ];
+// The clients shown in the strip. `w` and `h` are the file's own size; `show` is the height it is drawn at, chosen so the four look evenly weighted.
 const LOGOS = [
-  { src: "/images/landing/client-1.png", w: 114, h: 71 },
-  { src: "/images/landing/client-2.png", w: 79, h: 46 },
-  { src: "/images/landing/client-3.png", w: 143, h: 52 },
-  { src: "/images/landing/client-4.png", w: 118, h: 53 },
-  { src: "/images/landing/client-5.png", w: 90, h: 46 },
+  { src: "/icons/PFA/iconic.png", alt: "Iconic Event Planner", w: 287, h: 211, show: 66 },
+  { src: "/icons/PFA/RotaryMBS-Simple_RGB.png", alt: "Rotary", w: 300, h: 113, show: 50 },
+  { src: "/icons/PFA/TCLG_Logo.png", alt: "TCLG: Events, Sports, Travel", w: 118, h: 56, show: 56 },
+  { src: "/icons/PFA/Tillotama.png", alt: "Tillotama", w: 72, h: 20, show: 30 },
 ];
 
 export default function StatsClients() {
@@ -31,9 +31,9 @@ export default function StatsClients() {
         </dl>
         <Reveal variant="up" delay={120} className="flex flex-col items-center gap-5 border-t border-[#E1E7F2] pt-8">
           <p className="text-center text-[15px] text-[#4A5470] sm:text-[17px]">Trusted by event planners, agencies and families</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-5">
             {LOGOS.map((l) => (
-              <Image key={l.src} src={l.src} alt="" width={l.w} height={l.h} className="h-auto max-h-[66px] w-auto object-contain" />
+              <Image key={l.src} src={l.src} alt={l.alt} width={l.w} height={l.h} style={{ height: l.show, width: "auto" }} className="object-contain" />
             ))}
           </div>
         </Reveal>

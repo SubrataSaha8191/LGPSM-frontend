@@ -9,6 +9,7 @@ import BrandLoader from "@/components/common/BrandLoader";
 import { isExplicitLogout, loginRedirectPath } from "@/components/auth/authPortal";
 import { canAccessRoute } from "@/components/sidebar/navConfig";
 import { tokenStorage } from "@/services/tokenStorage";
+import { useReturnToDashboard } from "@/hooks/useReturnToDashboard";
 
 export default function DashboardLayout({
   children,
@@ -43,6 +44,8 @@ export default function DashboardLayout({
   }, [welcoming]);
   const allowed = !!user && !isSystemUser && canAccessRoute(user.role, pathname);
   const leavingAsStaff = useRef(false);
+  // after an hour away the app reopens at the dashboard, not on the page that was left
+  useReturnToDashboard(!!user && isAuthenticated && allowed);
 
   // The client router does not run in a document restored from the back/forward cache, so leave with
   // a full navigation when such a page comes back without a session

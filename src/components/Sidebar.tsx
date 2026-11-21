@@ -128,7 +128,7 @@ function AddEventButton({ active, onNavigate }: { active: boolean; onNavigate: (
 function Logo() {
   return (
     <Link href="/dashboard" className="inline-block shrink-0">
-      <Image src="/images/branding/eventqrapp-logo.svg" alt="EventQRapp" width={190} height={34} priority className="h-[34px] w-auto max-w-full object-contain object-left" />
+      <Image src="/images/branding/Final-Logo.svg" alt="EventQRapp" width={194} height={34} priority className="h-[34px] w-auto max-w-full object-contain object-left" />
     </Link>
   );
 }

@@ -54,7 +54,7 @@ export default function Navbar() {
     <header className="hero-anim hero-anim-nav w-full sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-[#E1EAF8]">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center shrink-0" aria-label="EventQRapp home">
-          <Image src="/images/branding/eventqrapp-logo.svg" alt="EventQRapp" width={180} height={32} priority className="h-8 w-auto" />
+          <Image src="/images/branding/Final-Logo.svg" alt="EventQRapp" width={183} height={32} priority className="h-8 w-auto" />
         </Link>
 
         <nav aria-label="Main" className="hidden lg:flex items-center gap-[30px]">
