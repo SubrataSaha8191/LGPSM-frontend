@@ -20,6 +20,8 @@ import SendWarningModal from "@/components/invitees/SendWarningModal";
 import SendBillModal from "@/components/invitees/SendBillModal";
 import DownloadCardsModal from "@/components/invitees/DownloadCardsModal";
 import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
+import RepeatedGuestsModal from "@/components/invitees/RepeatedGuestsModal";
+import { findRepeatedGuests, type RepeatedGuest } from "@/utils/repeatedGuests";
 import { isTooLarge, secondsLeft, splitNote, UPLOAD_COOLDOWN_MS } from "@/utils/uploadLimits";
 import { billingService, type BillQuote } from "@/services/billingService";
 import { openRazorpayCheckout } from "@/utils/razorpayCheckout";
@@ -332,6 +334,8 @@ export default function InviteesManagementPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   // a file with more invitees than one upload holds (the popup points to the contact page), and the pause after a successful upload
   const [tooLarge, setTooLarge] = useState<number | null>(null);
+  // the same email or mobile twice in the file: asked about before anything is uploaded
+  const [repeats, setRepeats] = useState<RepeatedGuest[] | null>(null);
   const uploadCooldownUntil = useRef(0);
   const term = search.trim().toLowerCase();
   const filteredInvitees = invitees.filter(
@@ -509,7 +513,11 @@ export default function InviteesManagementPage() {
   // With nobody on the list yet there is nothing to replace; otherwise the organizer chooses Add or Replace first
   // Save on the preview works out what each choice would do (two server dry runs, one per choice). Pressing Save twice must not start that twice.
   const importPreviewFlight = useRef(createSingleFlight());
-  const handleImport = (rows: InviteeSheetRow[]) => importPreviewFlight.current.run(() => prepareImport(rows));
+  const handleImport = (rows: InviteeSheetRow[]) => {
+    const dup = findRepeatedGuests(rows);
+    if (dup.length) { setRepeats(dup); return; }
+    return importPreviewFlight.current.run(() => prepareImport(rows));
+  };
   const prepareImport = async (rows: InviteeSheetRow[]) => {
     if (!upload || importInFlight.current) return;
     if (isTooLarge(rows.length)) {
@@ -1058,6 +1066,11 @@ export default function InviteesManagementPage() {
         />
       )}
       <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
+      <RepeatedGuestsModal
+        repeats={repeats}
+        onFix={() => { setRepeats(null); setUpload(null); }}
+        onConfirm={() => { setRepeats(null); if (upload) void importPreviewFlight.current.run(() => prepareImport(upload.rows)); }}
+      />
       {downloadOpen && selectedIds.length > 0 && <DownloadCardsModal eventId={eventId} eventTitle={event?.title || "this event"} inviteeIds={selectedIds} sessionId={filterSession?._id} onClose={() => setDownloadOpen(false)} />}
       {bill && <SendBillModal quote={bill.quote} busy={billBusy} error={billError} onCancel={() => setBill(null)} onFinish={payAndSend} />}
       {passAction && (

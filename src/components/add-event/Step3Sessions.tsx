@@ -11,6 +11,8 @@ import { listDisplayName } from "@/utils/inviteeLists";
 import { InviteeSheetRow, missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
 import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
 import { isTooLarge } from "@/utils/uploadLimits";
+import RepeatedGuestsModal from "@/components/invitees/RepeatedGuestsModal";
+import { findRepeatedGuests, type RepeatedGuest } from "@/utils/repeatedGuests";
 import InfoTip from "@/components/common/InfoTip";
 
 // Invitee sheets stay in memory only (they hold guest contact details and a File object)
@@ -116,6 +118,7 @@ export default function Step3Sessions({
   };
 
   const [tooLarge, setTooLarge] = React.useState<number | null>(null);
+  const [repeatAsk, setRepeatAsk] = React.useState<{ repeats: RepeatedGuest[]; accept: () => void } | null>(null);
   const handleFile = async (session: DraftSession, file: File) => {
     setFileError((prev) => ({ ...prev, [session.key]: undefined }));
     try {
@@ -132,9 +135,15 @@ export default function Step3Sessions({
         setTooLarge(parsed.rows.length);
         return;
       }
-      onSessionFileChange(session.key, { file, name: file.name, rows: parsed.rows, problemCount: parsed.problems.length });
-      onSkipInviteesChange(false);
-      onOpenInviteesPreview(session.key);
+      const accept = () => {
+        onSessionFileChange(session.key, { file, name: file.name, rows: parsed.rows, problemCount: parsed.problems.length });
+        onSkipInviteesChange(false);
+        onOpenInviteesPreview(session.key);
+      };
+      // the same email or mobile twice in the file: the file is kept only if the organizer confirms
+      const dup = findRepeatedGuests(parsed.rows);
+      if (dup.length) { setRepeatAsk({ repeats: dup, accept }); return; }
+      accept();
     } catch {
       setFileError((prev) => ({ ...prev, [session.key]: "The file could not be read. Upload an .xlsx or .xls sheet." }));
     }
@@ -143,6 +152,7 @@ export default function Step3Sessions({
   return (
     <>
     <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
+    <RepeatedGuestsModal repeats={repeatAsk?.repeats ?? null} onFix={() => setRepeatAsk(null)} onConfirm={() => { repeatAsk?.accept(); setRepeatAsk(null); }} />
     <form
       onSubmit={(e) => {
         e.preventDefault();

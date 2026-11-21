@@ -27,6 +27,8 @@ import { excelColumnsFor } from "@/utils/inviteeFields";
 import { missingColumnsMessage, parseInviteeSheet } from "@/utils/inviteeSheet";
 import UploadTooLargeModal from "@/components/invitees/UploadTooLargeModal";
 import { isTooLarge } from "@/utils/uploadLimits";
+import RepeatedGuestsModal from "@/components/invitees/RepeatedGuestsModal";
+import { findRepeatedGuests, type RepeatedGuest } from "@/utils/repeatedGuests";
 import { downloadInviteeTemplate, templateColumnsFor, type TemplateColumns } from "@/utils/inviteeTemplate";
 import DateTimePickerModal from "@/components/add-event/modals/DateTimePickerModal";
 import EventSubNav, { notifyDbUpdate } from "@/components/EventSubNav";
@@ -244,6 +246,8 @@ export default function EventSessionsPage() {
   };
 
   const [tooLarge, setTooLarge] = useState<number | null>(null);
+  // the same email or mobile twice in the file: the file is kept only if the organizer confirms
+  const [repeatAsk, setRepeatAsk] = useState<{ repeats: RepeatedGuest[]; file: File } | null>(null);
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -263,6 +267,8 @@ export default function EventSessionsPage() {
         setTooLarge(parsed.rows.length);
         return;
       }
+      const dup = findRepeatedGuests(parsed.rows);
+      if (dup.length) { setRepeatAsk({ repeats: dup, file }); return; }
     } catch {
       // an unreadable file is reported by the import itself
     }
@@ -411,6 +417,11 @@ export default function EventSessionsPage() {
   return (
     <div className="w-full min-h-full bg-white text-gray-900 font-sans">
       <UploadTooLargeModal count={tooLarge} onClose={() => setTooLarge(null)} />
+      <RepeatedGuestsModal
+        repeats={repeatAsk?.repeats ?? null}
+        onFix={() => setRepeatAsk(null)}
+        onConfirm={() => { if (repeatAsk) { setUploadedFileName(repeatAsk.file.name); setUploadedFile(repeatAsk.file); } setRepeatAsk(null); }}
+      />
       {/* Organiser frame 217:22014 says "Event Sessions"; the Super Admin frame 2114:5996 keeps "Event" */}
       <PageHeader title={user?.role === "ADMIN" ? "Event" : "Event Sessions"} />
 
